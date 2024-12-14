@@ -17,8 +17,9 @@ import { Kbd } from "@nextui-org/kbd";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import InfoIcon from '@mui/icons-material/Info';
 import { CourseInfo } from "../api/course";
-import { deleteFromSchedule, ScheduleInfo } from "../api/degree-plan";
+import { deleteFromSchedule, insertIntoSchedule, ScheduleInfo } from "../api/degree-plan";
 import { useCourses } from "../contexts/course/provider";
+import { useProfile } from "../contexts/profile/provider";
 
 export interface TermTableColumn {
   key: string;
@@ -62,7 +63,12 @@ const TermTable: FC<TermTableProps> = ({
 }: TermTableProps) => {
   
   const [emptyIndex, setEmptyIndex] = useState<number>(1);
-  const [scheduleRows, setScheduleRows] = useState<TermTableRow[]>([...rows, { key: `XX 0000`, course_id: 'XX 0000' }]);
+  const [scheduleRows, setScheduleRows] = useState<TermTableRow[]>(() => {
+    if (rows.length === 0) {
+      return [{ key: `XX 0000`, course_id: 'XX 0000' }];
+    }
+    return [...rows];
+  });
   const [queryValues, setQueryValues] = useState<Map<string, string>>(new Map());
   const [activeResults, setActiveResults] = useState<Map<string, string | null>>(new Map());
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +76,8 @@ const TermTable: FC<TermTableProps> = ({
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const { refetchScheduleEntries } = useProfile();
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
@@ -220,7 +228,7 @@ const TermTable: FC<TermTableProps> = ({
   const addActiveCourse: (key: string) => Promise<void> = useCallback(async (key: string) => {
     try {
       const course_id = activeResults.get(key)!;
-      let newRows = [
+      let newRows: TermTableRow[] = [
         ...scheduleRows.filter(row => row.key !== key && !row.key.startsWith('XX')),
         { key: course_id, course_id: course_id },
         ...scheduleRows.filter(row => row.key !== key && row.key.startsWith('XX')) 
@@ -239,6 +247,12 @@ const TermTable: FC<TermTableProps> = ({
       setActiveIndex(firstEmptyIndex);
       setPreviousRow(newRows[firstEmptyIndex])
       setRerenderCount((prev) => prev! + 1);
+
+      /** Insert into db */
+      if (course_id) {
+        await insertIntoSchedule(info!.schedule_id, course_id);
+        await refetchScheduleEntries();
+      }
     } catch (error) {
       console.error(error);
       setError('Unable to insert into schedule');
@@ -247,9 +261,6 @@ const TermTable: FC<TermTableProps> = ({
 
   const removeInsertedCourse: (key: string) => Promise<void> = useCallback(async (key: string) => {
     try {
-      if (!previousRow!.key.startsWith('XX')) {
-        await deleteFromSchedule(info!.schedule_id, previousRow!.key);
-      }
       setScheduleRows((prev: TermTableRow[]) => {
         const newRows = [...prev.filter(row => row.key !== key)];
         /** If there's an empty row available, activate it */
@@ -271,6 +282,11 @@ const TermTable: FC<TermTableProps> = ({
         return newRows;
       });
       removeFromDictionaries(key);
+      /** Delete from db */
+      if (!previousRow!.key.startsWith('XX')) {
+        await deleteFromSchedule(info!.schedule_id, previousRow!.key);
+        await refetchScheduleEntries();
+      }
     } catch (error) {
       console.error(error);
       setError('Unable to remove from schedule');
@@ -291,6 +307,7 @@ const TermTable: FC<TermTableProps> = ({
     const paddedNumber = emptyIndex.toString().padStart(4, '0');
     setEmptyIndex((prev) => prev + 1);
     const key = `XX ${paddedNumber}`;
+
     let newRows: TermTableRow[] = [];
     /** 
      * 1. If myRows is empty, just add the empty row and continue.
@@ -299,7 +316,7 @@ const TermTable: FC<TermTableProps> = ({
      */
     if (myRows.length === 0) {
       newRows = [{ key: key, course_id: 'XX 0000 '}];
-    } else if (!myRows[activeIndex!].key.startsWith('XX')) {
+    } else if (activeIndex! < 0 || activeIndex! >= myRows.length || !myRows[activeIndex!].key.startsWith('XX')) {
       newRows = [ 
         ...myRows.filter(row => !row.key.startsWith('XX')), 
         { key: key, course_id: 'XX 0000' }, 
@@ -580,7 +597,7 @@ const TermTable: FC<TermTableProps> = ({
           {(item) => (
             <TableRow 
               key={`${item.key}`} 
-              className={`border-b border-gray-200 hover:bg-gray-100 cursor-pointer`}
+              className={`border-b border-gray-200 hover:bg-gray-100`}
               onClick={() => {
                 handleSelectRow(item.key);
               }}
