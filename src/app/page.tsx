@@ -1,8 +1,10 @@
 import { useProfile } from "./contexts/profile/provider";
-import AverageOverTime from "./shared/averageOverTime";
+import AverageOverTime from "./home/averageOverTime";
 import { Footer } from "./shared/footer";
 import Navbar from "./shared/navbar";
 import { FC } from "react";
+import InfoIcon from '@mui/icons-material/Info';
+import Banner from "./home/banner";
 
 export interface HomePageProps {}
 
@@ -12,8 +14,11 @@ const Home: FC<HomePageProps> = ({}: HomePageProps) => {
     <div className="min-h-screen flex flex-col">
       <div className="flex-grow">
         <Navbar />
-        <div className="w-4/5 mx-auto mt-8">
-          <AverageOverTime />
+        <div className="w-4/5 mx-auto my-8">
+          <div className="flex flex-col gap-8">
+            {/* <Banner /> */}
+            <AverageOverTime />
+          </div>
         </div>
       </div>
       <Footer />

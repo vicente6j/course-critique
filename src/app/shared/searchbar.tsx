@@ -142,7 +142,7 @@ const SearchBar: FC<SearchBarProps> = ({
       setQuery('');
     }
     setIsFocused((isInInput)!);
-  }, [document.activeElement, activeIndex]);
+  }, [activeIndex]);
 
   /** 
    * Add these event listeners (renew them) every time activeIndex

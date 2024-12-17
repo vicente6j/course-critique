@@ -9,7 +9,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 export interface TermGridProps {
   termsSelected: string[] | null;
-  setTermsSelected: Dispatch<SetStateAction<Record<string, boolean> | null>>;
+  setTermsSelected: Dispatch<SetStateAction<string[] | null>>;
 }
 
 export interface ActionDropdownProps {
@@ -137,9 +137,7 @@ const TermGrid: FC<TermGridProps> = ({
         label: 'Remove', 
         onClick: () => {
           setTermsSelected(prev => {
-            const newObj = { ...prev };
-            newObj[term] = false;
-            return newObj;
+            return [...prev!.filter(myTerm => myTerm !== term)];
           });
         }
       }
@@ -169,7 +167,7 @@ const TermGrid: FC<TermGridProps> = ({
           </div>
         );
       })}
-      <div className="border border-gray-300 rounded-xl py-2 hover:bg-gray-200 cursor-pointer">
+      <div className="border border-gray-400 rounded-xl py-2 hover:bg-gray-200 cursor-pointer h-fit">
         <p className="text-md text-center">Add another term</p>
       </div>
     </div>

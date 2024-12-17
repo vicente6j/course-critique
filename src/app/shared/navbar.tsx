@@ -25,6 +25,14 @@ const Navbar: FC<NavbarProps> = ({
   const session = useSession();
   const router = useRouter();
 
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (session && session.status === 'authenticated') {
+      setIsAuthenticated(true);
+    }
+  }, [session]);
+
   return (
     <div className="w-full border border-bottom border-gray bg-white">
       <div className="w-4/5 mx-auto py-4">
@@ -41,7 +49,7 @@ const Navbar: FC<NavbarProps> = ({
             </div>
           </div>
           <div className="flex flex-row gap-4 items-center">
-            {session ? (
+            {isAuthenticated ? (
               <>
                 <Link href="/degree-plan" className="text-sm hover:text-gray-600 cursor-pointer">Degree Plan</Link>
                 <div

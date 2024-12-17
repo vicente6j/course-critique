@@ -24,7 +24,11 @@ const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
-    throw new Error('No user session found.');
+    return (
+      <>
+        {children}
+      </>
+    );
   }
 
   const profile: ProfileResponse = await profileFetch(session.user.email);

@@ -3,13 +3,14 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCourses } from "../contexts/course/provider";
 import LineChart, { LineChartDataset, LineDataPoint } from "./lineChart";
-import { getCSSVariableValue } from "./donutChart";
+import { getCSSVariableValue } from "../shared/donutChart";
 import CloseIcon from '@mui/icons-material/Close';
 import { Input } from "@nextui-org/input";
 import { SearchIcon } from "../../../public/icons/searchIcon";
 import { CourseAveragesByTerm, CourseInfo } from "../api/course";
 import { VariableSizeList } from "react-window";
-
+import InfoIcon from '@mui/icons-material/Info';
+import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 
 export const allTerms: string[] = [
   'Fall 2010', 'Spring 2011', 'Summer 2011',
@@ -56,7 +57,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   /** Have to transform this into a dictionary for courses -> terms -> averages */
   const { courses, averagesByTermMap } = useCourses();
 
-  const [comparing, setComparing] = useState<string[] | null>([ 'CS 1332', 'CS 1301', 'MATH 1554' ]);
+  const [comparing, setComparing] = useState<string[] | null>([ 'CS 1332', 'CS 1301' ]);
   const [comparedCourseSelected, setComparedCourseSelected] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(-1);
   const [rerenderKey, setRerenderKey] = useState<number | null>(0);
@@ -70,6 +71,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     /** Initialization */
@@ -96,34 +98,6 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       setCourseColorDict(newColorDict);
     }
   }, [averagesByTermMap]);
-
-  const handleFocusChange: () => void = useCallback(() => {
-    const isInInput = inputRef.current && document.activeElement === inputRef.current;
-
-    if (activeIndex !== -1) {
-      /** Don't update the DOM if we're hovering over an item (and by extension click it) */
-      return;
-    }
-
-    if (!isInInput) {
-      setQuery('');
-    }
-    setIsFocused((isInInput)!);
-  }, [document.activeElement, activeIndex]);
-
-  /** 
-   * Add these event listeners (renew them) every time activeIndex
-   * changes, so as to account for hovering and selecting an item in the variable size list.
-   */
-  useEffect(() => {
-    window.addEventListener('focus', handleFocusChange, true);
-    window.addEventListener('blur', handleFocusChange, true);
-
-    return () => {
-      window.removeEventListener('focus', handleFocusChange, true);
-      window.removeEventListener('blur', handleFocusChange, true);
-    }
-  }, [activeIndex, handleFocusChange]);
 
   useEffect(() => {
     if (error) {
@@ -216,6 +190,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 
   const coloredDatasets: LineChartDataset[] = useMemo(() => {
     let coloredDatasets: LineChartDataset[] = [...datasets];
+
     for (const dataset of coloredDatasets) {
       let cssVar = getCSSVariableValue(courseColorDict?.get(dataset.label)!);
       if (comparedCourseSelected) {
@@ -314,6 +289,12 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
               value={query ? query.toUpperCase() : ''}
               onChange={(e) => onSearchChange(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={() => {
+                setIsFocused(true);
+              }}
+              onBlur={() => {
+                setIsFocused(false);
+              }}
               ref={inputRef}
               autoComplete="off"
               placeholder={`${activeCourse ? '' : 'Search for a course'}`}
@@ -321,7 +302,13 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
             />
           </div>
         </div>
-        <div className={`${isFocused ? 'visible' : 'invisible'} absolute top-full w-full z-20 bg-white w-180 rounded-b-xl py-2 shadow-md`}>
+        <div 
+          className={`${isFocused ? 'visible' : 'invisible'} absolute top-full w-full z-20 bg-white w-180 rounded-b-xl py-2 shadow-md`}
+          ref={dropdownRef}
+          onMouseDown={(e) => {
+            e.preventDefault(); /** Extremely important to not unblur before selecting */
+          }}
+        >
           <VariableSizeList
             height={30 * filteredCourses.length}
             width="max-w-xs"
@@ -337,7 +324,12 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="heading-sm">Compare Courses</h1>
+      <div className="flex flex-row gap-2 items-center">
+       <h1 className="heading-md">Compare Courses</h1>
+        <NextToolTip content={'Aggregated across all term data. Select or hover to interact'}>
+          <InfoIcon style={{ width: '22px' }}/>
+        </NextToolTip>
+      </div>
       <div className="flex flex-col gap-2">
         <div className="flex flex-row gap-2 items-center flex-wrap">
           {comparing && comparing!.map((course: string) => {
@@ -361,8 +353,8 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
                 <div 
                   className="rounded-full w-3 h-3" 
                   style={{ 
-                  backgroundColor: getCSSVariableValue(courseColorDict?.get(course)!),
-                  border: '1px solid rgba(0,0,0,0.1)' 
+                    backgroundColor: getCSSVariableValue(courseColorDict?.get(course)!),
+                    border: '1px solid rgba(0,0,0,0.1)' 
                   }} 
                 />
                 <p className="text-xs">{course}</p>
@@ -377,6 +369,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         <LineChart
           courseColorDict={courseColorDict!}
           datasets={coloredDatasets}
+          datasetIndex={datasets.findIndex((dataset: LineChartDataset) => dataset.label === comparedCourseSelected)}
         />
       </div>
     </div>

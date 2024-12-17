@@ -20,6 +20,7 @@ import { CourseInfo } from "../api/course";
 import { deleteFromSchedule, insertIntoSchedule, ScheduleInfo } from "../api/degree-plan";
 import { useCourses } from "../contexts/course/provider";
 import { useProfile } from "../contexts/profile/provider";
+import Dropdown from "../shared/dropdown";
 
 export interface TermTableColumn {
   key: string;
@@ -547,6 +548,10 @@ const TermTable: FC<TermTableProps> = ({
     )
   }, [scheduleRows, averageGpa]);
 
+  // const dropdownOptions: any[] = useMemo(() => {
+
+  // }, []);
+
   return (
     <div 
       className="flex flex-col gap-2"
@@ -555,6 +560,11 @@ const TermTable: FC<TermTableProps> = ({
       }}
     >
       <div className="flex flex-row gap-8 w-full bg-levels-gray-blue px-2 py-1 rounded rounded-lg">
+        <div className="flex flex-row border border-gray-400 rounded-lg">
+          {/* <Dropdown 
+
+          /> */}
+        </div>
         <div className="flex flex-row gap-4 items-center">
           <NextToolTip content={nextToolTipDisplayContent} className="w-300">
             <InfoIcon style={{ width: '15px' }} />

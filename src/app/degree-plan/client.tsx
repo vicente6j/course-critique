@@ -16,9 +16,8 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
 
 }: DegreePlanPageClientProps) => {
 
-  const [showTermsSelected, setShowTermsSelected] = useState<boolean>(false);
-  const [termsSelected, setTermsSelected] = useState<Record<string, boolean> | null>(null);
-  const [isHovering, setIsHovering] = useState<boolean>(false);
+  const [termsSelected, setTermsSelected] = useState<string[] | null>(null);
+  const [showUnselected, setShowUnselected] = useState<boolean>(false);
 
   const { profile } = useProfile();
 
@@ -36,21 +35,11 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
 
     const i = ALL_TERMS.findIndex((term: string) => term === startTerm);
     const termsToSelect = i !== -1 ? ALL_TERMS.slice(i, i + 12) : [];
-    setTermsSelected(Object.fromEntries(termsToSelect.map(term => [term, true])));
+    setTermsSelected(termsToSelect);
   }, [profile?.year]);
 
-  const filteredForTrue: string[] | null = useMemo(() => {
-    if (!termsSelected) {
-      return [];
-    }
-    return Object.keys(termsSelected!).filter(key => termsSelected![key] === true);
-  }, [termsSelected]);
-
-  const filteredForFalse: string[] | null = useMemo(() => {
-    if (!termsSelected) {
-      return [];
-    }
-    return Object.keys(termsSelected!).filter(key => termsSelected![key] === false);
+  const unselectedTerms: string[] | null = useMemo(() => {
+    return [...ALL_TERMS.filter(term => !termsSelected?.includes(term))];
   }, [termsSelected]);
 
   useEffect(() => {
@@ -62,19 +51,62 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
       <div className="w-4/5 mx-auto my-8 flex flex-col gap-16">
         <div className="flex flex-col gap-8 w-full">
           <DegreePlanHeader />
-          <div className="grid grid-cols-[auto_1fr] gap-y-4 gap-x-8 text-sm">
-            <h1 className="heading-sm">Terms Selected</h1>
-            {showTermsSelected ? (
-              <div className="flex flex-row gap-2 items-center flex-wrap items-center">
-                {filteredForTrue!.map((term: string) => {
+          <div className="flex flex-row gap-2 flex-wrap">
+            {showUnselected ? (
+              <>
+                {ALL_TERMS?.map((term: string) => {
+                  const isSelected = termsSelected!.includes(term);
+                  return (
+                    <div 
+                      className={`flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center cursor-pointer
+                        ${isSelected ? 'hover:bg-gray-200' : 'bg-gray-300 hover:bg-gray-200'}
+                      `}
+                      onClick={() => {
+                        if (isSelected) {
+                          setTermsSelected(prev => {
+                            return [...prev!.filter(myTerm => myTerm !== term)];
+                          });
+                        } else {
+                          setTermsSelected(prev => {
+                            return [...prev!, term];
+                          });
+                        }
+                      }}
+                      key={`key-${term}`}
+                    >
+                      {isSelected ? (
+                        <CloseIcon 
+                          style={{ width: '14px', height: '14px' }}
+                          className={`p-0`}
+                        />
+                      ) : (
+                        <AddIcon 
+                          style={{ width: '14px', height: '14px' }}
+                          className={`p-0`}
+                        />
+                      )}
+                      <p className="text-sm">{term}</p>
+                    </div>
+                  )
+                })}
+                <p 
+                  className="text-sm px-2 py-1 cursor-pointer text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    setShowUnselected(!showUnselected);
+                  }}
+                >
+                  Show less
+                </p>
+              </>
+            ) : (
+              <>
+                {termsSelected?.map((term: string) => {
                   return (
                     <div 
                       className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
                       onClick={() => {
                         setTermsSelected(prev => {
-                          const newObj = { ...prev };
-                          newObj[term] = false;
-                          return newObj
+                          return [...prev!.filter(myTerm => myTerm !== term)];
                         });
                       }}
                       key={`key-${term}`}
@@ -87,66 +119,20 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                     </div>
                   )
                 })}
-                {filteredForFalse!.map((term: string) => {
-                  return (
-                    <div 
-                      className="flex flex-row bg-gray-300 h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
-                      onClick={() => {
-                        setTermsSelected(prev => {
-                          const newObj = { ...prev };
-                          newObj[term] = true;
-                          return newObj
-                        });
-                      }}
-                      key={`key-${term}`}
-                    >
-                      <AddIcon 
-                        style={{ width: '14px', height: '14px' }}
-                        className={`p-0`}
-                      />
-                      <p className="text-sm">{term}</p>
-                    </div>
-                  )
-                })}
-                <div 
-                  className="flex flex-row gap-1 items-center w-fit cursor-pointer ml-2"
+                <p 
+                  className="text-sm px-2 py-1 cursor-pointer text-gray-500 hover:text-gray-700"
                   onClick={() => {
-                    setShowTermsSelected(false);
-                    setIsHovering(false);
+                    setShowUnselected(!showUnselected);
                   }}
-                  onMouseEnter={() => setIsHovering(true)}
-                  onMouseLeave={() => setIsHovering(false)}
                 >
-                  <p className={`${isHovering ? 'underline' : ''} cursor-pointer text-blue-500 p-0 text-sm`}>
-                    Close
-                  </p>
-                  <ArrowLeftIcon 
-                    style={{ color: '#338ef7' }} 
-                  />
-                </div>
-              </div>
-            ) : (
-              <div 
-                className="flex flex-row gap-1 items-center w-fit cursor-pointer"
-                onClick={() => {
-                  setShowTermsSelected(true);
-                  setIsHovering(false);
-                }}
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
-              >
-                <p className={`${isHovering ? 'underline' : ''} cursor-pointer text-blue-500 p-0 text-sm`}>
-                  Show
+                  Show more
                 </p>
-                <ArrowRightIcon 
-                  style={{ color: '#338ef7' }} 
-                />
-              </div>
+              </>
             )}
           </div>
         </div>
         <TermGrid 
-          termsSelected={filteredForTrue}
+          termsSelected={termsSelected}
           setTermsSelected={setTermsSelected}
         />
       </div>
