@@ -1,10 +1,14 @@
+'use server'
 import { useProfile } from "./contexts/profile/provider";
 import AverageOverTime from "./home/averageOverTime";
 import { Footer } from "./shared/footer";
 import Navbar from "./shared/navbar";
-import { FC } from "react";
+import { FC, useCallback } from "react";
 import InfoIcon from '@mui/icons-material/Info';
 import Banner from "./home/banner";
+import { Button } from "@nextui-org/button";
+import { signOut } from "next-auth/react";
+import LogoutIcon from '@mui/icons-material/Logout';
 
 export interface HomePageProps {}
 

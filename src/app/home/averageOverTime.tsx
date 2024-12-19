@@ -11,6 +11,9 @@ import { CourseAveragesByTerm, CourseInfo } from "../api/course";
 import { VariableSizeList } from "react-window";
 import InfoIcon from '@mui/icons-material/Info';
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
+import { Button } from "@nextui-org/button";
+import { signOut } from "next-auth/react";
+import LogoutIcon from '@mui/icons-material/Logout';
 
 export const allTerms: string[] = [
   'Fall 2010', 'Spring 2011', 'Summer 2011',

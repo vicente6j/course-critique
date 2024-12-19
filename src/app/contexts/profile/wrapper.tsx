@@ -1,11 +1,15 @@
 'use server'
 
-import { courseScheduleFetch, ScheduleEntryData, ScheduleInfo, scheduleInfoFetch } from "@/app/api/degree-plan";
-import profileFetch, { ProfileResponse } from "@/app/api/profile";
 import { FC } from "react";
 import ProfileProvider from "./provider";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authConfig";
+import { fetchProfile, ProfileResponse } from "@/app/api/profile";
+import { fetchScheduleEntries, ScheduleEntry } from "@/app/api/schedule-entries";
+import { fetchSchedules, ScheduleInfo } from "@/app/api/schedule";
+import { fetchAssignments, ScheduleAssignment } from "@/app/api/schedule-assignments";
+import { fetchGrades, ScheduleGrade } from "@/app/api/schedule-grades";
+import { fetchTermSelections, TermSelection } from "@/app/api/term-selections";
 
 export interface ProfileProviderWrapperProps {
   children: React.ReactNode;
@@ -16,7 +20,7 @@ export interface ProfileProviderWrapperProps {
  * session. It would probably be best to obtain this on the server, but it likely 
  * doesn't matter.
  * @param param0 
- * @returns 
+ * @returns Children of wrapper.
  */
 const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
   children,
@@ -31,15 +35,21 @@ const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
     );
   }
 
-  const profile: ProfileResponse = await profileFetch(session.user.email);
-  const scheduleEntryData: ScheduleEntryData[] = await courseScheduleFetch(profile.id);
-  const scheduleInfoData: ScheduleInfo[] = await scheduleInfoFetch(profile.id);
+  const profile: ProfileResponse = await fetchProfile(session.user.email);
+  const schedules: ScheduleInfo[] = await fetchSchedules(profile.id);
+  const scheduleEntries: ScheduleEntry[] = await fetchScheduleEntries(profile.id);
+  const scheduleAssignments: ScheduleAssignment[] = await fetchAssignments(profile.id);
+  const scheduleGrades: ScheduleGrade[] = await fetchGrades(profile.id);
+  const termSelections: TermSelection[] = await fetchTermSelections(profile.id);
 
   return (
     <ProfileProvider
-      userProfile={profile}
-      scheduleEntryData={scheduleEntryData}
-      scheduleInfoData={scheduleInfoData}
+      profile={profile}
+      schedules={schedules}
+      scheduleEntries={scheduleEntries}
+      scheduleAssignments={scheduleAssignments}
+      scheduleGrades={scheduleGrades}
+      termSelections={termSelections}
     >
       {children}
     </ProfileProvider>

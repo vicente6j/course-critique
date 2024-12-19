@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       try {
-        await fetch(`${PROD_ENDPOINT}/signup`, {
+        const response = await fetch(`${PROD_ENDPOINT}/signup`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -33,9 +33,11 @@ export const authOptions: NextAuthOptions = {
             provider: account?.provider,
           }),
         });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       } catch (error) {
-        console.error('Error saving into db: ', error);
-        return false;
+        console.error('Error during sign up process: ', error);
       }
       return true;
     },

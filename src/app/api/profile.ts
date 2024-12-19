@@ -28,7 +28,7 @@ export interface ProfileResponse {
  * @param email email to query for
  * @returns the full user profile from users.
  */
-const fetchProfile = async (email: string): Promise<ProfileResponse[]> => {
+export const fetchProfile = async (email: string): Promise<ProfileResponse> => {
   const response = await fetch(`${PROD_ENDPOINT}/user`, {
     method: 'POST',
     headers: {
@@ -37,7 +37,6 @@ const fetchProfile = async (email: string): Promise<ProfileResponse[]> => {
     body: JSON.stringify({
       email: email,
     }),
-    cache: 'default'
   });
   if (!response.ok) {
     throw new Error('Failed to fetch profile data');
@@ -45,47 +44,42 @@ const fetchProfile = async (email: string): Promise<ProfileResponse[]> => {
   return await response.json();
 };
 
+export type ProfileField = 
+| 'level' 
+| 'year' 
+| 'degree_program' 
+| 'secondary_degree_program' 
+| 'minor_program';
+
+type FieldValue = string | number;
+
 /**
  * Modifier to update fields for a given user.
- * @param field field to modify (one of 'level', 'year', 'degree_program', 'secondary_degree_program', 'minor_program')
- * @param value new value
- * @param id id of user
- * @returns 
+ * @param field field to modify 
+ *  (one of 'level', 'year', 'degree_program', 'secondary_degree_program', 'minor_program')
+ * @param value New value for the field
+ * @param userId ID of the user to update
+ * @throws Error if the update request fails
  */
-export const updateField = async (field: string, value: number | string, id: string): Promise<void> => {
+export const updateProfileField = async (
+  field: ProfileField, 
+  value: FieldValue, 
+  userId: string
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/user`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      id: id,
+      userId: userId,
       [field]: value,
     }),
   });
   if (!response.ok) {
-    throw new Error('Failed to put new year.');
+    throw new Error(
+      `Failed to update ${field}. Status: ${response.status} ${response.statusText}`
+    );
   }
-
-  return await response.json();
+  return;
 };
-
-/**
- * We're again using in-memory caching for this profile data. But it's likely not super
- * necessary, any caching mechanism can work here.
- * 
- * UPDATE: removing caching because this might be throwing errors.
- */
-const profileFetch = async (email: string): Promise<ProfileResponse> => {
-
-  let profile: ProfileResponse[];
-  try {
-    profile = await fetchProfile(email);
-  } catch (e) {
-    throw new Error("Failed to fetch profile data.");
-  }
-
-  return profile[0];
-};
-
-export default profileFetch;
