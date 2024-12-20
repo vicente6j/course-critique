@@ -40,6 +40,7 @@ export const fetchTermSelections = async (userId: string): Promise<TermSelection
       userId: userId,
       action: 'list'
     }),
+    cache: 'no-store',
   });
   if (!response.ok) {
     throw new Error(`Failed to fetch term selections for user with ID ${userId}. Status: ${response.status}.`);

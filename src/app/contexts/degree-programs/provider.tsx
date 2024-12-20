@@ -1,14 +1,14 @@
 'use client'
 
-import { ScheduleEntryData, ScheduleInfo } from "@/app/api/degree-plan";
 import { DegreeProgram, DegreeProgramRequirement } from "@/app/api/degree-programs";
-import profileFetch, { ProfileResponse } from "@/app/api/profile";
-import { createContext, FC, useCallback, useContext, useState } from "react";
+import { createContext, FC, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface DegreeProgramContextValue {
   degreePrograms: DegreeProgram[] | null;
   degreeProgramMap: Map<string, DegreeProgram> | null;
   degreeRequirements: DegreeProgramRequirement[] | null;
+  degreeRequirementsMap: Map<string, DegreeProgramRequirement[]> | null;
+  loading: boolean | null;
 }
 
 export interface DegreeProgramProviderProps {
@@ -31,18 +31,56 @@ const DegreeProgramsProvider: FC<DegreeProgramProviderProps> = ({
   children,
 }: DegreeProgramProviderProps) => {
 
-  const [programs, setDegreePrograms] = useState<DegreeProgram[] | null>(degreePrograms);
-  const [programsMap, setProgramsMap] = useState<Map<string, DegreeProgram> | null>(new Map(programs!.map(program => [program.id, program])));
-  const [requirements, setRequirements] = useState<DegreeProgramRequirement[] | null>(degreeRequirements);
+  const [data, setData] = useState<{
+    degreePrograms: DegreeProgram[];
+    degreeRequirements: DegreeProgramRequirement[];
+  }>({
+    degreePrograms: degreePrograms!,
+    degreeRequirements: degreeRequirements!,
+  });
+  const [maps, setMaps] = useState<{
+    degreePrograms: Map<string, DegreeProgram>;
+    degreeRequirements: Map<string, DegreeProgramRequirement[]>;
+  }>({
+    degreePrograms: new Map(),
+    degreeRequirements: new Map(),
+  });
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const constructMaps: () => void = useCallback(() => {
+    const degreeProgramsMap = new Map(data.degreePrograms.map(program => [program.id, program]));
+
+    const degreeRequirementsMap = new Map();
+    data.degreeRequirements?.forEach(requirement => {
+      const existing = degreeRequirementsMap.get(requirement.program_id) || [];
+      degreeRequirementsMap.set(requirement.program_id, [...existing, requirement]);
+    });
+
+    setMaps({
+      degreePrograms: degreeProgramsMap,
+      degreeRequirements: degreeRequirementsMap,
+    });
+    setLoading(false);
+  }, [data]);
+
+  useEffect(() => {
+    constructMaps();
+  }, [constructMaps]);
+
+    /**
+   * Memoize the context value such that there are no unncessary rerenders
+   * upon a child component calling an instance of the context.
+   */
+    const contextValue: DegreeProgramContextValue = useMemo(() => ({
+      degreePrograms: data.degreePrograms,
+      degreeProgramMap: maps.degreePrograms,
+      degreeRequirements: data.degreeRequirements,
+      degreeRequirementsMap: maps.degreeRequirements,
+      loading: loading,
+    }), [data, maps, loading]);
 
   return (
-    <DegreeProgramContext.Provider 
-      value={{ 
-        degreePrograms: programs,
-        degreeRequirements: requirements,
-        degreeProgramMap: programsMap,
-      }}
-    >
+    <DegreeProgramContext.Provider value={contextValue}>
       {children}
     </DegreeProgramContext.Provider>
   );

@@ -51,6 +51,7 @@ export const fetchGrades = async (userId: string): Promise<ScheduleGrade[]> => {
       userId: userId,
       action: 'list'
     }),
+    cache: 'no-store',
   });
   if (!response.ok) {
     throw new Error(`Failed to fetch schedule grades for user with ID ${userId}. Status: ${response.status}.`);

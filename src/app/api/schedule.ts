@@ -38,6 +38,7 @@ export const fetchSchedules = async (userId: string): Promise<ScheduleInfo[]> =>
       userId: userId,
       action: 'list'
     }),
+    cache: 'no-store',
   });
   if (!response.ok) {
     throw new Error(`Failed to create a schedule for user with ID ${userId}. Status: ${response.status}.`);

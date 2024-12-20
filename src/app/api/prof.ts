@@ -1,6 +1,6 @@
 'use server'
 
-import { ALL_COURSE_AVERAGES_BY_PROF_JSON, ALL_COURSE_AVERAGES_BY_TERM_JSON, ALL_COURSE_AVERAGES_JSON, ALL_PROF_AVERAGES_BY_COURSE_JSON, ALL_PROF_AVERAGES_BY_TERM_JSON, ALL_PROF_AVERAGES_JSON, COURSE_INFO_JSON, HOT_COURSES_JSON, PROF_INFO_JSON } from "@/app/endpoints";
+import { ALL_PROF_AVERAGES_BY_COURSE_JSON, ALL_PROF_AVERAGES_BY_TERM_JSON, ALL_PROF_AVERAGES_JSON, COURSE_INFO_JSON, HOT_COURSES_JSON, PROF_INFO_JSON } from "@/app/endpoints";
 
 export interface ProfAverages {
   prof_id: string;
@@ -56,52 +56,39 @@ export interface HotResponse {
   hot_course: string;
 }
 
-export const fetchProfAverages = async (): Promise<ProfAverages[]> => {
-  const res = await fetch(ALL_PROF_AVERAGES_JSON, {
-    cache: 'default'
-  });
-  if (!res.ok) {
-    throw new Error('Could not fetch prof averages.');
-  }
-  return res.json();
-}
+export type DataType = 'averages' | 'byCourse' | 'byTerm';
 
-export const fetchProfAveragesByCourse = async (): Promise<ProfAveragesByCourse[]> => {
-  const res = await fetch(ALL_PROF_AVERAGES_BY_COURSE_JSON, {
-    cache: 'default'
-  });
-  if (!res.ok) {
-    throw new Error('Could not fetch prof averages by course.');
-  }
-  return res.json();
-}
+export const fetchProfData = async (type: DataType) => {
+  const URL = 
+    type === 'averages' ? ALL_PROF_AVERAGES_JSON 
+    : type === 'byCourse' ? ALL_PROF_AVERAGES_BY_COURSE_JSON 
+    : ALL_PROF_AVERAGES_BY_TERM_JSON;
 
-export const fetchProfAveragesByTerm = async (): Promise<ProfAveragesByTerm[]> => {
-  const res = await fetch(ALL_PROF_AVERAGES_BY_TERM_JSON, {
-    cache: 'default'
+  const res = await fetch(URL, { 
+    cache: 'force-cache' 
   });
   if (!res.ok) {
-    throw new Error('Could not fetch prof averages by term.');
+    throw new Error(`Failed to fetch professor ${type}: ${res.status}`);
   }
   return res.json();
 }
 
 export const fetchProfInfo = async (): Promise<AllProfResponse> => {
   const res = await fetch(PROF_INFO_JSON, {
-    cache: 'default'
+    cache: 'force-cache'
   });
   if (!res.ok) {
-    throw new Error('Could not fetch professor information.');
+    throw new Error(`Could not fetch professor information: ${res.status}`);
   }
   return res.json();
 }
 
 export const fetchProfHotCourses = async (): Promise<HotResponse[]> => {
   const res = await fetch(HOT_COURSES_JSON, {
-    cache: 'default'
+    cache: 'force-cache'
   });
   if (!res.ok) {
-    throw new Error('Could not fetch hot courses.');
+    throw new Error(`Could not fetch hot courses: ${res.status}`);
   }
   return res.json();
 }

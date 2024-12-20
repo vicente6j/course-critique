@@ -37,6 +37,7 @@ export const fetchProfile = async (email: string): Promise<ProfileResponse> => {
     body: JSON.stringify({
       email: email,
     }),
+    cache: 'no-store'
   });
   if (!response.ok) {
     throw new Error('Failed to fetch profile data');

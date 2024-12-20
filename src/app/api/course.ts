@@ -47,48 +47,29 @@ export interface CourseInfo {
   last_updated?: string;
 }
 
-/**
- * No cache requires validation each time, but can still
- * take advantage of caching.
- * @returns 
- */
-export const fetchCourseAverages = async (): Promise<CourseAverages[]> => {
-  const res = await fetch(ALL_COURSE_AVERAGES_JSON, {
-    cache: 'default'
-  });
-  if (!res.ok) {
-    throw new Error('Could not fetch course averages');
-  }
-  return res.json();
-}
+export type DataType = 'averages' | 'byProf' | 'byTerm';
 
-export const fetchCourseAveragesByProf = async (): Promise<CourseAveragesByProf[]> => {
-  const res = await fetch(ALL_COURSE_AVERAGES_BY_PROF_JSON, {
-    cache: 'default'
-  });
-  if (!res.ok) {
-    throw new Error('Could not fetch course averages');
-  }
-  return res.json();
-}
+export const fetchCourseData = async (type: DataType) => {
+  const URL = 
+    type === 'averages' ? ALL_COURSE_AVERAGES_JSON 
+    : type === 'byProf' ? ALL_COURSE_AVERAGES_BY_PROF_JSON 
+    : ALL_COURSE_AVERAGES_BY_TERM_JSON;
 
-export const fetchCourseAveragesByTerm = async (): Promise<CourseAveragesByTerm[]> => {
-  /** Hit our endpoint every time upon a server request */
-  const res = await fetch(ALL_COURSE_AVERAGES_BY_TERM_JSON, {
-    cache: 'default'
+  const res = await fetch(URL, { 
+    cache: 'force-cache' 
   });
   if (!res.ok) {
-    throw new Error('Could not fetch course averages');
+    throw new Error(`Failed to fetch course ${type}: ${res.status}`);
   }
   return res.json();
 }
 
 export const fetchCourseInfo = async (): Promise<CourseInfo[]> => {
   const res = await fetch(COURSE_INFO_JSON, {
-    cache: 'default'
+    cache: 'force-cache'
   });
   if (!res.ok) {
-    throw new Error('Could not fetch course averages');
+    throw new Error(`Failed to fetch course information: ${res.status}`);
   }
   return res.json();
 }

@@ -1,6 +1,6 @@
 'use client'
 import { CourseAverages, CourseAveragesByProf, CourseAveragesByTerm, CourseInfo } from "@/app/api/course";
-import { createContext, FC, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, FC, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface CourseProviderContextValue {
   averages: CourseAverages[] | null;
@@ -10,16 +10,15 @@ export interface CourseProviderContextValue {
   averagesByTerm: CourseAveragesByTerm[] | null;
   averagesByTermMap: Map<string, CourseAveragesByTerm[]> | null;
   courses: CourseInfo[] | null;
-  coursesMap: Map<string, CourseInfo> | null;
+  courseMap: Map<string, CourseInfo> | null;
   loading: boolean;
-  error: string | null;
 }
 
 export interface CourseProviderProps {
-  courseAveragesPure: CourseAverages[];
+  courseAverages: CourseAverages[];
   courseAveragesByProf: CourseAveragesByProf[];
   courseAveragesByTerm: CourseAveragesByTerm[];
-  courseInfo: CourseInfo[];
+  courses: CourseInfo[];
   children: React.ReactNode;
 }
 
@@ -40,84 +39,92 @@ export function getSizeInBytes<T>(arr: T[]): number {
 const GlobalCourseContext = createContext<CourseProviderContextValue | undefined>(undefined);
 
 const CourseProvider: FC<CourseProviderProps> = ({
-  courseAveragesPure,
+  courseAverages,
   courseAveragesByProf,
   courseAveragesByTerm,
-  courseInfo,
+  courses,
   children,
 }: CourseProviderProps) => {
 
-  const [averages, setAverages] = useState<CourseAverages[] | null>(courseAveragesPure);
-  const [averagesByProf, setAveragesByProf] = useState<CourseAveragesByProf[] | null>(courseAveragesByProf);
-  const [averagesByTerm, setAveragesByTerm] = useState<CourseAveragesByTerm[] | null>(courseAveragesByTerm);
-  const [courses, setCourses] = useState<CourseInfo[] | null>(courseInfo);
-
-  const [averagesMap, setAveragesMap] = useState<Map<string, CourseAverages> | null>(new Map());
-  const [averagesByProfMap, setAveragesByProfMap] = useState<Map<string, CourseAveragesByProf[]> | null>(new Map());
-  const [averagesByTermMap, setAveragesByTermMap] = useState<Map<string, CourseAveragesByTerm[]> | null>(new Map());
-  const [coursesMap, setCoursesMap] = useState<Map<string, CourseInfo> | null>(new Map());
-
+  const [data, setData] = useState<{
+    averages: CourseAverages[];
+    averagesByProf: CourseAveragesByProf[];
+    averagesByTerm: CourseAveragesByTerm[];
+    courses: CourseInfo[];
+  }>({
+    averages: courseAverages,
+    averagesByProf: courseAveragesByProf,
+    averagesByTerm: courseAveragesByTerm,
+    courses: courses
+  });
+  const [maps, setMaps] = useState<{
+    averages: Map<string, CourseAverages>;
+    averagesByProf: Map<string, CourseAveragesByProf[]>;
+    averagesByTerm: Map<string, CourseAveragesByTerm[]>;
+    courses: Map<string, CourseInfo>;
+  }>({
+    averages: new Map(),
+    averagesByProf: new Map(),
+    averagesByTerm: new Map(),
+    courses: new Map()
+  });
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   const constructMaps: () => void = useCallback(() => {
-    try {
-      const averagesMap = new Map(averages!.map(average => [average.course_id, average]));
-      setAveragesMap(averagesMap);
+    const averagesMap = new Map(data.averages.map(courseAverage => [courseAverage.course_id, courseAverage]));
 
-      const averagesByProfMap = new Map();
-      for (const average of averagesByProf!) {
-        if (!averagesByProfMap.has(average.course_id)) {
-          averagesByProfMap.set(average.course_id, []);
-        }
-        averagesByProfMap.get(average.course_id)!.push(average);
-      }
-      setAveragesByProfMap(averagesByProfMap);
+    const averagesByProfMap = new Map();
+    data.averagesByProf?.forEach(average => {
+      const existing = averagesByProfMap.get(average.course_id) || [];
+      averagesByProfMap.set(average.course_id, [...existing, average]);
+    });
 
-      const averagesByTermMap = new Map();
-      for (const average of averagesByTerm!) {
-        if (!averagesByTermMap.has(average.course_id)) {
-          averagesByTermMap.set(average.course_id, []);
-        }
-        averagesByTermMap.get(average.course_id)!.push(average);
-      }
-      setAveragesByTermMap(averagesByTermMap);
+    const averagesByTermMap = new Map();
+    data.averagesByTerm?.forEach(average => {
+      const existing = averagesByTermMap.get(average.course_id) || [];
+      averagesByTermMap.set(average.course_id, [...existing, average]);
+    });
 
-      const coursesMap = new Map(courses!.map(course => [course.id, course]));
-      setCoursesMap(coursesMap);
-    } catch (error) {
-      setError(error as string);
-      console.error(error);
-    }
+    const courseMap = new Map(data.courses?.map(course => [course.id, course]));
+
+    setMaps({
+      averages: averagesMap,
+      averagesByProf: averagesByProfMap,
+      averagesByTerm: averagesByTermMap,
+      courses: courseMap
+    });
     setLoading(false);
-  }, [averages, averagesByProf, averagesByTerm, courses]);
+  }, [data]);
 
   useEffect(() => {
     constructMaps();
   }, [constructMaps]);
 
+  /**
+   * Memoize the context value such that there are no unncessary rerenders
+   * upon a child component calling an instance of the context.
+   */
+  const contextValue: CourseProviderContextValue = useMemo(() => ({
+    averages: data.averages,
+    averagesMap: maps.averages,
+    averagesByProf: data.averagesByProf,
+    averagesByProfMap: maps.averagesByProf,
+    averagesByTerm: data.averagesByTerm,
+    averagesByTermMap: maps.averagesByTerm,
+    courses: data.courses,
+    courseMap: maps.courses,
+    loading: loading,
+  }), [data, maps, loading]);
+
   return (
-    <GlobalCourseContext.Provider 
-      value={{ 
-        averages,
-        averagesMap,
-        averagesByProf,
-        averagesByProfMap,
-        averagesByTerm,
-        averagesByTermMap,
-        courses,
-        coursesMap,
-        loading,
-        error
-      }}
-    >
+    <GlobalCourseContext.Provider value={contextValue}>
       {children}
     </GlobalCourseContext.Provider>
   );
 }
 
 export const useCourses = (): CourseProviderContextValue => {
-  const context = useContext(GlobalCourseContext);
+  const context: CourseProviderContextValue | undefined = useContext(GlobalCourseContext);
   if (context === undefined) {
     throw new Error('useCourseProvider must be used within a CourseProvider');
   }

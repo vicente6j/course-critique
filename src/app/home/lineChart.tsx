@@ -1,14 +1,16 @@
 import { ActiveElement, ChartData, ChartEvent } from "chart.js";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
 import { getCSSVariableValue } from "../shared/donutChart";
 import { hexToRgb } from "@mui/material";
-import { hexToRgba } from "./averageOverTime";
+import { allTerms, hexToRgba, termToSortableInteger } from "./averageOverTime";
+import { useCourses } from "../contexts/course/provider";
 
 export interface LineDataPoint {
   x: string;
-  y: number;
+  y: number | null; 
 }
 
 export interface LineChartDataset {
@@ -23,7 +25,7 @@ export interface LineChartProps {
   courseColorDict: Map<string, string>;
 }
 
-ChartJS.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale);
+ChartJS.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale, annotationPlugin);
 
 const LineChart: FC<LineChartProps> = ({
   datasets,
@@ -32,6 +34,8 @@ const LineChart: FC<LineChartProps> = ({
 }: LineChartProps) => {
 
   const [hoveredDatasetIndex, setHoveredDatasetIndex] = useState<number | null>(datasetIndex);
+
+  const { averagesMap } = useCourses();
 
   useEffect(() => {
     /** Use a use effect so that it triggers on every new invocation, rather than just sometimes */
@@ -54,6 +58,11 @@ const LineChart: FC<LineChartProps> = ({
       mode: 'point',
       intersect: false,
     },
+    layout: {
+      padding: {
+        right: 70
+      }
+    },
     onHover: (event: ChartEvent, chartElement: ActiveElement[]) => {
       if (chartElement.length) {
         const { datasetIndex } = chartElement[0];
@@ -66,7 +75,7 @@ const LineChart: FC<LineChartProps> = ({
     },
     plugins: {
       title: {
-        display: 'Grades Per Term',
+        display: '',
         text: 'Grades Per Term',
       },
       legend: {
@@ -80,6 +89,22 @@ const LineChart: FC<LineChartProps> = ({
             };
           },
         },
+      },
+      annotation: {
+        clip: false,  // Extremely important to allow drawing outside chart area
+        annotations: hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets ? [{
+          type: 'label',
+          xValue: allTerms[allTerms.length - 1],
+          yValue: averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA,
+          backgroundColor: 'transparent',
+          color: '#666',
+          content: `Avg: ${averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
+          position: 'right',
+          xAdjust: 35,
+          font: {
+            size: 12
+          }
+        }] : []
       }
     },
     scales: {
@@ -88,10 +113,13 @@ const LineChart: FC<LineChartProps> = ({
           display: true,
           text: 'Term'
         },
+        afterFit: (scale: any) => {
+          scale.paddingRight = 10;
+        }
       },
       y: {
         min: 0,
-        max: 4.3,
+        max: 4.2,
         title: {
           display: true,
           text: 'GPA',
@@ -115,23 +143,57 @@ const LineChart: FC<LineChartProps> = ({
         }
       },
     },
-  }), [adjustOpacities, hoveredDatasetIndex]);
+  }), [adjustOpacities, hoveredDatasetIndex, datasets]);
 
   const finalData: ChartData<'line', LineDataPoint[]> = useMemo(() => {
     const processedDatasets = hoveredDatasetIndex !== null 
       ? adjustOpacities(hoveredDatasetIndex)
       : adjustOpacities(-1);
-    
+
+    /** 
+     * Each dataset in processed datasets is already sorted, we just
+     * need to verify that when the graph renders the dataset with the largest
+     * bias in history gets rendered first (i.e. the oldest)
+     */
+    processedDatasets.sort((a: LineChartDataset, b: LineChartDataset) => {
+      const firstTermA = a.data[0].x;
+      const firstTermB = b.data[0].x;
+      return termToSortableInteger(firstTermA) - termToSortableInteger(firstTermB)
+    });
+    processedDatasets.forEach((dataset: LineChartDataset) => {
+      dataset.data.sort((a: LineDataPoint, b: LineDataPoint) => {
+        return termToSortableInteger(a.x) - termToSortableInteger(b.x);
+      });
+    });
+
+    const termsToRender: string[] = allTerms.slice(allTerms.findIndex(term => term === processedDatasets[0]?.data[0].x));
     return {
-      labels: processedDatasets[0]?.data.map(point => point.x) || [],
-      datasets: processedDatasets.map((dataset: LineChartDataset) => ({
-        label: dataset.label,
-        data: dataset.data.map(point => ({ x: point.x, y: point.y })),
-        borderColor: dataset.borderColor,
-        backgroundColor: 'rgba(0, 0, 0, 0.1)',
-        fill: false,
-        tension: 0.4,
-      })),
+      /** Respect ordering of terms by using allTerms.slice() here (really important) */
+      labels: termsToRender, 
+      datasets: [
+        ...processedDatasets.map((dataset: LineChartDataset) => ({
+          label: dataset.label,
+          data: dataset.data.map(point => ({ x: point.x, y: point.y })),
+          borderColor: dataset.borderColor,
+          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+          fill: false,
+          tension: 0.4,
+          spanGaps: true,
+        })),
+        /** Average lines */
+        ...processedDatasets.map((dataset: LineChartDataset, index: number) => ({
+          label: `${dataset.label} Avg`,
+          data: termsToRender.map((term): LineDataPoint => ({
+            x: term,
+            y: averagesMap?.get(datasets[index].label)?.GPA ?? null
+          })),
+          borderColor: '#333',
+          borderDash: [10, 10], // First number is dash length, second is gap length
+          borderWidth: 1,
+          pointRadius: 0,
+          hidden: hoveredDatasetIndex !== index, // Only show for hovered dataset
+        }))
+      ]
     };
   }, [datasets, hoveredDatasetIndex, adjustOpacities]);
 

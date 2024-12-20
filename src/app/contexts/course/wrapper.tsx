@@ -2,7 +2,7 @@
 
 import { FC } from "react"
 import CourseProvider from "./provider";
-import { CourseAverages, CourseAveragesByProf, CourseAveragesByTerm, CourseInfo, fetchCourseAverages, fetchCourseAveragesByProf, fetchCourseAveragesByTerm, fetchCourseInfo } from "@/app/api/course";
+import { CourseAverages, CourseAveragesByProf, CourseAveragesByTerm, CourseInfo, fetchCourseData, fetchCourseInfo } from "@/app/api/course";
 
 
 export interface CourseProviderWrapperProps {
@@ -13,17 +13,17 @@ const CourseProviderWrapper: FC<CourseProviderWrapperProps> = async ({
   children
 }: CourseProviderWrapperProps) => {
 
-  const courseAveragesPure: CourseAverages[] = await fetchCourseAverages();
-  const courseAveragesByProf: CourseAveragesByProf[] = await fetchCourseAveragesByProf();
-  const courseAveragesByTerm: CourseAveragesByTerm[] = await fetchCourseAveragesByTerm();
-  const courseInfo: CourseInfo[] = await fetchCourseInfo();
+  const courseAverages: CourseAverages[] = await fetchCourseData('averages');
+  const courseAveragesByProf: CourseAveragesByProf[] = await fetchCourseData('byProf');
+  const courseAveragesByTerm: CourseAveragesByTerm[] = await fetchCourseData('byTerm');
+  const courses: CourseInfo[] = await fetchCourseInfo();
 
   return (
     <CourseProvider
-      courseAveragesPure={courseAveragesPure}
+      courseAverages={courseAverages}
       courseAveragesByProf={courseAveragesByProf}
       courseAveragesByTerm={courseAveragesByTerm}
-      courseInfo={courseInfo}
+      courses={courses}
     >
       {children}
     </CourseProvider>

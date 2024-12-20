@@ -41,6 +41,7 @@ export const fetchScheduleEntries = async (userId: string): Promise<ScheduleEntr
       userId: userId,
       action: 'list'
     }),
+    cache: 'no-store',
   });
   if (!response.ok) {
     throw new Error(`Failed to fetch schedule entries for user with ID ${userId}. Status: ${response.status}.`);

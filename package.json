@@ -27,6 +27,7 @@
     "@nextui-org/tooltip": "^2.0.41",
     "@react-stately/data": "^3.11.7",
     "chart.js": "^4.4.6",
+    "chartjs-plugin-annotation": "^3.1.0",
     "framer-motion": "^11.9.0",
     "next": "14.2.3",
     "next-auth": "^4.24.10",

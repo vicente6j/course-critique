@@ -30,7 +30,6 @@ export const allTerms: string[] = [
   'Fall 2021', 'Spring 2022', 'Summer 2022',
   'Fall 2022', 'Spring 2023', 'Summer 2023',
   'Fall 2023', 'Spring 2024', 'Summer 2024',
-  'Fall 2024',
 ];
 
 const colors: string[] = [
@@ -42,6 +41,13 @@ const colors: string[] = [
   '--color-light-blue',
   '--color-dark-blue',
 ];
+
+export const termToSortableInteger: (term: string) => number = (term) => {
+  const [semester, year] = term.split(' ');
+  const yearNum = parseInt(year);
+  const semesterNum = semester === 'Spring' ? 1 : semester === 'Summer' ? 2 : 3;
+  return yearNum * 10 + semesterNum;
+}
 
 export const hexToRgba: (hex: string, opacity: number) => string = (hex, opacity) => {
   hex = hex.replace(/^#/, '');
@@ -170,10 +176,10 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       return [];
     }
     let datasets: LineChartDataset[] = [];
-    termsDict.keys().forEach((course) => {
+    termsDict.keys().forEach((course: string) => {
       let data: LineDataPoint[] = [];
+      // All terms is already sorted.
       for (const term of allTerms) {
-        /** If no entry exists for this term, skip */
         if (!termsDict.get(course)!.has(term)) {
           continue;
         }
@@ -187,7 +193,8 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         label: course,
         data: data,
       });
-    })
+    });
+
     return datasets;
   }, [courseColorDict, termsDict, colors]);
 
@@ -247,27 +254,29 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     e.preventDefault();
   }, [filteredCourses, activeCourse, activeIndex]);
 
-  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => (
+  const handleRowClick: () => void = useCallback(() => {
+    if (termsDict && termsDict!.has(activeCourse!.id.toUpperCase())) {
+      setError(`Already comparing ${activeCourse!.id}`);
+      inputRef.current?.focus();
+      return;
+    } else if (termsDict && termsDict!.size === 7) {
+      setError(`Can\'t compare more than seven courses...`);
+      inputRef.current?.focus();
+      return;
+    }
+    setComparing((prev) => [...prev!, activeCourse!.id]);
+    addToTermsDict(activeCourse!.id);
+    setQuery('');
+    setActiveIndex(-1);
+  }, [termsDict, activeCourse, addToTermsDict]);
+
+  const Row: ({ index, style }: { index: number; style: React.CSSProperties }) => JSX.Element = useCallback(({ index, style }) => (
     <div 
       id={`row-${index}`}
       style={style}
       onMouseEnter={() => setActiveIndex(index)}
       onMouseLeave={() => setActiveIndex(-1)}
-      onClick={() => {
-        if (termsDict && termsDict!.has(activeCourse!.id.toUpperCase())) {
-          setError(`Already comparing ${activeCourse!.id}`);
-          inputRef.current?.focus();
-          return;
-        } else if (termsDict && termsDict!.size === 7) {
-          setError(`Can\'t compare more than seven courses...`);
-          inputRef.current?.focus();
-          return;
-        }
-        setComparing((prev) => [...prev!, activeCourse!.id]);
-        addToTermsDict(activeCourse!.id);
-        setQuery('');
-        setActiveIndex(-1);
-      }}
+      onClick={() => handleRowClick()}
       className={`${activeIndex === index ? 'bg-gray-200' : ''} text-xs cursor-pointer pl-4 rounded-none py-1`}
     >
       {filteredCourses[index].id}
@@ -277,7 +286,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   const searchbar: React.ReactNode = useMemo(() => {
     return (
       <div className="relative">
-        <div className={`relative border-b p-0 pl-4 w-200 ${isFocused ? 'border-gray-400' : 'border-gray-400'}`}>
+        <div className={`relative border-b p-0 pl-4 w-200 ${isFocused ? 'border-gray-300' : 'border-gray-400'}`}>
           {activeCourse && (
             <div className="text-xs absolute t-0 l-0 ml-3.5 px-2 py-1 z-10">
               <span className="opacity-0">{query?.toUpperCase()}</span>
@@ -292,12 +301,8 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
               value={query ? query.toUpperCase() : ''}
               onChange={(e) => onSearchChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              onFocus={() => {
-                setIsFocused(true);
-              }}
-              onBlur={() => {
-                setIsFocused(false);
-              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               ref={inputRef}
               autoComplete="off"
               placeholder={`${activeCourse ? '' : 'Search for a course'}`}
@@ -327,10 +332,11 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
+      <h1 className="heading-md">Compare Courses</h1>
       <div className="flex flex-row gap-2 items-center">
-       <h1 className="heading-md">Compare Courses</h1>
-        <NextToolTip content={'Aggregated across all term data. Select or hover to interact'}>
-          <InfoIcon style={{ width: '22px' }}/>
+        <p className="text-sm text-gray-600">Course GPAs Over Time</p>
+        <NextToolTip content={'Aggregated across all term data. Select or hover to interact.'}>
+          <InfoIcon style={{ width: '16px' }}/>
         </NextToolTip>
       </div>
       <div className="flex flex-col gap-2">
@@ -368,7 +374,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         </div>
         <p className="text-red-600 text-sm">{error}</p>
       </div>
-      <div className="w-3/5" key={rerenderKey}>
+      <div className="w-full" key={rerenderKey}>
         <LineChart
           courseColorDict={courseColorDict!}
           datasets={coloredDatasets}

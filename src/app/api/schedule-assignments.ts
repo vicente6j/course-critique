@@ -44,6 +44,7 @@ export const fetchAssignments = async (userId: string): Promise<ScheduleAssignme
       userId: userId,
       action: 'list'
     }),
+    cache: 'no-store'  // Explicitly tell Next.js to never cache this
   });
   if (!response.ok) {
     throw new Error(`Failed to fetch schedule assignments for user with ID ${userId}. Status: ${response.status}.`);

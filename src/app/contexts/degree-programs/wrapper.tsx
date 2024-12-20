@@ -9,11 +9,9 @@ export interface DegreeProgramsProviderWrapperProps {
 }
 
 /**
- * Obviously in order to even use this wrapper we need the email associated with the current
- * session. It would probably be best to obtain this on the server, but it likely 
- * doesn't matter.
- * @param param0 
- * @returns 
+ * Again we call fetchDegreePrograms and fetchDegreeProgramRequirements on the server
+ * to reduce load on the browser.
+ * @param param0
  */
 const DegreeProgramProviderWrapper: FC<DegreeProgramsProviderWrapperProps> = async ({
   children,
