@@ -8,7 +8,8 @@ export interface CourseProviderContextValue {
   averagesByProf: CourseAveragesByProf[] | null;
   averagesByProfMap: Map<string, CourseAveragesByProf[]> | null;
   averagesByTerm: CourseAveragesByTerm[] | null;
-  averagesByTermMap: Map<string, CourseAveragesByTerm[]> | null;
+  courseToTermAveragesMap: Map<string, CourseAveragesByTerm[]> | null;
+  termToCourseAveragesMap: Map<string, CourseAveragesByTerm[]> | null;
   courses: CourseInfo[] | null;
   courseMap: Map<string, CourseInfo> | null;
   loading: boolean;
@@ -60,12 +61,14 @@ const CourseProvider: FC<CourseProviderProps> = ({
   const [maps, setMaps] = useState<{
     averages: Map<string, CourseAverages>;
     averagesByProf: Map<string, CourseAveragesByProf[]>;
-    averagesByTerm: Map<string, CourseAveragesByTerm[]>;
+    courseToTermAveragesMap: Map<string, CourseAveragesByTerm[]>;
+    termToCourseAveragesMap: Map<string, CourseAveragesByTerm[]>;
     courses: Map<string, CourseInfo>;
   }>({
     averages: new Map(),
     averagesByProf: new Map(),
-    averagesByTerm: new Map(),
+    courseToTermAveragesMap: new Map(),
+    termToCourseAveragesMap: new Map(),
     courses: new Map()
   });
   const [loading, setLoading] = useState<boolean>(true);
@@ -73,16 +76,29 @@ const CourseProvider: FC<CourseProviderProps> = ({
   const constructMaps: () => void = useCallback(() => {
     const averagesMap = new Map(data.averages.map(courseAverage => [courseAverage.course_id, courseAverage]));
 
+    /**
+     * Averages by prof matches on courses and gives each one
+     * a list of prof averages. e.g. prof_id = mhb3, averages = {}
+     */
     const averagesByProfMap = new Map();
     data.averagesByProf?.forEach(average => {
       const existing = averagesByProfMap.get(average.course_id) || [];
       averagesByProfMap.set(average.course_id, [...existing, average]);
     });
 
-    const averagesByTermMap = new Map();
+    /**
+     * Meanwhile, averages by term should match on term and give a list
+     * of courses, such that each term maps to the course averages which
+     * were obtained during that period. e.g. fall 24 -> {averages}
+     */
+    const courseToTermAveragesMap = new Map();
+    const termToCourseAveragesMap = new Map();
     data.averagesByTerm?.forEach(average => {
-      const existing = averagesByTermMap.get(average.course_id) || [];
-      averagesByTermMap.set(average.course_id, [...existing, average]);
+      const existingCourseList = courseToTermAveragesMap.get(average.course_id) || [];
+      courseToTermAveragesMap.set(average.course_id, [...existingCourseList, average]);
+
+      const existingTermList = termToCourseAveragesMap.get(average.term) || [];
+      termToCourseAveragesMap.set(average.term, [...existingTermList, average]);
     });
 
     const courseMap = new Map(data.courses?.map(course => [course.id, course]));
@@ -90,7 +106,8 @@ const CourseProvider: FC<CourseProviderProps> = ({
     setMaps({
       averages: averagesMap,
       averagesByProf: averagesByProfMap,
-      averagesByTerm: averagesByTermMap,
+      courseToTermAveragesMap: courseToTermAveragesMap,
+      termToCourseAveragesMap: termToCourseAveragesMap,
       courses: courseMap
     });
     setLoading(false);
@@ -110,7 +127,8 @@ const CourseProvider: FC<CourseProviderProps> = ({
     averagesByProf: data.averagesByProf,
     averagesByProfMap: maps.averagesByProf,
     averagesByTerm: data.averagesByTerm,
-    averagesByTermMap: maps.averagesByTerm,
+    courseToTermAveragesMap: maps.courseToTermAveragesMap,
+    termToCourseAveragesMap: maps.termToCourseAveragesMap,
     courses: data.courses,
     courseMap: maps.courses,
     loading: loading,

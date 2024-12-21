@@ -52,7 +52,7 @@ const CourseHeader: FC<CourseHeaderProps> = ({
                 onClick={() => setSeeOthers(!seeOthers)}
                 className="hover:underline cursor-pointer text-blue-500"
               >
-                {taughtByIds.length - 3} others
+                ({taughtByIds.length - 3}) others
               </span>
             </p>
           )}

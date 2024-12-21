@@ -40,7 +40,7 @@ export const SidePanel: FC<SidePanelProps> = ({
             {relatedCourses === null || relatedCourses === undefined || fetchLoading ? (
               Array(5).fill(null).map((_, index) => {
                 return (
-                  <Skeleton>
+                  <Skeleton key={index}>
                     <div className="flex flex-col gap-0 h-12">
                       <div className="h-5 w-3/4"></div>
                       <div className="h-4 w-full"></div>

@@ -34,6 +34,29 @@ export const getCSSVariableValue: (variable: string) => string = (variable: stri
   return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
 }
 
+export const formatGPANoVar: (gpa: number) => string = (gpa: number) => {
+  let color = '--color-dark-green';
+  if (gpa > 3.5 && gpa <= 4.0) {
+    color = '--color-dark-green';
+  } else if (gpa > 3.0 && gpa <= 3.5) {
+    color = '--color-light-green';
+  } else if (gpa > 2.5 && gpa <= 3.0) {
+    color = '--color-yellow';
+  } else {
+    color = '--color-red';
+  }
+  return color;
+};
+
+export const resolvedColors: Record<string, string> = {
+  'A': getCSSVariableValue('--color-dark-green'),
+  'B': getCSSVariableValue('--color-light-green'),
+  'C': getCSSVariableValue('--color-yellow'),
+  'D': getCSSVariableValue('--color-pink'),
+  'F': getCSSVariableValue('--color-red'),
+  'W': getCSSVariableValue('--color-lightest-dark'),
+};
+
 export interface DonutChartProps {
   aggregateRow: GradeTableRow;
   history?: CourseHistory | ProfHistory | null;

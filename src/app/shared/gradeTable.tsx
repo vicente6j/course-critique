@@ -9,6 +9,7 @@ import {
   TableCell,
   getKeyValue,
 } from "@nextui-org/table";
+import PersonIcon from '@mui/icons-material/Person';
 
 export interface GradeTableColumn {
   key: string;
@@ -80,7 +81,14 @@ const GradeTable: FC<TableProps> = ({
             key={column.key}
             className="mix-blend-mode-multiply"
           >
-            {column.label}
+            {column.key === 'enrollment' ? (
+              <div className="flex flex-row gap-2 items-center">
+                {column.label}
+                <PersonIcon style={{ width: '18px' }}/>
+              </div>
+            ) : (
+              <>{column.label}</>
+            )}
           </TableColumn>
         );
       }}
@@ -94,7 +102,9 @@ const GradeTable: FC<TableProps> = ({
                 let color = formatGPA(Number(value));
                 return <TableCell style={{ color: color }} className="font-semibold">{Number(value).toFixed(2)}</TableCell>;
               } else if (columnKey === 'enrollment') {
-                return <TableCell>{Math.round(Number(value))}</TableCell>;
+                return (
+                  <TableCell>{Math.round(Number(value))}</TableCell>
+                );
               }
               const formattedValue =
                 typeof value === 'number'

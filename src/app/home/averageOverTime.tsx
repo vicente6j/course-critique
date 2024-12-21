@@ -16,6 +16,7 @@ import { signOut } from "next-auth/react";
 import LogoutIcon from '@mui/icons-material/Logout';
 
 export const allTerms: string[] = [
+  'Spring 2010', 'Summer 2010',
   'Fall 2010', 'Spring 2011', 'Summer 2011',
   'Fall 2011', 'Spring 2012', 'Summer 2012',
   'Fall 2012', 'Spring 2013', 'Summer 2013',
@@ -64,7 +65,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 }: AverageOverTimeProps) => {
 
   /** Have to transform this into a dictionary for courses -> terms -> averages */
-  const { courses, averagesByTermMap } = useCourses();
+  const { courses, courseToTermAveragesMap } = useCourses();
 
   const [comparing, setComparing] = useState<string[] | null>([ 'CS 1332', 'CS 1301' ]);
   const [comparedCourseSelected, setComparedCourseSelected] = useState<string | null>(null);
@@ -84,11 +85,11 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 
   useEffect(() => {
     /** Initialization */
-    if (!termsDict && averagesByTermMap && averagesByTermMap.size > 0) {
+    if (!termsDict && courseToTermAveragesMap && courseToTermAveragesMap.size > 0) {
       const newDict = new Map();
       for (const course of comparing!) {
         newDict.set(course, new Map());
-        for (const average of averagesByTermMap!.get(course)!) {
+        for (const average of courseToTermAveragesMap!.get(course)!) {
           if (!newDict.get(course).has(average.term)) {
             newDict.get(course).set(average.term, average);
           }
@@ -106,7 +107,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       setColorIndex(idx);
       setCourseColorDict(newColorDict);
     }
-  }, [averagesByTermMap]);
+  }, [courseToTermAveragesMap]);
 
   useEffect(() => {
     if (error) {
@@ -148,7 +149,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     setTermsDict(prev => {
       const newDict = new Map(prev);
       newDict.set(course, new Map());
-      for (const average of averagesByTermMap!.get(course)!) {
+      for (const average of courseToTermAveragesMap!.get(course)!) {
         if (!newDict.get(course)!.has(average.term)) {
           newDict.get(course)!.set(average.term, average);
         }
@@ -169,7 +170,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     setRerenderKey(prev => prev! + 1);
     setIsFocused(false);
     inputRef!.current!.blur();
-  }, [averagesByTermMap, colorIndex]);
+  }, [courseToTermAveragesMap, colorIndex]);
 
   const datasets: LineChartDataset[] = useMemo(() => {
     if (!termsDict || !courseColorDict) {

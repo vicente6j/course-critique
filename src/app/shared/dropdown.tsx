@@ -1,29 +1,41 @@
 import { FC, useState } from "react";
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 export interface DropdownProps {
   options: Array<{ 
     label: string;
     onClick: () => void;
   }>;
+  text: string;
 }
 
-export const Dropdown: FC<DropdownProps> = ({
-  options
+const Dropdown: FC<DropdownProps> = ({
+  options,
+  text,
 }: DropdownProps) => {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
   return (
-    <div className="relative inline-block">
-      <button 
-        className="border border-gray-400 bg-white cursor-pointer hover:bg-gray-200"
-        onClick={() => {
-          setIsOpen(true);
-        }}
-      />
-
+    <div 
+      className="relative inline-block"
+      onMouseEnter={() => {
+        setIsOpen(true);
+      }}
+      onMouseLeave={() => {
+        setIsOpen(false);
+      }}
+    >
+      {/** Trigger container */}
+      <div className="flex flex-row gap-1 items-center hover:bg-gray-100 px-2 py-1 rounded-md">
+        <p className="text-sm">{text}</p>
+        <KeyboardArrowDownIcon 
+          style={{ width: '22px', height: '22px' }}
+          className={`cursor-pointer p-0`}
+        />
+      </div>
       {isOpen && (
-        <div className="absolute left-0 z-10 w-fit bg-white border border-gray-200 rounded-md shadow-lg">
+        <div className="absolute top-full left-0 z-10 w-fit bg-white border border-gray-200 rounded-none shadow-md">
           {options.map((option, index) => (
             <button
               key={index}
@@ -31,19 +43,12 @@ export const Dropdown: FC<DropdownProps> = ({
                 option.onClick();
                 setIsOpen(false);
               }}
-              className="block w-fit px-4 py-2 text-left hover:bg-gray-100 text-sm"
+              className="block w-full px-4 py-2 text-left hover:bg-gray-100 text-sm whitespace-nowrap"
             >
               {option.label}
             </button>
           ))}
         </div>
-      )}
-
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-0" 
-          onClick={() => setIsOpen(false)}
-        />
       )}
     </div>
   );

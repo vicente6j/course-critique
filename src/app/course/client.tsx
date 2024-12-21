@@ -179,7 +179,10 @@ const CourseClient: FC<CourseClientProps> = ({
                         fetchLoading={fetchLoading} 
                         forTerm={false}
                       />
-                      <GradeTable rows={[aggregateRow]} forTerm={false}/>
+                      <GradeTable 
+                        rows={[aggregateRow]} 
+                        forTerm={false}
+                      />
                     </div>
                   </div>
                   <div 

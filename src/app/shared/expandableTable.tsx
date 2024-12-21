@@ -25,6 +25,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { courseCols, professorCols } from "./professorOrCourseTable";
 import { useRouter } from "next/navigation";
 import { useProfs } from "../contexts/prof/provider";
+import PersonIcon from '@mui/icons-material/Person';
 
 export interface ExpandableTableProps {
   rows: GradeTableRow[];
@@ -320,7 +321,7 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
               key={item.key} 
               className={`
                 ${isHidden ? 'hidden' : 'border-b border-gray-200'} 
-                ${isSelectable ? 'hover:bg-gray-100 rounded-sm cursor-pointer' : ''} 
+                ${isSelectable ? 'cursor-pointer rounded-sm' : ''} 
                 ${isSubTableHeader ? 'bg-gray-100' : ''}
               `}
               onClick={() => {
@@ -390,7 +391,23 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
       topContent={topContent}
     >
       <TableHeader columns={forProf ? expandableProfColumns : courseCols}>
-        {(column) => <TableColumn key={column.key} allowsSorting>{column.label}</TableColumn>}
+      {(column) => {
+        return (
+          <TableColumn 
+            key={column.key}
+            allowsSorting={column.key !== 'enrollment'}
+          >
+            {column.key === 'enrollment' ? (
+              <div className="flex flex-row gap-2 items-center">
+                {column.label}
+                <PersonIcon style={{ width: '18px' }}/>
+              </div>
+            ) : (
+              <>{column.label}</>
+            )}
+          </TableColumn>
+        );
+      }}
       </TableHeader>
       {memoizedTableBody}
     </Table>
