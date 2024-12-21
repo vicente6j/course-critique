@@ -131,33 +131,6 @@ const SearchBar: FC<SearchBarProps> = ({
     e.preventDefault();
   }, [compiledResults, activeIndex]);
 
-  const handleFocusChange: () => void = useCallback(() => {
-    const isInInput = inputRef.current && document.activeElement === inputRef.current;
-    if (activeIndex !== -1) {
-      /** Don't update the DOM if we're hovering over an item (and by extension click it) */
-      return;
-    }
-
-    if (!isInInput) {
-      setQuery('');
-    }
-    setIsFocused((isInInput)!);
-  }, [activeIndex]);
-
-  /** 
-   * Add these event listeners (renew them) every time activeIndex
-   * changes, so as to account for hovering and selecting an item in the variable size list.
-   */
-  useEffect(() => {
-    window.addEventListener('focus', handleFocusChange, true);
-    window.addEventListener('blur', handleFocusChange, true);
-
-    return () => {
-      window.removeEventListener('focus', handleFocusChange, true);
-      window.removeEventListener('blur', handleFocusChange, true);
-    }
-  }, [activeIndex]);
-
   const handleGlobalKeyDown: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       inputRef.current?.focus();
@@ -214,7 +187,7 @@ const SearchBar: FC<SearchBarProps> = ({
    * @param param0 
    * @returns 
    */
-  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => (
+  const Row: ({ index, style }: { index: number; style: React.CSSProperties }) => JSX.Element = useCallback(({ index, style }) => (
     <div 
       style={style}
       onClick={() => {
@@ -237,7 +210,7 @@ const SearchBar: FC<SearchBarProps> = ({
         </>
       )}
     </div>
-  );
+  ), [handleEventClick, compiledResults, activeIndex]);
 
   return (
     <div className="relative flex flex-col justify-center gap-0 w-320">
@@ -261,8 +234,13 @@ const SearchBar: FC<SearchBarProps> = ({
             type="text"
             value={query ? query : ''}
             onChange={(e) => onSearchChange(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             ref={inputRef}
+            onMouseDown={() => {
+              inputRef.current?.focus();
+            }}
             autoComplete="off"
             placeholder={`${activeResult ? '' : 'Search for a course or professor'}`}
             className="text-search w-full bg-transparent z-2 p-2 outline-none border-none rounded"
@@ -275,7 +253,12 @@ const SearchBar: FC<SearchBarProps> = ({
           </Kbd>
         </div>
       </div>
-      <div className={`${isFocused ? 'visible' : 'invisible'} absolute top-full w-full z-20 bg-white w-300 rounded-b-xl py-2 shadow-md`}>
+      <div 
+        className={`${isFocused ? 'visible' : 'invisible'} absolute top-full w-full z-20 bg-white w-300 rounded-b-xl py-2 shadow-md`}
+        onMouseDown={(e) => {
+          e.preventDefault(); /** Extremely important to not unblur before selecting */
+        }}
+      >
         <VariableSizeList
           ref={listRef}
           height={getTotalHeight(compiledResults)}

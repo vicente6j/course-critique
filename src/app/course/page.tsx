@@ -15,19 +15,20 @@ const CoursePage: FC<CoursePageProps> = ({
 }: CoursePageProps) => {
 
   const [courseFetchAggregate, setCourseFetchAggregate] = useState<CourseFetchAggregate | null>(null); 
-  const [fetchLoading, setFetchLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const courseID = searchParams.courseID.split('/')[0];
 
   const fetchData: () => Promise<void> = useCallback(async () => {
-    setFetchLoading(true);
+    setLoading(true);
+    
     try {
       const courseFetchAggregate: CourseFetchAggregate = await courseFetch(courseID);
       setCourseFetchAggregate(courseFetchAggregate);
     } catch (error) {
       console.error('Error fetching course data:', error);
     }
-    setFetchLoading(false);
-  }, [searchParams.courseID]);
+    setLoading(false);
+  }, [searchParams.courseID, loading]);
 
   useEffect(() => {
     fetchData();
@@ -38,7 +39,7 @@ const CoursePage: FC<CoursePageProps> = ({
       <div className="flex-grow">
         <CourseClient 
           courseFetchAggregate={courseFetchAggregate!}
-          fetchLoading={fetchLoading}
+          fetchLoading={loading}
           courseID={searchParams.courseID!}
         />
       </div>

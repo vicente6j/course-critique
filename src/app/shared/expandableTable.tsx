@@ -43,7 +43,7 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
   const [page, setPage] = useState<number>(1);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
-  const { loading: profsLoading, profsMap } = useProfs();
+  const { profMap } = useProfs();
   const router = useRouter();
 
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
@@ -100,11 +100,11 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
 
   const filteredItems: GradeTableRow[] = useMemo(() => {
     setSelectedKeys([]);
-    if (!hasSearchFilter || profsLoading) {
+    if (!hasSearchFilter) {
       return [...rows];
     }
     return [...rows].filter(row => {
-      return forProf ? profsMap!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
+      return forProf ? profMap!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
         : (row.course_id as string).toLowerCase().includes(searchValue.toLowerCase());
       }
     );
@@ -142,11 +142,11 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
           }}
           className="text-sm hover:underline cursor-pointer"
         >
-          {profsMap!.get(profId)?.instructor_name}
+          {profMap!.get(profId)?.instructor_name}
         </Link>
       </TableCell>
     );
-  }, [profsMap, profsLoading]);
+  }, [profMap]);
 
   const formatCourse: (courseId: string, isSelected: boolean) => JSX.Element = useCallback((courseId: string, isSelected: boolean) => {
     return (
@@ -214,7 +214,7 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
           )}
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm">Total {rows.length} {forProf ? ' professors' : ' courses'}</span>
+          <span className="text-sm text-gray-400">Found {rows.length} {forProf ? ' professors' : ' courses'}</span>
           <label className="flex items-center text-sm">
             Rows per page:
             <select
@@ -375,7 +375,7 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
     );
   }, [flattenTree, selectedKeys, reverseMapping]);
 
-  if (profsLoading || !flattenTree()) {
+  if (!flattenTree()) {
     return <Spinner />;
   }
 

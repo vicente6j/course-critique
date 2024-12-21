@@ -38,9 +38,10 @@ const CourseClient: FC<CourseClientProps> = ({
   const [instructorRows, setInstructorRows] = useState<GradeTableRow[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>('overview');
   const [arrowRight, setArrowRight] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { loading, coursesMap, averagesMap, averagesByProfMap } = useCourses();
-  const { loading: profsLoading, profsMap } = useProfs();
+  const { courseMap, averagesMap, averagesByProfMap } = useCourses();
+  const { profMap } = useProfs();
 
   /**
    * Here we simply compute the row from the averages map. Computing this
@@ -48,6 +49,7 @@ const CourseClient: FC<CourseClientProps> = ({
    */
   const computeRow: () => void = useCallback(() => {
     if (!averagesMap || !averagesMap.has(courseID)) {
+      setError('Averages map was null or didn\'t contain course ID.');
       return;
     }
     setAggregateRow({
@@ -62,14 +64,12 @@ const CourseClient: FC<CourseClientProps> = ({
     });
   }, [averagesMap, courseID]);
 
-  /**
-   * Here again we simply examine the static JSON.
-   */
   const computeInstructors: () => void = useCallback(() => {
     if (!averagesByProfMap || !averagesByProfMap.has(courseID)) {
+      setError('Averages map was null or didn\'t contain course ID.');
       return;
     }
-    let newRows = [];
+    let newRows: GradeTableRow[] = [];
     for (const prof of averagesByProfMap?.get(courseID)!) {
       newRows.push({
         key: prof.prof_id,
@@ -94,7 +94,7 @@ const CourseClient: FC<CourseClientProps> = ({
     for (const prof of averagesByProfMap?.get(courseID)!) {
       sorted.push({ profID: prof.prof_id, GPA: prof.GPA! });
     }
-    sorted.sort((a, b) => {
+    sorted.sort((a: ProfAndAvg, b: ProfAndAvg) => {
       return a.GPA - b.GPA;
     });
     let percentiles: Map<number, ProfAndAvg> = new Map();
@@ -115,8 +115,8 @@ const CourseClient: FC<CourseClientProps> = ({
     for (const prof of averagesByProfMap?.get(courseID)!) {
       sorted.push({ profID: prof.prof_id, GPA: prof.GPA! });
     }
-    sorted.sort((a, b) => {
-      return b.GPA - a.GPA;
+    sorted.sort((a: ProfAndAvg, b: ProfAndAvg) => {
+      return a.GPA - b.GPA;
     });
     return sorted;
   }, [averagesByProfMap, courseID]);
@@ -125,18 +125,14 @@ const CourseClient: FC<CourseClientProps> = ({
     if (!averagesByProfMap || !averagesByProfMap.has(courseID)) {
       return [];
     }
-    let ids: string[] = [];
-    for (const prof of averagesByProfMap.get(courseID)!) {
-      ids.push(prof.prof_id);
-    }
-    return ids;
+    return [...averagesByProfMap.get(courseID)!.map(prof => prof.prof_id)]
   }, [courseID, averagesByProfMap]);
 
   useEffect(() => {
     computeRow();
     computeInstructors();
     setSelectedTab('overview');
-  }, [computeRow, computeInstructors, percentiles]);
+  }, [computeRow, computeInstructors]);
 
   useEffect(() => {
     const originalQuery = `course?courseID=${encodeURIComponent(courseID)}`;
@@ -147,106 +143,106 @@ const CourseClient: FC<CourseClientProps> = ({
     <div className="min-h-screen w-full">
       <Navbar />
       <div className="w-4/5 mx-auto mt-8">
-        {loading || profsLoading ? (
-          <Spinner />
-        ) : (
-            <div className="flex flex-col gap-8" key={courseID}>
-              <CourseHeader 
-                info={coursesMap!.get(courseID)!}
-                taughtByIds={taughtByIds}
-                selectedTab={selectedTab}
-                setSelectedTab={setSelectedTab}
-              />
-              <div className="flex flex-row justify space-between mb-8">
-                <div className="flex-grow min-w-[73%] mr-4 bg-white p-8 rounded-md shadow-sm h-fit">
-                  {selectedTab === "overview" ? (
-                    <div className="flex flex-col gap-8">
-                      <div className="flex flex-col gap-6">
-                        <h1 className="heading-md font-loose">{courseID} Overview</h1>
-                        <p className="text-gray-400 text-sm">
-                          {courseID} GPAs range from 
-                          <span className="font-bold"> {percentiles.get(25)?.GPA.toFixed(2)} </span>
-                            on the low end (25th percentile) to 
-                          <span className="font-bold"> {percentiles.get(75)?.GPA.toFixed(2)} </span>
-                            on the high end (75th percentile). The highest ranked professors for {courseID} include{' '} 
-                          {sortedProfs.slice(0,3).map((prof, idx) => {
-                            return <span key={prof.profID}>
-                              {profsMap!.get(prof.profID)?.instructor_name}
-                              {idx === 0 && <>, </>}
-                              {idx === 1 && <>, and </>}
-                              {idx === 2 && <>. </>}
-                            </span>
-                          })}
-                        </p>
-                        <div className="flex flex-col gap-4">
-                          <DonutChart 
-                            aggregateRow={aggregateRow}
-                            history={courseFetchAggregate?.courseHistory}
-                            compiledResponse={courseFetchAggregate?.compiledResponse}
-                            fetchLoading={fetchLoading} 
-                            forTerm={false}
-                          />
-                          <GradeTable rows={[aggregateRow]} forTerm={false}/>
-                        </div>
-                      </div>
-                      <div 
-                        className="flex flex-row gap-4 px-4 py-2 bg-levels-blue rounded-lg cursor-pointer "
-                        onClick={() => {
-                          setSelectedTab('history')
-                          window.scrollTo({ top: 0 });
-                        }}
-                        onMouseEnter={() => {
-                          setArrowRight(true);
-                        }}
-                        onMouseLeave={() => {
-                          setArrowRight(false);
-                        }}
-                      >
-                        <Link 
-                          className="text-sm"
-                          onClick={() => {
-                            setSelectedTab('history')
-                            window.scrollTo({ top: 0 });
-                          }}
-                        >
-                          Check out course history
-                        </Link>
-                        <div className={`transition ease-out duration-200 ${arrowRight ? 'translate-x-2' : ''}`}>
-                          <ArrowRightAltIcon 
-                            className="hover:cursor-pointer"
-                            style={{ color: '#338ef7' }} 
-                          />
-                        </div>
-                      </div>
-                      <ProfessorOrCourseTable rows={instructorRows} forProf={true} />
-                    </div>
-                  ) : selectedTab === 'history' ? (
+        <div className="flex flex-col gap-8" key={courseID}>
+          <CourseHeader 
+            info={courseMap!.get(courseID)!}
+            taughtByIds={taughtByIds}
+            selectedTab={selectedTab}
+            setSelectedTab={setSelectedTab}
+          />
+          <div className="flex flex-row justify space-between mb-8">
+            <div className="flex-grow min-w-[73%] mr-4 bg-white p-8 rounded-md shadow-sm h-fit">
+              {selectedTab === "overview" ? (
+                <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-6">
+                    <h1 className="heading-md font-loose">{courseID} Overview</h1>
+                    <p className="text-gray-400 text-sm">
+                      {courseID} GPAs range from 
+                      <span className="font-bold"> {percentiles.get(25)?.GPA.toFixed(2)} </span>
+                        on the low end (25th percentile) to 
+                      <span className="font-bold"> {percentiles.get(75)?.GPA.toFixed(2)} </span>
+                        on the high end (75th percentile). The highest ranked professors for {courseID} include{' '} 
+                      {sortedProfs.slice(0,3).map((prof, idx) => {
+                        return <span key={prof.profID}>
+                          {profMap!.get(prof.profID)?.instructor_name}
+                          {idx === 0 && <>, </>}
+                          {idx === 1 && <>, and </>}
+                          {idx === 2 && <>. </>}
+                        </span>
+                      })}
+                    </p>
                     <div className="flex flex-col gap-4">
-                      <h1 className="heading-md font-loose">{courseID} History</h1>
-                      <History 
-                        courseHistory={courseFetchAggregate?.courseHistory}
-                        courseID={courseID}
+                      <DonutChart 
+                        aggregateRow={aggregateRow}
+                        history={courseFetchAggregate?.courseHistory}
+                        compiledResponse={courseFetchAggregate?.compiledResponse}
                         fetchLoading={fetchLoading} 
+                        forTerm={false}
+                      />
+                      <GradeTable rows={[aggregateRow]} forTerm={false}/>
+                    </div>
+                  </div>
+                  <div 
+                    className="flex flex-row gap-4 px-4 py-2 bg-levels-blue rounded-lg cursor-pointer "
+                    onClick={() => {
+                      setSelectedTab('history')
+                      window.scrollTo({ top: 0 });
+                    }}
+                    onMouseEnter={() => {
+                      setArrowRight(true);
+                    }}
+                    onMouseLeave={() => {
+                      setArrowRight(false);
+                    }}
+                  >
+                    <Link 
+                      className="text-sm"
+                      onClick={() => {
+                        setSelectedTab('history')
+                        window.scrollTo({ top: 0 });
+                      }}
+                    >
+                      Check out course history
+                    </Link>
+                    <div className={`transition ease-out duration-200 ${arrowRight ? 'translate-x-2' : ''}`}>
+                      <ArrowRightAltIcon 
+                        className="hover:cursor-pointer"
+                        style={{ color: '#338ef7' }} 
                       />
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      <h1 className="heading-md font-loose">{courseID} Info</h1>
-                      <Info 
-                        courseInfo={courseFetchAggregate?.info} 
-                        compiledResponse={courseFetchAggregate?.compiledResponse} 
-                        fetchLoading={fetchLoading} 
-                      />
-                    </div>
-                  )}
+                  </div>
+                  <ProfessorOrCourseTable 
+                    rows={instructorRows} 
+                    forProf={true} 
+                  />
                 </div>
-                <SidePanel 
-                  relatedCourses={courseFetchAggregate?.related_courses} 
-                  courseInfo={courseFetchAggregate?.info} 
-                />
-              </div>
+              ) : selectedTab === 'history' ? (
+                <div className="flex flex-col gap-4">
+                  <h1 className="heading-md font-loose">{courseID} History</h1>
+                  <History 
+                    courseHistory={courseFetchAggregate?.courseHistory}
+                    courseID={courseID}
+                    fetchLoading={fetchLoading} 
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <h1 className="heading-md font-loose">{courseID} Info</h1>
+                  <Info 
+                    courseInfo={courseFetchAggregate?.info} 
+                    compiledResponse={courseFetchAggregate?.compiledResponse} 
+                    fetchLoading={fetchLoading} 
+                  />
+                </div>
+              )}
             </div>
-        )}
+            <SidePanel 
+              relatedCourses={courseFetchAggregate?.related_courses} 
+              courseInfo={courseFetchAggregate?.info} 
+              fetchLoading={fetchLoading}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )  

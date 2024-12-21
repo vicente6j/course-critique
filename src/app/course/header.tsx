@@ -5,7 +5,7 @@ import { useProfs } from "../contexts/prof/provider";
 import { CourseInfo } from "../api/course";
 
 export interface CourseHeaderProps {
-  info: CourseInfo;
+  info: CourseInfo | null;
   taughtByIds: string[];
   selectedTab: string;
   setSelectedTab: Dispatch<SetStateAction<string>>;
@@ -19,7 +19,7 @@ const CourseHeader: FC<CourseHeaderProps> = ({
 }: CourseHeaderProps) => {
 
   const [seeOthers, setSeeOthers] = useState<boolean>(false);
-  const { profsMap } = useProfs();
+  const { profMap } = useProfs();
   const router = useRouter();
 
   const formatProfs: (start: number, end: number) => JSX.Element[] = useCallback((start, end) => {
@@ -32,17 +32,17 @@ const CourseHeader: FC<CourseHeaderProps> = ({
           }}
           className="text-sm hover:underline cursor-pointer text-gray-800"
         >
-          {profsMap!.get(id)?.instructor_name}
+          {profMap!.get(id)?.instructor_name}
         </Link>
       );
     })
-  }, [profsMap, taughtByIds]);
+  }, [profMap, taughtByIds]);
 
   return (
     <div className="flex flex-col w-full shadow-sm">
       <div className="relative flex flex-col w-full bg-white p-8 rounded-top">
-        <h1 className="heading-md font-semi-bold">{info.id}</h1>
-        <h1 className="heading-sm">{info.course_name}</h1>
+        <h1 className="heading-md font-semi-bold">{info?.id}</h1>
+        <h1 className="heading-sm">{info?.course_name}</h1>
         <div className="flex flex-row flex-wrap gap-x-2 gap-y-0 text-sm">
           <span>Taught by</span> 
           {formatProfs(0, 3)}
@@ -52,7 +52,7 @@ const CourseHeader: FC<CourseHeaderProps> = ({
                 onClick={() => setSeeOthers(!seeOthers)}
                 className="hover:underline cursor-pointer text-blue-500"
               >
-                others
+                {taughtByIds.length - 3} others
               </span>
             </p>
           )}

@@ -37,7 +37,7 @@ const History: FC<HistoryProps> = ({
 }: HistoryProps) => {
 
   const [searchValue, setSearchValue] = useState<string>("");
-  const [rowsPerPage, setRowsPerPage] = useState<number>(4);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(5);
   const [page, setPage] = useState<number>(1);
   const [term, setTerm] = useState<string | null>(null);
   const [arrowRightArray, setArrowRightArray] = useState<boolean[]>([]);
@@ -206,8 +206,8 @@ const History: FC<HistoryProps> = ({
   return (
     <div className="flex flex-col">
       {term ? (
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-row gap-2">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-row gap-2 mb-2">
             <ArrowRightAltIcon 
               onClick={() => {
                 setTerm(null);
@@ -236,8 +236,14 @@ const History: FC<HistoryProps> = ({
               <></>
             )}
           </p>
-          <DonutChart aggregateRow={termMap.get(term)!.aggregateRow} forTerm={true} />
-          <GradeTable rows={[termMap.get(term)!.aggregateRow]} forTerm={true} />
+          <DonutChart 
+            aggregateRow={termMap.get(term)!.aggregateRow} 
+            forTerm={true} 
+          />
+          <GradeTable 
+            rows={[termMap.get(term)!.aggregateRow]} 
+            forTerm={true} 
+          />
           <ExpandableTable 
             rows={termMap.get(term)!.instructorRows} 
             sectionRows={termMap.get(term)!.sectionRows!} 
@@ -255,11 +261,12 @@ const History: FC<HistoryProps> = ({
             </p>
             <Input
               isClearable
+              variant="bordered"
               classNames={{
                 base: "w-full sm:max-w-[44%]",
-                inputWrapper: "border-1",
+                inputWrapper: "border-1 border-gray-300 data-[hover=true]:border-default-300 group-data-[focus=true]:border-default-400 rounded-md shadow-none",
               }}
-              placeholder="Search for a term..."
+              placeholder={`Search for a term...`}
               startContent={<SearchIcon />}
               value={searchValue}
               onClear={onClear}
@@ -321,19 +328,24 @@ const History: FC<HistoryProps> = ({
                   onChange={onRowsPerPageChange}
                   value={rowsPerPage}
                 >
-                  <option value="4">4</option>
-                  <option value="8">8</option>
-                  <option value="12">12</option>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
                 </select>
               </label>
               <Pagination
+                disableAnimation
+                variant="bordered"
                 isCompact
                 showControls
                 showShadow
                 color="default"
                 page={page}
                 total={numPages}
-                onChange={setPage}
+                onChange={(page) => setPage(page)}
+                classNames={{
+                  item: 'data-[active=true]:bg-default-100 border-none'
+                }}
               />
             </div>
           </div>

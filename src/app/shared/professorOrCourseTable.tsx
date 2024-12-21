@@ -64,7 +64,7 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
    * a given course, but for professor professor IDs isn't particularly indicative,
    * so we fetch their full name instead (given their ID).
    */
-  const { profs, loading, profsMap } = useProfs();
+  const { profMap } = useProfs();
 
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
     column: forProf ? 'professor' : 'course_id',
@@ -75,11 +75,11 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
   const hasSearchFilter = Boolean(searchValue);
 
   const filteredItems: GradeTableRow[] = useMemo(() => {
-    if (!hasSearchFilter || loading) {
+    if (!hasSearchFilter) {
       return [...rows];
     }
     return [...rows].filter(row => {
-      return forProf ? profsMap!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
+      return forProf ? profMap!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
         : (row.course_id as string).toLowerCase().includes(searchValue.toLowerCase());
       }
     );
@@ -111,11 +111,11 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
           }}
           className="text-sm hover:underline cursor-pointer"
         >
-          {profsMap!.get(profId)?.instructor_name}
+          {profMap!.get(profId)?.instructor_name}
         </Link>
       </TableCell>
     );
-  }, [profsMap, loading]);
+  }, [profMap]);
 
   const formatCourse: (courseId: string) => JSX.Element = useCallback((courseId: string) => {
     return (
@@ -158,12 +158,12 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
           {rows.length > rowsPerPage ? (
             <Input
               isClearable
-              variant="flat"
+              variant="bordered"
               classNames={{
                 base: "w-full sm:max-w-[44%]",
-                inputWrapper: "border-1",
+                inputWrapper: "border-1 border-gray-300 data-[hover=true]:border-default-300 group-data-[focus=true]:border-default-400 rounded-md shadow-none",
               }}
-              placeholder={`Search by ${forProf ? ' name...' : ' course ID...'}`}
+              placeholder={`Search by ${forProf ? 'name...' : 'course ID...'}`}
               startContent={<SearchIcon />}
               value={searchValue}
               onClear={onClear}
@@ -174,7 +174,7 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
           )}
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm">Total {rows.length} {forProf ? ' professors' : ' courses'}</span>
+          <span className="text-sm text-gray-400">Found {rows.length} {forProf ? ' professors' : ' courses'}</span>
           <label className="flex items-center text-sm">
             Rows per page:
             <select
@@ -198,6 +198,8 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
     return (
       <div className="py-2 px-2 flex justify-center items-center">
         <Pagination
+          disableAnimation
+          variant="bordered"
           isCompact
           showControls
           showShadow
@@ -205,14 +207,13 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
           page={page}
           total={numPages}
           onChange={(page) => setPage(page)}
+          classNames={{
+            item: 'data-[active=true]:bg-default-100 border-none'
+          }}
         />
       </div>
     );
   }, [page, numPages, filteredItems]);
-
-  if (loading) {
-    return <Spinner />;
-  }
 
   return (
     <Table 

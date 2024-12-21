@@ -374,7 +374,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         </div>
         <p className="text-red-600 text-sm">{error}</p>
       </div>
-      <div className="w-full" key={rerenderKey}>
+      <div className="w-800" key={rerenderKey}>
         <LineChart
           courseColorDict={courseColorDict!}
           datasets={coloredDatasets}

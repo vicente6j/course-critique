@@ -16,7 +16,7 @@ const Info: FC<InfoProps> = ({
   fetchLoading,
 }: InfoProps) => {
 
-  const { profsMap } = useProfs();
+  const { profMap } = useProfs();
 
   if (fetchLoading || !courseInfo) {
     return <></>;
@@ -51,7 +51,7 @@ const Info: FC<InfoProps> = ({
         <p>List of instructors</p>
         <div className="flex flex-row flex-wrap gap-4 gap-y-2">
           {Array.from(compiledResponse!.instructor_ids).map((profId: string) => (
-            <span key={profId}>{profsMap?.get(profId)!.instructor_name} </span>
+            <span key={profId}>{profMap?.get(profId)!.instructor_name} </span>
           ))}
         </div>
 

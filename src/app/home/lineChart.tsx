@@ -60,7 +60,7 @@ const LineChart: FC<LineChartProps> = ({
     },
     layout: {
       padding: {
-        right: 70
+        right: 80
       }
     },
     onHover: (event: ChartEvent, chartElement: ActiveElement[]) => {
@@ -92,19 +92,38 @@ const LineChart: FC<LineChartProps> = ({
       },
       annotation: {
         clip: false,  // Extremely important to allow drawing outside chart area
-        annotations: hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets ? [{
-          type: 'label',
-          xValue: allTerms[allTerms.length - 1],
-          yValue: averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA,
-          backgroundColor: 'transparent',
-          color: '#666',
-          content: `Avg: ${averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
-          position: 'right',
-          xAdjust: 35,
-          font: {
-            size: 12
-          }
-        }] : []
+        annotations: [
+          ...(hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets 
+            ? [{
+                type: 'label',
+                xValue: allTerms[allTerms.length - 1],
+                yValue: averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA,
+                backgroundColor: 'transparent',
+                color: '#666',
+                content: `Avg: ${averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
+                position: 'right',
+                xAdjust: 45,
+                font: {
+                  size: 12
+                }
+              }]
+            : []),
+          ...datasets.map((dataset: LineChartDataset, idx: number) => {
+            const cssVar = getCSSVariableValue(courseColorDict?.get(dataset.label)!);
+            return {
+              type: 'label',
+              xValue: allTerms[allTerms.length - 1],
+              yValue: dataset.data[dataset.data.length - 1].y,
+              backgroundColor: 'transparent',
+              color: hexToRgba(cssVar, 1),
+              content: `${dataset.label}`,
+              position: 'right',
+              xAdjust: 45,
+              font: {
+                size: 14
+              }
+            }
+          })]
       }
     },
     scales: {
@@ -187,8 +206,8 @@ const LineChart: FC<LineChartProps> = ({
             x: term,
             y: averagesMap?.get(datasets[index].label)?.GPA ?? null
           })),
-          borderColor: '#333',
-          borderDash: [10, 10], // First number is dash length, second is gap length
+          borderColor: '#8d8d8d',
+          borderDash: [15, 15], // First number is dash length, second is gap length
           borderWidth: 1,
           pointRadius: 0,
           hidden: hoveredDatasetIndex !== index, // Only show for hovered dataset
