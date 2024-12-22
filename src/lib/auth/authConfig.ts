@@ -33,9 +33,6 @@ export const authOptions: NextAuthOptions = {
             provider: account?.provider,
           }),
         });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
       } catch (error) {
         console.error('Error during sign up process: ', error);
       }

@@ -28,6 +28,7 @@ const RankingsPageClient: FC<RankingsPageClientProps> = ({
   const [termMap, setTermMap] = useState<Map<string, RankingsTableRow[]>>(new Map());
   const [termSelected, setTermSelected] = useState<string>("Summer 2024");
   const [searchValue, setSearchValue] = useState<string>("");
+  const [showAll, setShowAll] = useState<boolean>(false);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
 
@@ -116,15 +117,32 @@ const RankingsPageClient: FC<RankingsPageClientProps> = ({
         <Tabs 
           aria-label="Options"
           selectedKey={termSelected}
-          onSelectionChange={(key) => setTermSelected(key as string)}
+          onSelectionChange={(key) => {
+            if (key === 'show-all') {
+              return;
+            } else if (key === 'show-less') {
+              setShowAll(false);
+              return;
+            }
+            setTermSelected(key as string);
+          }}
           disableAnimation
           classNames={{
-            tabList: "p-0"
+            tabList: "flex flex-row flex-wrap gap-0 px-16 bg-transparent items-center scrollbar-hide rounded-none p-0",
+            tab: "w-fit bg-default-100 rounded-none data-[selected=true]:rounded-lg",
           }}
-          items={tabs}
+          items={showAll 
+            ? [...tabs, { id: 'show-less', label: 'Show less' }] 
+            : [...tabs.slice(0, 5), { id: 'show-all', label: 'Show all' }]
+          }
         >
           {(item) => (
-            <Tab key={item.id} title={item.label} />
+            <Tab 
+              key={item.id} 
+              title={item.id === 'show-all' || item.id === 'show-less' 
+                ? <span className="text-blue-400 bg-transparent">{item.label}</span> 
+                : item.label}
+            />
           )}
         </Tabs>
         <div className="flex flex-col gap-8">
@@ -145,13 +163,18 @@ const RankingsPageClient: FC<RankingsPageClientProps> = ({
               </select>
             </label>
             <Pagination
+              disableAnimation
+              variant="bordered"
               isCompact
               showControls
               showShadow
               color="default"
               page={page}
               total={numPages}
-              onChange={setPage}
+              onChange={(page) => setPage(page)}
+              classNames={{
+                item: 'data-[active=true]:bg-default-100 border-none'
+              }}
             />
           </div>
         </div>

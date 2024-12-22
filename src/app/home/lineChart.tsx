@@ -54,6 +54,7 @@ const LineChart: FC<LineChartProps> = ({
 
   const options: any = useMemo(() => ({
     responsive: true,
+    maintainAspectRatio: true,
     interaction: {
       mode: 'point',
       intersect: false,
@@ -217,12 +218,10 @@ const LineChart: FC<LineChartProps> = ({
   }, [datasets, hoveredDatasetIndex, adjustOpacities]);
 
   return (
-    <div className="h-fit">
-      <Line 
-        data={finalData} 
-        options={options} 
-      />
-    </div>
+    <Line 
+      data={finalData} 
+      options={options} 
+    />
   );
 }
 
