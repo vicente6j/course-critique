@@ -15,7 +15,8 @@ export interface DropdownProps {
   selectedOption: string;
   containsSearch?: boolean;
   searchString?: string | null;
-  filterOptions?: (searchValue: string) => any[];
+  filterOptions?: (searchValue: string, filterType?: any) => any[];
+  filterType?: any;
 }
 
 const ProfileDropdown: FC<DropdownProps> = ({
@@ -25,6 +26,7 @@ const ProfileDropdown: FC<DropdownProps> = ({
   containsSearch,
   searchString,
   filterOptions,
+  filterType
 }: DropdownProps) => {
 
   const [searchValue, setSearchValue] = useState<string | null>(null);
@@ -34,7 +36,7 @@ const ProfileDropdown: FC<DropdownProps> = ({
   const onSearchChange = (value: string) => {
     setSearchValue(value || '');
     if (containsSearch) {
-      const newOptions: any[] = filterOptions!(value);
+      const newOptions: any[] = filterType ? filterOptions!(value, filterType) : filterOptions!(value);
       setOptions(newOptions);
     }
   }
@@ -45,7 +47,7 @@ const ProfileDropdown: FC<DropdownProps> = ({
 
   return (
     <div 
-      className="relative inline-block"
+      className="relative inline-block w-full"
       onClick={() => {
         setIsOpen(true);
       }}
