@@ -17,10 +17,10 @@ import { Kbd } from "@nextui-org/kbd";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import InfoIcon from '@mui/icons-material/Info';
 import { CourseInfo } from "../api/course";
-import { deleteFromSchedule, insertIntoSchedule, ScheduleInfo } from "../api/degree-plan";
 import { useCourses } from "../contexts/course/provider";
 import { useProfile } from "../contexts/profile/provider";
-import Dropdown from "../shared/dropdown";
+import { ScheduleInfo } from "../api/schedule";
+import SelectionDropdown from "../shared/selectionDropdown";
 
 export interface TermTableColumn {
   key: string;
@@ -51,6 +51,7 @@ export interface TermTableProps {
   info: ScheduleInfo | null;
   scheduleSelected: string;
   setScheduleSelected: Dispatch<SetStateAction<string | null>>;
+  replaceScheduleAssignment: (term: string, schedule: ScheduleInfo) => void;
 }
 
 export type Course = CourseInfo | null;
@@ -61,6 +62,7 @@ const TermTable: FC<TermTableProps> = ({
   info,
   scheduleSelected,
   setScheduleSelected,
+  replaceScheduleAssignment,
 }: TermTableProps) => {
   
   const [emptyIndex, setEmptyIndex] = useState<number>(1);
@@ -78,18 +80,23 @@ const TermTable: FC<TermTableProps> = ({
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const { refetchScheduleEntries } = useProfile();
-
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
 
-  const { courses, coursesMap, averagesMap } = useCourses();
+  const { courses, courseMap, averagesMap } = useCourses();
+  const { schedules } = useProfile();
   const router = useRouter();
 
   /** Runs every instance of activeKey changing (extremely regularly) */
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
   }, [activeKey]);
+
+  useEffect(() => {
+    if (scheduleSelected === term) {
+      console.log(info);
+    } 
+  }, [scheduleSelected]);
 
   /**
    * This function has a few moving parts to it.
@@ -251,8 +258,8 @@ const TermTable: FC<TermTableProps> = ({
 
       /** Insert into db */
       if (course_id) {
-        await insertIntoSchedule(info!.schedule_id, course_id);
-        await refetchScheduleEntries();
+        // await insertIntoSchedule(info!.schedule_id, course_id);
+        // await refetchScheduleEntries();
       }
     } catch (error) {
       console.error(error);
@@ -285,8 +292,8 @@ const TermTable: FC<TermTableProps> = ({
       removeFromDictionaries(key);
       /** Delete from db */
       if (!previousRow!.key.startsWith('XX')) {
-        await deleteFromSchedule(info!.schedule_id, previousRow!.key);
-        await refetchScheduleEntries();
+        // await deleteFromSchedule(info!.schedule_id, previousRow!.key);
+        // await refetchScheduleEntries();
       }
     } catch (error) {
       console.error(error);
@@ -467,7 +474,7 @@ const TermTable: FC<TermTableProps> = ({
         continue;
       }
       const courseGpa = averagesMap?.get(row.key)?.GPA!;
-      const numCredits = Number(coursesMap?.get(row.key)!.credits!);
+      const numCredits = Number(courseMap?.get(row.key)!.credits!);
       average = (average * credits + courseGpa * numCredits) / (credits + numCredits);
       credits += numCredits;
     }
@@ -480,7 +487,7 @@ const TermTable: FC<TermTableProps> = ({
       if (row.key.startsWith('XX')) {
         continue;
       }
-      numCredits += Number(coursesMap?.get(row.key)?.credits!);
+      numCredits += Number(courseMap?.get(row.key)?.credits!);
     }
     return numCredits;
   }, [scheduleRows]);
@@ -548,9 +555,32 @@ const TermTable: FC<TermTableProps> = ({
     )
   }, [scheduleRows, averageGpa]);
 
-  // const dropdownOptions: any[] = useMemo(() => {
+  const trigger: React.ReactNode = useMemo(() => {
+    return (
+      <div className="border border-gray-400 bg-white px-4 py-1 rounded-md hover:bg-gray-100 cursor-pointer w-fit">
+        <p className="text-sm">{info?.name}</p>
+      </div>
+    );
+  }, [info]);
 
-  // }, []);
+  const scheduleOptions: Array<{ 
+    label: string;
+    onClick: () => void;
+  }> = useMemo(() => {
+    return [
+      'Create a new schedule',
+      ...schedules!,
+    ]!.map((schedule: ScheduleInfo | string) => ({
+      label: schedule === 'Create a new schedule' ? schedule : (schedule as ScheduleInfo).name!,
+      onClick: () => {
+        if (schedule === 'Create a new schedule') {
+
+        } else {
+          replaceScheduleAssignment(term, schedule as ScheduleInfo);
+        }
+      }
+    }));
+  }, [schedules]);
 
   return (
     <div 
@@ -559,17 +589,23 @@ const TermTable: FC<TermTableProps> = ({
         setScheduleSelected(term);
       }}
     >
-      <div className="flex flex-row gap-8 w-full bg-levels-gray-blue px-2 py-1 rounded rounded-lg">
-        <div className="flex flex-row border border-gray-400 rounded-lg">
-          {/* <Dropdown 
-
-          /> */}
-        </div>
+      <div className="flex flex-row gap-8 w-full bg-levels-gray-blue px-4 py-2 rounded rounded-lg">
+        {info && (
+          <div className="w-fit">
+            <SelectionDropdown 
+              options={scheduleOptions}
+              selectedOption={info.name!}
+              customTrigger={trigger}
+            />
+          </div>
+        )}
         <div className="flex flex-row gap-4 items-center">
-          <NextToolTip content={nextToolTipDisplayContent} className="w-300">
-            <InfoIcon style={{ width: '15px' }} />
-          </NextToolTip>
-          <p className="text-sm font-semi-bold">Schedule GPA</p>
+          <div className="flex flex-row gap-2 items-center">
+            <NextToolTip content={nextToolTipDisplayContent} className="w-300">
+              <InfoIcon style={{ width: '15px' }} />
+            </NextToolTip>
+            <p className="text-sm font-semi-bold">Schedule GPA</p>
+          </div>
           {averageGpa && averageGpa !== 0 ? (
             <p className="text-sm font-semi-bold" style={{ color: formatGPA(averageGpa) }}>{Number(averageGpa).toFixed(2)}</p>
           ) : (
@@ -607,7 +643,7 @@ const TermTable: FC<TermTableProps> = ({
           {(item) => (
             <TableRow 
               key={`${item.key}`} 
-              className={`border-b border-gray-200 hover:bg-gray-100`}
+              className={`border-b border-gray-200 hover:bg-gray-100 cursor-pointer`}
               onClick={() => {
                 handleSelectRow(item.key);
               }}
@@ -619,7 +655,7 @@ const TermTable: FC<TermTableProps> = ({
                 let course: Course | null = null;
                 let averageGpa: number | null = null;
                 if (activeResults.has(item.key) && activeResults.get(item.key)) {
-                  course = coursesMap?.get(activeResults.get(item.key)!)!; 
+                  course = courseMap?.get(activeResults.get(item.key)!)!; 
                   averageGpa = averagesMap?.get(activeResults.get(item.key)!)?.GPA!;
                 }
                 const isActive = item.key === activeKey;
@@ -657,7 +693,7 @@ const TermTable: FC<TermTableProps> = ({
                   }
                 }
 
-                course = coursesMap?.get(item.key)!;
+                course = courseMap?.get(item.key)!;
                 averageGpa = averagesMap?.get(item.key)?.GPA!;
 
                 if (columnKey === 'GPA') {

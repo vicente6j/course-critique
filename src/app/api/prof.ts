@@ -1,6 +1,6 @@
 'use server'
 
-import { ALL_PROF_AVERAGES_BY_COURSE_JSON, ALL_PROF_AVERAGES_BY_TERM_JSON, ALL_PROF_AVERAGES_JSON, COURSE_INFO_JSON, HOT_COURSES_JSON, PROF_INFO_JSON } from "@/app/endpoints";
+import { ALL_PROF_AVERAGES_BY_COURSE_JSON, ALL_PROF_AVERAGES_BY_TERM_JSON, ALL_PROF_AVERAGES_JSON, COURSE_INFO_JSON, HOT_COURSES_JSON, MOCK_PROF_AVERAGES_JSON, MOCK_PROF_INFO_JSON, PROF_INFO_JSON } from "@/app/endpoints";
 
 export interface ProfAverages {
   prof_id: string;
@@ -59,6 +59,24 @@ export interface HotResponse {
 export type DataType = 'averages' | 'byCourse' | 'byTerm';
 
 export const fetchProfData = async (type: DataType) => {
+  if (process.env.NODE_ENV === 'development') {
+    const URL = 
+      type === 'averages' ? MOCK_PROF_AVERAGES_JSON 
+      : type === 'byCourse' ? '' 
+      : '';
+    if (URL === '') {
+      return [];
+    }
+
+    const res = await fetch(URL, { 
+      cache: 'force-cache' 
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch professor ${type}: ${res.status}`);
+    }
+    return res.json();
+  }
+
   const URL = 
     type === 'averages' ? ALL_PROF_AVERAGES_JSON 
     : type === 'byCourse' ? ALL_PROF_AVERAGES_BY_COURSE_JSON 
@@ -73,7 +91,17 @@ export const fetchProfData = async (type: DataType) => {
   return res.json();
 }
 
-export const fetchProfInfo = async (): Promise<AllProfResponse> => {
+export const fetchProfInfo = async (): Promise<ProfAverages[]> => {
+  if (process.env.NODE_ENV === 'development') {
+    const res = await fetch(MOCK_PROF_INFO_JSON, { 
+      cache: 'force-cache' 
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch professor information: ${res.status}`);
+    }
+    return res.json();
+  }
+
   const res = await fetch(PROF_INFO_JSON, {
     cache: 'force-cache'
   });
@@ -84,6 +112,9 @@ export const fetchProfInfo = async (): Promise<AllProfResponse> => {
 }
 
 export const fetchProfHotCourses = async (): Promise<HotResponse[]> => {
+  if (process.env.NODE_ENV === 'development') {
+    return [];
+  }
   const res = await fetch(HOT_COURSES_JSON, {
     cache: 'force-cache'
   });

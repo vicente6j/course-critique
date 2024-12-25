@@ -30,31 +30,25 @@ export interface PieSectionData {
   dataVisibility: boolean[];
 }
 
-export const getCSSVariableValue: (variable: string) => string = (variable: string) => {
-  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
-}
-
-export const formatGPANoVar: (gpa: number) => string = (gpa: number) => {
-  let color = '--color-dark-green';
-  if (gpa > 3.5 && gpa <= 4.0) {
-    color = '--color-dark-green';
-  } else if (gpa > 3.0 && gpa <= 3.5) {
-    color = '--color-light-green';
-  } else if (gpa > 2.5 && gpa <= 3.0) {
-    color = '--color-yellow';
-  } else {
-    color = '--color-red';
-  }
-  return color;
+export const resolvedColors: Record<string, string> = {
+  'A': '#168921',
+  'B': '#11AF22',
+  'C': '#FCB400',
+  'D': '#FF9999',
+  'F': '#FE466C',
+  'W': '#666666',
 };
 
-export const resolvedColors: Record<string, string> = {
-  'A': getCSSVariableValue('--color-dark-green'),
-  'B': getCSSVariableValue('--color-light-green'),
-  'C': getCSSVariableValue('--color-yellow'),
-  'D': getCSSVariableValue('--color-pink'),
-  'F': getCSSVariableValue('--color-red'),
-  'W': getCSSVariableValue('--color-lightest-dark'),
+export const getClientColorFromGPA: (gpa: number) => string = (gpa: number) => {
+  let color: string = '#168921'; // dark-green
+  if (gpa > 3.0 && gpa <= 3.5) {
+    color = '#11AF22'; // light-green
+  } else if (gpa > 2.5 && gpa <= 3.0) {
+    color = '#FCB400'; // yellow
+  } else {
+    color = '#FE466C'; // red
+  }
+  return color;
 };
 
 export interface DonutChartProps {
@@ -73,32 +67,6 @@ const DonutChart: FC<DonutChartProps> = ({
   forTerm,
 }: DonutChartProps) => {
 
-  const colors: Record<string, string> = useMemo(() => {
-    const resolvedColors: Record<string, string> = {
-      'A': getCSSVariableValue('--color-dark-green'),
-      'B': getCSSVariableValue('--color-light-green'),
-      'C': getCSSVariableValue('--color-yellow'),
-      'D': getCSSVariableValue('--color-pink'),
-      'F': getCSSVariableValue('--color-red'),
-      'W': getCSSVariableValue('--color-lightest-dark'),
-    };
-    return resolvedColors;
-  }, []);
-
-  const formatGPA: (gpa: number) => string = useCallback((gpa: number) => {
-    let color = '--color-dark-green';
-    if (gpa > 3.5 && gpa <= 4.0) {
-      color = '--color-dark-green';
-    } else if (gpa > 3.0 && gpa <= 3.5) {
-      color = '--color-light-green';
-    } else if (gpa > 2.5 && gpa <= 3.0) {
-      color = '--color-yellow';
-    } else {
-      color = '--color-red';
-    }
-    return color;
-  }, []);
-
   useEffect(() => {
     ChartJS.unregister({ id: 'centerText' });
     if (aggregateRow.GPA !== undefined) {
@@ -110,10 +78,10 @@ const DonutChart: FC<DonutChartProps> = ({
       
           const fontSize = (height / 100).toFixed(2);
           const fontWeight = 500;
-          const fontColor = formatGPA(aggregateRow.GPA as number);
+          const fontColor = getClientColorFromGPA(aggregateRow.GPA as number);
           ctx.font = `${fontWeight} ${fontSize}em sans-serif`;
           ctx.textBaseline = "middle";
-          ctx.fillStyle = getCSSVariableValue(fontColor);
+          ctx.fillStyle = fontColor;
       
           const text = (aggregateRow.GPA as number).toFixed(2);
           const textX = Math.round((width - ctx.measureText(text).width) / 2);
@@ -138,7 +106,7 @@ const DonutChart: FC<DonutChartProps> = ({
       sections.push({
         label: grade as string,
         value: aggregateRow[grade] as number,
-        color: colors[grade],
+        color: resolvedColors[grade],
         cutout: '80%',
       });
     }

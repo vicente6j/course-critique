@@ -3,7 +3,6 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCourses } from "../contexts/course/provider";
 import LineChart, { LineChartDataset, LineDataPoint } from "./lineChart";
-import { getCSSVariableValue } from "../shared/donutChart";
 import CloseIcon from '@mui/icons-material/Close';
 import { Input } from "@nextui-org/input";
 import { SearchIcon } from "../../../public/icons/searchIcon";
@@ -14,6 +13,7 @@ import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import { Button } from "@nextui-org/button";
 import { signOut } from "next-auth/react";
 import LogoutIcon from '@mui/icons-material/Logout';
+import { GRADE_COLORS } from "../metadata";
 
 export const allTerms: string[] = [
   'Spring 2010', 'Summer 2010',
@@ -31,16 +31,6 @@ export const allTerms: string[] = [
   'Fall 2021', 'Spring 2022', 'Summer 2022',
   'Fall 2022', 'Spring 2023', 'Summer 2023',
   'Fall 2023', 'Spring 2024', 'Summer 2024',
-];
-
-const colors: string[] = [
-  '--color-yellow',
-  '--color-dark-green',
-  '--color-light-green',
-  '--color-pink',
-  '--color-red',
-  '--color-light-blue',
-  '--color-dark-blue',
 ];
 
 export const termToSortableInteger: (term: string) => number = (term) => {
@@ -101,7 +91,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       const newColorDict = new Map();
       let idx = 0;
       for (const course of comparing!) {
-        newColorDict.set(course, colors[idx]);
+        newColorDict.set(course, GRADE_COLORS[idx]);
         idx++;
       }
       setColorIndex(idx);
@@ -160,13 +150,13 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     setCourseColorDict(prev => {
       const newDict = new Map(prev);
       idx = colorIndex;
-      while (Array.from(newDict.values()).includes(colors[idx!])) {
-        idx = (idx! + 1) % colors.length;
+      while (Array.from(newDict.values()).includes(GRADE_COLORS[idx!])) {
+        idx = (idx! + 1) % GRADE_COLORS.length;
       }
-      newDict.set(course, colors[idx!]);
+      newDict.set(course, GRADE_COLORS[idx!]);
       return newDict;
     });
-    setColorIndex((idx! + 1) % colors.length);
+    setColorIndex((idx! + 1) % GRADE_COLORS.length);
     setRerenderKey(prev => prev! + 1);
     setIsFocused(false);
     inputRef!.current!.blur();
@@ -197,13 +187,13 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     });
 
     return datasets;
-  }, [courseColorDict, termsDict, colors]);
+  }, [courseColorDict, termsDict]);
 
   const coloredDatasets: LineChartDataset[] = useMemo(() => {
     let coloredDatasets: LineChartDataset[] = [...datasets];
 
     for (const dataset of coloredDatasets) {
-      let cssVar = getCSSVariableValue(courseColorDict?.get(dataset.label)!);
+      let cssVar = courseColorDict?.get(dataset.label)!;
       if (comparedCourseSelected) {
         dataset.borderColor = dataset.label === comparedCourseSelected ? hexToRgba(cssVar, 1) : hexToRgba(cssVar, 0.1);
       } else {
@@ -363,7 +353,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
                 <div 
                   className="rounded-full w-3 h-3" 
                   style={{ 
-                    backgroundColor: getCSSVariableValue(courseColorDict?.get(course)!),
+                    backgroundColor: courseColorDict?.get(course)!,
                     border: '1px solid rgba(0,0,0,0.1)' 
                   }} 
                 />
@@ -375,7 +365,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         </div>
         <p className="text-red-600 text-sm">{error}</p>
       </div>
-      <div className="w-800" key={rerenderKey}>
+      <div className="w-900 h-400" key={rerenderKey}>
         <LineChart
           courseColorDict={courseColorDict!}
           datasets={coloredDatasets}

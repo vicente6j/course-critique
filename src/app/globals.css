@@ -66,6 +66,7 @@
   --color-cyan: #18BFFF;
   --color-pink: #FF9999;
   --color-red: #FE466C;
+  --color-next-table: #f4f4f5;
 }
 
 .dark {
@@ -307,6 +308,10 @@ body {
     background-color: var(--color-levels);
   }
 
+  .bg-next-table {
+    background-color: var(--color-next-table);
+  }
+
   .bg-levels-light {
     background-color: var(--color-levels-light);
   }
@@ -479,6 +484,11 @@ body {
     min-width: 800px;
   }
 
+  .w-900 {
+    width: 900px;
+    min-width: 900px;
+  }
+
   .h-200 {
     height: 200px;
     min-height: 200px;
@@ -493,6 +503,11 @@ body {
   .h-300 {
     height: 300px;
     min-height: 300px;
+  }
+
+  .h-400 {
+    height: 400px;
+    min-height: 400px;
   }
 
   .h-fit {

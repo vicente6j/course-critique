@@ -20,3 +20,13 @@ export const ALL_TERMS: string[] = [
   'Fall 2028', 'Spring 2029', 'Summer 2029',
   'Fall 2029', 'Spring 2030',
 ];
+
+export const GRADE_COLORS: string[] = [
+  '#168921', 
+  '#11AF22',
+  '#FCB400',
+  '#FF9999',
+  '#FE466C',
+  '#9CC7FF',
+  '#2D7FF9',
+]

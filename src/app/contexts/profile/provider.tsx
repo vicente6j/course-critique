@@ -6,15 +6,19 @@ import { fetchAssignments, ScheduleAssignment } from "@/app/api/schedule-assignm
 import { fetchScheduleEntries, ScheduleEntry } from "@/app/api/schedule-entries";
 import { fetchGrades, ScheduleGrade } from "@/app/api/schedule-grades";
 import { fetchTermSelections, TermSelection } from "@/app/api/term-selections";
-import { createContext, FC, useCallback, useContext, useState } from "react";
+import { createContext, FC, useCallback, useContext, useEffect, useState } from "react";
 
 export interface ProfileContextValue {
   profile: ProfileResponse | null;
   schedules: ScheduleInfo[] | null;
+  scheduleMap: Map<string, ScheduleInfo> | null;
   scheduleEntries: ScheduleEntry[] | null;
+  scheduleEntryMap: Map<string, ScheduleEntry[]> | null;
   scheduleAssignments: ScheduleAssignment[] | null;
+  scheduleAssignmentsMap: Map<string, ScheduleAssignment> | null;
   scheduleGrades: ScheduleGrade[] | null;
   termSelections: TermSelection[] | null;
+  termSelectionsMap: Map<string, TermSelection> | null;
   error: string | null;
   refetchProfile: () => Promise<boolean>;
   refetchSchedules: () => Promise<boolean>;
@@ -54,12 +58,57 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
 }: ProfileProviderProps) => {
 
   const [profile, setProfile] = useState<ProfileResponse | null>(initialProfile);
-  const [schedules, setSchedules] = useState<ScheduleInfo[] | null>(initialSchedules);
-  const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[] | null>(initialScheduleEntries);
-  const [scheduleAssignments, setScheduleAssignments] = useState<ScheduleAssignment[] | null>(initialScheduleAssignments);
-  const [scheduleGrades, setScheduleGrades] = useState<ScheduleGrade[] | null>(initialScheduleGrades);
-  const [termSelections, setTermSelections] = useState<TermSelection[] | null>(initialTermSelections);
   const [error, setError] = useState<string | null>(null);
+
+  const [data, setData] = useState<{
+    schedules: ScheduleInfo[];
+    scheduleEntries: ScheduleEntry[];
+    scheduleAssignments: ScheduleAssignment[];
+    scheduleGrades: ScheduleGrade[];
+    termSelections: TermSelection[];
+  }>({
+    schedules: initialSchedules!,
+    scheduleEntries: initialScheduleEntries!,
+    scheduleAssignments: initialScheduleAssignments!,
+    scheduleGrades: initialScheduleGrades!,
+    termSelections: initialTermSelections!,
+  });
+
+  const [maps, setMaps] = useState<{
+    scheduleInfoMap: Map<string, ScheduleInfo>;
+    scheduleEntryMap: Map<string, ScheduleEntry[]>;
+    scheduleAssignments: Map<string, ScheduleAssignment>;
+    termSelections: Map<string, TermSelection>;
+  }>({
+    scheduleInfoMap: new Map(),
+    scheduleEntryMap: new Map(),
+    scheduleAssignments: new Map(),
+    termSelections: new Map(),
+  });
+
+  const constructMaps: () => void = useCallback(() => {
+    const scheduleInfoMap = new Map(data.schedules?.map(schedule => [schedule.schedule_id, schedule]));
+
+    const scheduleEntryMap = new Map();
+    data.scheduleEntries?.forEach(entry => {
+      const existing = scheduleEntryMap.get(entry.schedule_id) || [];
+      scheduleEntryMap.set(entry.schedule_id, [...existing, entry]);
+    });
+
+    const scheduleAssignmentsMap = new Map(data.scheduleAssignments?.map(assignment => [assignment.term, assignment]));
+    const termSelectionsMap = new Map(data.termSelections?.map(term => [term.term, term]));
+
+    setMaps({
+      scheduleInfoMap: scheduleInfoMap,
+      scheduleEntryMap: scheduleEntryMap,
+      scheduleAssignments: scheduleAssignmentsMap,
+      termSelections: termSelectionsMap,
+    });
+  }, [data]);
+
+  useEffect(() => {
+    constructMaps();
+  }, [constructMaps]);
 
   const refetchProfile: () => Promise<boolean> = useCallback(async () => {
     if (!profile?.email) {
@@ -83,7 +132,10 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     }
     try {
       const newSchedules = await fetchSchedules(profile.id);
-      setSchedules(newSchedules);
+      setData(prevData => ({
+        ...prevData,
+        schedules: newSchedules,
+      }));
     } catch (error) {
       setError('Failed to reload schedules.');
       return false;
@@ -98,7 +150,10 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     }
     try {
       const newEntries = await fetchScheduleEntries(profile.id);
-      setScheduleEntries(newEntries);
+      setData(prevData => ({
+        ...prevData,
+        scheduleEntries: newEntries,
+      }));
     } catch (error) {
       setError('Failed to reload schedule entries.');
       return false;
@@ -113,7 +168,10 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     }
     try {
       const newAssignments = await fetchAssignments(profile.id);
-      setScheduleAssignments(newAssignments);
+      setData(prevData => ({
+        ...prevData,
+        scheduleAssignments: newAssignments,
+      }));
     } catch (error) {
       setError('Failed to reload schedule assignments.');
       return false;
@@ -128,7 +186,10 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     }
     try {
       const newGrades = await fetchGrades(profile.id);
-      setScheduleGrades(newGrades);
+      setData(prevData => ({
+        ...prevData,
+        scheduleGrades: newGrades,
+      }));
     } catch (error) {
       setError('Failed to reload schedule grades.');
       return false;
@@ -143,7 +204,10 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     }
     try {
       const newSelections = await fetchTermSelections(profile.id);
-      setTermSelections(newSelections);
+      setData(prevData => ({
+        ...prevData,
+        termSelections: newSelections,
+      }));
     } catch (error) {
       setError('Failed to reload term selections.');
       return false;
@@ -155,11 +219,15 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     <ProfileContext.Provider 
       value={{ 
         profile: profile,
-        schedules: schedules,
-        scheduleEntries: scheduleEntries,
-        scheduleAssignments: scheduleAssignments,
-        scheduleGrades: scheduleGrades,
-        termSelections: termSelections,
+        schedules: data.schedules,
+        scheduleMap: maps.scheduleInfoMap,
+        scheduleEntries: data.scheduleEntries,
+        scheduleEntryMap: maps.scheduleEntryMap,
+        scheduleAssignments: data.scheduleAssignments,
+        scheduleAssignmentsMap: maps.scheduleAssignments,
+        scheduleGrades: data.scheduleGrades,
+        termSelections: data.termSelections,
+        termSelectionsMap: maps.termSelections,
         error: error,
         refetchProfile: refetchProfile,
         refetchSchedules: refetchSchedules,

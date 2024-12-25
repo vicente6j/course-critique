@@ -4,8 +4,8 @@ import { PROD_ENDPOINT } from "../endpoints";
 
 export interface ScheduleAssignment {
   term: string;
-  userId: string;
-  scheduleId: string;
+  user_id: string;
+  schedule_id: string;
   assigned_at: string | null;
 }
 

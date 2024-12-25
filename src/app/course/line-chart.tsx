@@ -3,7 +3,6 @@ import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
-import { getCSSVariableValue } from "../shared/donutChart";
 import { hexToRgb } from "@mui/material";
 import { useCourses } from "../contexts/course/provider";
 import { allTerms, hexToRgba, termToSortableInteger } from "../home/averageOverTime";

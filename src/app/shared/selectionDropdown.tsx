@@ -6,28 +6,30 @@ import { Input } from "@nextui-org/input";
 import { SearchIcon } from "../../../public/icons/searchIcon";
 import StickySearchbar from "./stickySearchbar";
 
-export interface DropdownProps {
+export interface SelectionDropdownProps {
   options: Array<{ 
     label: string;
     onClick: () => void;
   }>;
-  text: string;
   selectedOption: string;
+  text?: string;
+  customTrigger?: React.ReactNode;
   containsSearch?: boolean;
   searchString?: string | null;
   filterOptions?: (searchValue: string, filterType?: any) => any[];
   filterType?: any;
 }
 
-const ProfileDropdown: FC<DropdownProps> = ({
+const SelectionDropdown: FC<SelectionDropdownProps> = ({
   options : initOptions,
-  text,
   selectedOption,
+  text,
+  customTrigger,
   containsSearch,
   searchString,
   filterOptions,
   filterType
-}: DropdownProps) => {
+}: SelectionDropdownProps) => {
 
   const [searchValue, setSearchValue] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -53,13 +55,17 @@ const ProfileDropdown: FC<DropdownProps> = ({
       }}
     >
       {/** Trigger container */}
-      <div className="w-fit flex flex-row gap-2 items-center hover:bg-gray-100 cursor-pointer px-4 py-2 rounded-md border border-gray-300">
-        <p className="text-sm">{text}</p>
-        <ArrowDropDownIcon 
-          style={{ width: '22px', height: '22px' }}
-          className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </div>
+      {customTrigger ? (
+        customTrigger
+      ) : (
+        <div className="w-fit flex flex-row gap-2 items-center hover:bg-gray-100 cursor-pointer px-4 py-2 rounded-md border border-gray-300">
+          <p className="text-sm">{text}</p>
+          <ArrowDropDownIcon 
+            style={{ width: '22px', height: '22px' }}
+            className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </div>
+      )}
       {isOpen && (
         <div className="absolute top-[calc(100%+4px)] left-0 z-20 max-h-60 overflow-y-scroll min-w-48 max-w-96 bg-white border border-gray-200 rounded-none shadow-md">
           {containsSearch && (
@@ -107,4 +113,4 @@ const ProfileDropdown: FC<DropdownProps> = ({
   );
 }
 
-export default ProfileDropdown;
+export default SelectionDropdown;

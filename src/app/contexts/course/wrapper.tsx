@@ -1,9 +1,9 @@
 'use server'
 
 import { FC } from "react"
-import CourseProvider from "./provider";
 import { CourseAverages, CourseAveragesByProf, CourseAveragesByTerm, CourseInfo, fetchCourseData, fetchCourseInfo } from "@/app/api/course";
-
+import dynamic from 'next/dynamic';
+import CourseProvider from "./provider";
 
 export interface CourseProviderWrapperProps {
   children: React.ReactNode;

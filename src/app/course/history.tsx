@@ -8,7 +8,7 @@ import { SearchIcon } from "../../../public/icons/searchIcon";
 import ExpandableTable from "../shared/expandableTable";
 import ProfessorOrCourseTable from "../shared/professorOrCourseTable";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
-import DonutChart, { formatGPANoVar, getCSSVariableValue } from "../shared/donutChart";
+import DonutChart, { getClientColorFromGPA } from "../shared/donutChart";
 import { CourseAveragesByTerm } from "../api/course";
 import { useCourses } from "../contexts/course/provider";
 import { LineChartDataset, LineDataPoint } from "../home/lineChart";
@@ -67,7 +67,6 @@ const History: FC<HistoryProps> = ({
       courseToTermAveragesMap?.get(courseID)?.forEach((termAverage: CourseAveragesByTerm) => {
         newDict.set(termAverage.term, termAverage);
       });
-      console.log(newDict);
       setTermDict(newDict);
     }
   }, [courseToTermAveragesMap]);
@@ -92,7 +91,7 @@ const History: FC<HistoryProps> = ({
     });
     const dataset: LineChartDataset = {
       data: data,
-      borderColor: getCSSVariableValue(formatGPANoVar(averagesMap!.get(courseID)?.GPA!)),
+      borderColor: getClientColorFromGPA(averagesMap!.get(courseID)?.GPA!),
       label: courseID,
     };
     return dataset;

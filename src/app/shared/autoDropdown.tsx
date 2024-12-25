@@ -1,7 +1,7 @@
 import { FC, useState } from "react";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
-export interface DropdownProps {
+export interface AutoDropdown {
   options: Array<{ 
     label: string;
     onClick: () => void;
@@ -9,10 +9,10 @@ export interface DropdownProps {
   text: string;
 }
 
-const Dropdown: FC<DropdownProps> = ({
+const AutoDropdown: FC<AutoDropdown> = ({
   options,
   text,
-}: DropdownProps) => {
+}: AutoDropdown) => {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -54,4 +54,4 @@ const Dropdown: FC<DropdownProps> = ({
   );
 }
 
-export default Dropdown;
+export default AutoDropdown;

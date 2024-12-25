@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProviderWrapper } from "./sessionWrapper";
 import { Navbar } from "@nextui-org/react";
-import { MySessionProvider } from "./contexts/session";
 import CourseProviderWrapper from "./contexts/course/wrapper";
 import ProfProviderWrapper from "./contexts/prof/wrapper";
 import { SessionProvider } from "next-auth/react";

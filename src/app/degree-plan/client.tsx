@@ -9,6 +9,7 @@ import { Link } from "@nextui-org/link";
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import ArrowLeftIcon from '@mui/icons-material/ArrowLeft';
 import AddIcon from '@mui/icons-material/Add';
+import { termToSortableInteger } from "../home/averageOverTime";
 
 export interface DegreePlanPageClientProps {}
 
@@ -18,33 +19,38 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
 
   const [termsSelected, setTermsSelected] = useState<string[] | null>(null);
   const [showUnselected, setShowUnselected] = useState<boolean>(false);
+  const [hoverRecord, setHoverRecord] = useState<Record<string, boolean>>({});
 
-  const { profile } = useProfile();
+  const { profile, termSelectionsMap } = useProfile();
 
-  const setTerms: () => void = useCallback(() => {
+  const fetchFromProfile: () => void = useCallback(() => {
     if (!profile) {
       return [];
-    } else if (!profile.year) {
-      /** If we don't have a year, just set to default */
-      const startTerm = `Fall ${Metadata.is_spring ? Metadata.year - 1 : Metadata.year}`;
-      const i = ALL_TERMS.findIndex((term: string) => term === startTerm);
-      return i !== -1 ? ALL_TERMS.slice(i, i + 12) : [];
     }
-    const startYear = Metadata.is_spring ? Metadata.year - profile.year : Metadata.year - profile.year + 1;
-    const startTerm = `Fall ${startYear}`;
+    if (termSelectionsMap) {
+      const sortedTerms = Array.from(termSelectionsMap.keys())
+        .sort((a: string, b: string) => termToSortableInteger(a) - termToSortableInteger(b));
+      
+      setTermsSelected(sortedTerms);
+      setHoverRecord(Object.fromEntries(sortedTerms.map(term => [term, false])));
+    }
+  }, [termSelectionsMap]);
 
-    const i = ALL_TERMS.findIndex((term: string) => term === startTerm);
-    const termsToSelect = i !== -1 ? ALL_TERMS.slice(i, i + 12) : [];
-    setTermsSelected(termsToSelect);
-  }, [profile?.year]);
+  const handleSelectTerm: (term: string) => void = useCallback(async (term) => {
+    setTermsSelected(prev => {
+      const newArr = [...prev!, term];
+      newArr.sort((a: string, b: string) => termToSortableInteger(a) - termToSortableInteger(b));
+      return newArr;
+    });
+  }, []);
 
-  const unselectedTerms: string[] | null = useMemo(() => {
-    return [...ALL_TERMS.filter(term => !termsSelected?.includes(term))];
-  }, [termsSelected]);
+  const handleUnselectTerm: (term: string) => void = useCallback(async (term) => {
+    setTermsSelected(prev => [...prev!.filter(el => el !== term)]);
+  }, []);
 
   useEffect(() => {
-    setTerms();
-  }, [setTerms]);
+    fetchFromProfile();
+  }, [fetchFromProfile]);
 
   return (
     <div className="w-full">
@@ -54,7 +60,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
           <div className="flex flex-row gap-2 flex-wrap">
             {showUnselected ? (
               <>
-                {ALL_TERMS?.map((term: string) => {
+                {ALL_TERMS.map((term: string) => {
                   const isSelected = termsSelected!.includes(term);
                   return (
                     <div 
@@ -63,13 +69,9 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                       `}
                       onClick={() => {
                         if (isSelected) {
-                          setTermsSelected(prev => {
-                            return [...prev!.filter(myTerm => myTerm !== term)];
-                          });
+                          handleUnselectTerm(term);
                         } else {
-                          setTermsSelected(prev => {
-                            return [...prev!, term];
-                          });
+                          handleSelectTerm(term);
                         }
                       }}
                       key={`key-${term}`}
@@ -77,12 +79,10 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                       {isSelected ? (
                         <CloseIcon 
                           style={{ width: '14px', height: '14px' }}
-                          className={`p-0`}
                         />
                       ) : (
                         <AddIcon 
                           style={{ width: '14px', height: '14px' }}
-                          className={`p-0`}
                         />
                       )}
                       <p className="text-sm">{term}</p>
@@ -105,15 +105,12 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                     <div 
                       className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
                       onClick={() => {
-                        setTermsSelected(prev => {
-                          return [...prev!.filter(myTerm => myTerm !== term)];
-                        });
+                        handleUnselectTerm(term);
                       }}
                       key={`key-${term}`}
                     >
                       <CloseIcon 
                         style={{ width: '14px', height: '14px' }}
-                        className={`p-0`}
                       />
                       <p className="text-sm">{term}</p>
                     </div>
@@ -133,7 +130,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
         </div>
         <TermGrid 
           termsSelected={termsSelected}
-          setTermsSelected={setTermsSelected}
+          handleUnselectTerm={handleUnselectTerm}
         />
       </div>
     </div>

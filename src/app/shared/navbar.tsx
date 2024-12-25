@@ -8,7 +8,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import SearchBar from "./searchbar";
-import Dropdown from "./dropdown";
+import Dropdown from "./autoDropdown";
 
 export interface NavbarProps {}
 const Navbar: FC<NavbarProps> = ({
@@ -70,10 +70,15 @@ const Navbar: FC<NavbarProps> = ({
               />
             </div>
           </div>
-          <div className="flex flex-row gap-4 items-center">
-            {isAuthenticated ? (
+          <div className="flex flex-row gap-8 items-center">
+            {session ? (
               <>
-                <Link href="/degree-plan" className="text-sm hover:text-gray-600 cursor-pointer">Degree Plan</Link>
+                <Link 
+                  href="/degree-plan" 
+                  className="text-sm hover:text-gray-600 cursor-pointer"
+                >
+                  Degree Plan
+                </Link>
                 <div
                   onClick={() => {
                     router.push(`/profile`);

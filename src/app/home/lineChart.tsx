@@ -1,9 +1,9 @@
+'use client'
 import { ActiveElement, ChartData, ChartEvent } from "chart.js";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
-import { getCSSVariableValue } from "../shared/donutChart";
 import { hexToRgb } from "@mui/material";
 import { allTerms, hexToRgba, termToSortableInteger } from "./averageOverTime";
 import { useCourses } from "../contexts/course/provider";
@@ -44,7 +44,7 @@ const LineChart: FC<LineChartProps> = ({
 
   const adjustOpacities: (index: number) => LineChartDataset[] = useCallback((index: number) => {
     return datasets.map((dataset: LineChartDataset, i: number) => {
-      const cssVar = getCSSVariableValue(courseColorDict?.get(dataset.label)!);
+      const cssVar = courseColorDict?.get(dataset.label)!;
       return {
         ...dataset,
         borderColor: i === index || index === -1 ? hexToRgba(cssVar, 1) : hexToRgba(cssVar, 0.1)
@@ -54,7 +54,7 @@ const LineChart: FC<LineChartProps> = ({
 
   const options: any = useMemo(() => ({
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     interaction: {
       mode: 'point',
       intersect: false,
@@ -110,7 +110,7 @@ const LineChart: FC<LineChartProps> = ({
               }]
             : []),
           ...datasets.map((dataset: LineChartDataset, idx: number) => {
-            const cssVar = getCSSVariableValue(courseColorDict?.get(dataset.label)!);
+            const cssVar = courseColorDict?.get(dataset.label)!;
             return {
               type: 'label',
               xValue: allTerms[allTerms.length - 1],

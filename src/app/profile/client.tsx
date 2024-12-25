@@ -4,7 +4,6 @@ import { signOut } from "next-auth/react";
 import { Button, SharedSelection, Spinner } from "@nextui-org/react";
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Input } from "@nextui-org/input";
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { SearchIcon } from "../../../public/icons/searchIcon";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
@@ -13,8 +12,8 @@ import { useProfile } from "../contexts/profile/provider";
 import { useDegreePrograms } from "../contexts/degree-programs/provider";
 import { DegreeProgram } from "../api/degree-programs";
 import { updateProfileField } from "../api/profile";
-import ProfileDropdown from "./dropdown";
-import {Skeleton} from "@nextui-org/skeleton";
+import { Skeleton } from "@nextui-org/skeleton";
+import Dropdown from "../shared/selectionDropdown";
 
 export const suffixDict: Record<number, string> = {
   1: '1st',
@@ -58,7 +57,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
   const [selectedMinorProgram, setSelectedMinorProgram] = useState<string>('Select a minor');
   const [level, setLevel] = useState<string>('Not specified');
   const [createdAt, setCreatedAt] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
   const { degreePrograms, degreeProgramMap } = useDegreePrograms();
 
@@ -323,7 +322,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
         <div className="grid grid-cols-[auto_1fr] gap-y-4 gap-x-10 text-md items-center">
           <p className="text-md">Year</p>
           <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
-            <ProfileDropdown 
+            <Dropdown 
               options={yearOptions}
               text={selectedYear === 'Select a year' ? 'Select a year' : `${suffixDict[parseInt(selectedYear)]} year`}
               selectedOption={selectedYear}
@@ -340,7 +339,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
 
           <p className="text-md">Degree Program</p>
           <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
-            <ProfileDropdown 
+            <Dropdown 
               options={degreeProgramOptions}
               text={selectedDegreeProgram}
               selectedOption={selectedDegreeProgram}
@@ -358,7 +357,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
             </NextToolTip>
           </div>
           <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
-            <ProfileDropdown 
+            <Dropdown 
               options={secondaryDegreeProgramOptions}
               text={selectedSecondaryDegreeProgram}
               selectedOption={selectedSecondaryDegreeProgram}
@@ -376,7 +375,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
             </NextToolTip>
           </div>
           <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
-            <ProfileDropdown 
+            <Dropdown 
               options={minorProgramOptions}
               text={selectedMinorProgram}
               selectedOption={selectedMinorProgram}
