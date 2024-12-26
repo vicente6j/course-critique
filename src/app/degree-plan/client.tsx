@@ -65,7 +65,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                   return (
                     <div 
                       className={`flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center cursor-pointer
-                        ${isSelected ? 'hover:bg-gray-200' : 'bg-gray-300 hover:bg-gray-200'}
+                        ${isSelected ? 'hover:bg-gray-100 bg-white' : 'bg-gray-300 hover:bg-gray-100'}
                       `}
                       onClick={() => {
                         if (isSelected) {
@@ -103,7 +103,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                 {termsSelected?.map((term: string) => {
                   return (
                     <div 
-                      className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
+                      className="flex flex-row bg-white h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-100 cursor-pointer"
                       onClick={() => {
                         handleUnselectTerm(term);
                       }}

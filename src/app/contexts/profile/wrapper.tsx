@@ -27,7 +27,6 @@ const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
 }: ProfileProviderWrapperProps) => {
 
   const session = await getServerSession(authOptions);
-
   if (!session?.user?.email) {
     return (
       <>

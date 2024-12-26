@@ -8,7 +8,7 @@ import StickySearchbar from "./stickySearchbar";
 
 export interface SelectionDropdownProps {
   options: Array<{ 
-    label: string;
+    label: string | React.ReactNode;
     onClick: () => void;
   }>;
   selectedOption: string;

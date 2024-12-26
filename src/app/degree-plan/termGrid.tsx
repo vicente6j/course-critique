@@ -140,9 +140,6 @@ const TermGrid: FC<TermGridProps> = ({
           </div>
         );
       })}
-      <div className="border border-gray-400 rounded-xl py-2 hover:bg-gray-200 cursor-pointer h-fit">
-        <p className="text-md text-center">Add another term</p>
-      </div>
     </div>
   );
 }

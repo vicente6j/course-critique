@@ -20,7 +20,9 @@ import { CourseInfo } from "../api/course";
 import { useCourses } from "../contexts/course/provider";
 import { useProfile } from "../contexts/profile/provider";
 import { ScheduleInfo } from "../api/schedule";
-import SelectionDropdown from "../shared/selectionDropdown";
+import AddIcon from '@mui/icons-material/Add';
+import SelectionDropdown from "./scheduleDropdown";
+import ScheduleDropdown from "./scheduleDropdown";
 
 export interface TermTableColumn {
   key: string;
@@ -91,12 +93,6 @@ const TermTable: FC<TermTableProps> = ({
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
   }, [activeKey]);
-
-  useEffect(() => {
-    if (scheduleSelected === term) {
-      console.log(info);
-    } 
-  }, [scheduleSelected]);
 
   /**
    * This function has a few moving parts to it.
@@ -555,31 +551,36 @@ const TermTable: FC<TermTableProps> = ({
     )
   }, [scheduleRows, averageGpa]);
 
-  const trigger: React.ReactNode = useMemo(() => {
-    return (
-      <div className="border border-gray-400 bg-white px-4 py-1 rounded-md hover:bg-gray-100 cursor-pointer w-fit">
-        <p className="text-sm">{info?.name}</p>
-      </div>
-    );
-  }, [info]);
-
   const scheduleOptions: Array<{ 
     label: string;
+    customNode?: React.ReactNode;
     onClick: () => void;
   }> = useMemo(() => {
     return [
       'Create a new schedule',
       ...schedules!,
-    ]!.map((schedule: ScheduleInfo | string) => ({
-      label: schedule === 'Create a new schedule' ? schedule : (schedule as ScheduleInfo).name!,
-      onClick: () => {
-        if (schedule === 'Create a new schedule') {
-
-        } else {
-          replaceScheduleAssignment(term, schedule as ScheduleInfo);
-        }
-      }
-    }));
+    ]!.map((schedule: ScheduleInfo | string) => {
+      const isCreateNew = schedule === 'Create a new schedule';
+      return (
+        ({
+          label: isCreateNew ? schedule : (schedule as ScheduleInfo).name!,
+          customNode: isCreateNew ? (
+            <div className="flex flex-row items-center gap-2">
+              <AddIcon style={{ width: '20px', height: '20px' }}/>
+              {schedule}
+            </div> 
+          ) : undefined,
+          helper: isCreateNew,
+          onClick: () => {
+            if (isCreateNew) {
+    
+            } else {
+              replaceScheduleAssignment(term, schedule as ScheduleInfo);
+            }
+          }
+        })
+      );
+    });
   }, [schedules]);
 
   return (
@@ -589,16 +590,12 @@ const TermTable: FC<TermTableProps> = ({
         setScheduleSelected(term);
       }}
     >
-      <div className="flex flex-row gap-8 w-full bg-levels-gray-blue px-4 py-2 rounded rounded-lg">
-        {info && (
-          <div className="w-fit">
-            <SelectionDropdown 
-              options={scheduleOptions}
-              selectedOption={info.name!}
-              customTrigger={trigger}
-            />
-          </div>
-        )}
+      <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
+        <ScheduleDropdown 
+          options={scheduleOptions}
+          text={info ? info.name! : 'No schedule selected'}
+          selectedOption={info ? info.name! : ''}
+        />
         <div className="flex flex-row gap-4 items-center">
           <div className="flex flex-row gap-2 items-center">
             <NextToolTip content={nextToolTipDisplayContent} className="w-300">
@@ -643,7 +640,7 @@ const TermTable: FC<TermTableProps> = ({
           {(item) => (
             <TableRow 
               key={`${item.key}`} 
-              className={`border-b border-gray-200 hover:bg-gray-100 cursor-pointer`}
+              className={`border-b border-gray-200 hover:bg-gray-100 ${item.key.startsWith('XX') ? '' : 'cursor-pointer'}`}
               onClick={() => {
                 handleSelectRow(item.key);
               }}
