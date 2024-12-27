@@ -21,7 +21,7 @@ export interface ProfileContextValue {
   termSelectionsMap: Map<string, TermSelection> | null;
   error: string | null;
   refetchProfile: () => Promise<boolean>;
-  refetchSchedules: () => Promise<boolean>;
+  refetchSchedules: () => Promise<ScheduleInfo[]>;
   refetchScheduleEntries: () => Promise<boolean>;
   refetchScheduleAssignments: () => Promise<boolean>;
   refetchScheduleGrades: () => Promise<boolean>;
@@ -125,22 +125,27 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     return true;
   }, [profile]);
 
-  const refetchSchedules: () => Promise<boolean> = useCallback(async () => {
+  const refetchSchedules: () => Promise<ScheduleInfo[]> = useCallback(async () => {
     if (!profile?.id) {
       setError('No user ID found.');
-      return false;
+      return [];
     }
+    let newSchedules: ScheduleInfo[] = [];
     try {
-      const newSchedules = await fetchSchedules(profile.id);
+      newSchedules = await fetchSchedules(profile.id);
       setData(prevData => ({
         ...prevData,
         schedules: newSchedules,
       }));
+      setMaps(prevMaps => ({
+        ...prevMaps,
+        scheduleInfoMap: new Map(newSchedules?.map(schedule => [schedule.schedule_id, schedule]))
+      }));
     } catch (error) {
       setError('Failed to reload schedules.');
-      return false;
+      return [];
     }
-    return true;
+    return newSchedules;
   }, [profile]);
 
   const refetchScheduleEntries: () => Promise<boolean> = useCallback(async () => {
@@ -171,6 +176,10 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
       setData(prevData => ({
         ...prevData,
         scheduleAssignments: newAssignments,
+      }));
+      setMaps(prevMaps => ({
+        ...prevMaps,
+        scheduleAssignments: new Map(newAssignments?.map(assignment => [assignment.schedule_id, assignment]))
       }));
     } catch (error) {
       setError('Failed to reload schedule assignments.');

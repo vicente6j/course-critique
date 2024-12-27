@@ -20,29 +20,36 @@ const TermGrid: FC<TermGridProps> = ({
   handleUnselectTerm
 }: TermGridProps) => {
   
-  const [scheduleSelected, setScheduleSelected] = useState<string | null>(null);
-  const [rowMap, setRowMap] = useState<Map<string, TermTableRow[]>>(new Map());
+  /** 
+   * This is the string of the term we're currently working with, 
+   * e.g. 'Fall 2024' -- it delineates which term to apply shortcuts to,
+   * e.g. I press cmd-enter and I add a row to the current schedule occupying
+   * Fall 2024.
+   */
+  const [termSelected, setTermSelected] = useState<string | null>(null);
 
-  /** Maps each selected term to the schedule_id which lives there (for each assignment) */
-  const [scheduleIdMap, setScheduleIdMap] = useState<Map<string, string>>(new Map());
+  /** 
+   * Maps each selected term to the schedule_id which lives there (for each assignment) 
+   * Pass this into the term table so it knows which schedule_id belongs to it.
+   */
+  const [termScheduleMap, setTermScheduleMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
 
-  const { termSelectionsMap, scheduleAssignmentsMap, scheduleEntryMap, scheduleMap } = useProfile();
+  const { termSelectionsMap, scheduleAssignmentsMap, scheduleEntryMap } = useProfile();
 
   /**
    * The purpose of this is to simply iterate throughout the assignments
    * we've obtained on the back-end, and if there's a term selection for it (to currently display),
    * fill out a dictionary representing
-   *  term -> { key: , course_id: }
+   *  - term -> schedule_id
    * for rendering a proper table on the client. Obviously, there will only be visible entries
    * for (a) schedules that exist and have an assignment, and (b) a term selection.
    */
-  const fetchMyEntries: () => void = useCallback(() => {
+  const declareTermScheduleMap: () => void = useCallback(() => {
     if (!scheduleAssignmentsMap || !scheduleEntryMap) {
       return;
     }
 
-    let termMap: Map<string, TermTableRow[]> = new Map();
     let scheduleIdMap: Map<string, string> = new Map();
     for (const term of scheduleAssignmentsMap?.keys()!) {
       if (!termSelectionsMap?.has(term)) {
@@ -51,51 +58,19 @@ const TermGrid: FC<TermGridProps> = ({
       const assignment: ScheduleAssignment = scheduleAssignmentsMap!.get(term)!;
       const schedule_id = assignment.schedule_id;
       scheduleIdMap.set(term, schedule_id);
-      const entries: ScheduleEntry[] = scheduleEntryMap?.get(schedule_id)!;
-      /** Sort by insertion time */
-      entries.sort((a, b) => {
-        const dateA = new Date(a.inserted_at as string);
-        const dateB = new Date(b.inserted_at as string);
-        return dateA.getTime() - dateB.getTime();
-      })
-      termMap.set(term, []);
-      for (const entry of entries) {
-        termMap.get(term)?.push({
-          key: entry.course_id!,
-          course_id: entry.course_id!,
-        });
-      }
     }
-    setScheduleIdMap(scheduleIdMap);
+    setTermScheduleMap(scheduleIdMap);
     setLoading(false);
-    setRowMap(termMap);
   }, [scheduleAssignmentsMap, scheduleEntryMap, termSelectionsMap]);
 
-  const replaceScheduleAssignment: (term: string, schedule: ScheduleInfo) => void = useCallback((term, schedule) => {
-    setRowMap(prev => {
-      const newMap = new Map(prev);
-      newMap.set(term, []);
-      const entries: ScheduleEntry[] = scheduleEntryMap?.get(schedule.schedule_id)!;
-      for (const entry of entries) {
-        newMap.get(term)?.push({
-          key: entry.course_id!,
-          course_id: entry.course_id!,
-        });
-      }
-      return newMap;
-    })
-    setScheduleIdMap(prev => {
-      const newMap = new Map(prev);
-      newMap.set(term, schedule.schedule_id);
-      return newMap;
-    })
-  }, [scheduleEntryMap]);
-
   useEffect(() => {
-    fetchMyEntries();
-  }, [fetchMyEntries]);
+    declareTermScheduleMap();
+  }, [declareTermScheduleMap]);
 
-  const getOptions: (term: string) => any[] = useCallback((term: string) => {
+  const getOptions: (term: string) => Array<{ 
+    label: string;
+    onClick: () => void;
+  }> = useCallback((term) => {
     return [
       { 
         label: 'Remove', 
@@ -106,18 +81,16 @@ const TermGrid: FC<TermGridProps> = ({
     ]; 
   }, []);
 
-  const trigger: React.ReactNode = useMemo(() => {
-    return (
-      <MoreVertIcon 
-        style={{ width: '16px', height: '16px' }}
-        className={`cursor-pointer p-0 hover:bg-gray-200`}
-      />
-    )
-  }, []);
+  const trigger: React.ReactNode = useMemo(() => (
+    <MoreVertIcon 
+      style={{ width: '16px', height: '16px' }}
+      className={`cursor-pointer p-0 hover:bg-gray-200`}
+    />
+  ), []);
   
   return (
     <div className="grid grid-cols-2 gap-y-8 gap-x-10 text-md">
-      {termsSelected?.map((term: string) => {
+      {termsSelected?.map((term: string) => { /** In the future we can make a hook for termsSelected and selections */
         return (
           <div key={`${term}-${loading}`} className="flex flex-col gap-2">
             <div className="flex flex-row gap-2 items-center">
@@ -130,11 +103,10 @@ const TermGrid: FC<TermGridProps> = ({
             <Skeleton isLoaded={!loading}>
               <TermTable 
                 term={term} 
-                rows={rowMap.get(term) || []}
-                info={scheduleMap?.get(scheduleIdMap.get(term)!) || null}
-                scheduleSelected={scheduleSelected!}
-                setScheduleSelected={setScheduleSelected}
-                replaceScheduleAssignment={replaceScheduleAssignment}
+                scheduleId={termScheduleMap.get(term) ?? null}
+                termSelected={termSelected!}
+                setTermSelected={setTermSelected}
+                setTermScheduleMap={setTermScheduleMap}
               />
             </Skeleton>
           </div>

@@ -12,16 +12,27 @@ export interface ScheduleInfo {
 
 export type ActionType = 'list' | 'create';
 
-export const createSchedule = async (userId: string): Promise<void> => {
+export const createSchedule = async (userId: string, scheduleName?: string): Promise<void> => {
+
+  const body: {
+    userId: string;
+    action: string;
+    scheduleName?: string;
+  } = {
+    userId: userId,
+    action: 'create',
+  };
+
+  if (scheduleName !== undefined) {
+    body.scheduleName = scheduleName;
+  }
+
   const response = await fetch(`${PROD_ENDPOINT}/schedules`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      userId: userId,
-      action: 'create'
-    }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     throw new Error(`Failed to create a schedule for user with ID ${userId}. Status: ${response.status}.`);

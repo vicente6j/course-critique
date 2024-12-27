@@ -56,7 +56,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
         <div className="flex flex-col gap-8 w-full">
           <DegreePlanHeader />
           <div className="flex flex-col gap-2">
-            <p className="heading-sm text-lg">Terms Selected</p>
+            <p className="heading-xs font-regular">Term Selections</p>
             <div className="flex flex-row gap-2 flex-wrap">
               {showUnselected ? (
                 <>
@@ -65,7 +65,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                     return (
                       <div 
                         className={`flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center cursor-pointer
-                          ${isSelected ? 'hover:bg-gray-100 bg-white' : 'bg-gray-300 hover:bg-gray-100'}
+                          ${isSelected ? 'bg-gray-300 hover:bg-gray-200' : 'bg-transparent hover:bg-gray-200'}
                         `}
                         onClick={() => {
                           if (isSelected) {
@@ -103,7 +103,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                   {termsSelected?.map((term: string) => {
                     return (
                       <div 
-                        className="flex flex-row bg-white border border-gray-300 h-fit gap-2 rounded-lg px-2 py-1 items-center hover:bg-gray-300 cursor-pointer"
+                        className="flex flex-row bg-gray-200 hover:bg-gray-300 h-fit gap-2 rounded-lg px-2 py-1 items-center cursor-pointer"
                         onClick={() => {
                           handleUnselectTerm(term);
                         }}
@@ -122,7 +122,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                       setShowUnselected(!showUnselected);
                     }}
                   >
-                    Show all
+                    Show more
                   </p>
                 </>
               )}

@@ -19,10 +19,11 @@ import InfoIcon from '@mui/icons-material/Info';
 import { CourseInfo } from "../api/course";
 import { useCourses } from "../contexts/course/provider";
 import { useProfile } from "../contexts/profile/provider";
-import { ScheduleInfo } from "../api/schedule";
+import { createSchedule, ScheduleInfo } from "../api/schedule";
 import AddIcon from '@mui/icons-material/Add';
 import SelectionDropdown from "./scheduleDropdown";
 import ScheduleDropdown from "./scheduleDropdown";
+import { createScheduleAssignment } from "../api/schedule-assignments";
 
 export interface TermTableColumn {
   key: string;
@@ -48,32 +49,25 @@ interface MutableRef<T> {
 }
 
 export interface TermTableProps {
-  rows: TermTableRow[];
   term: string;
-  info: ScheduleInfo | null;
-  scheduleSelected: string;
-  setScheduleSelected: Dispatch<SetStateAction<string | null>>;
-  replaceScheduleAssignment: (term: string, schedule: ScheduleInfo) => void;
+  scheduleId: string | null;
+  termSelected: string;
+  setTermSelected: Dispatch<SetStateAction<string | null>>;
+  setTermScheduleMap: Dispatch<SetStateAction<Map<string, string>>>;
 }
 
 export type Course = CourseInfo | null;
 
 const TermTable: FC<TermTableProps> = ({
-  rows,
   term,
-  info,
-  scheduleSelected,
-  setScheduleSelected,
-  replaceScheduleAssignment,
+  scheduleId,
+  termSelected,
+  setTermSelected,
+  setTermScheduleMap,
 }: TermTableProps) => {
   
   const [emptyIndex, setEmptyIndex] = useState<number>(1);
-  const [scheduleRows, setScheduleRows] = useState<TermTableRow[]>(() => {
-    if (rows.length === 0) {
-      return [{ key: `XX 0000`, course_id: 'XX 0000' }];
-    }
-    return [...rows];
-  });
+  const [scheduleRows, setScheduleRows] = useState<TermTableRow[] | null>(null);
   const [queryValues, setQueryValues] = useState<Map<string, string>>(new Map());
   const [activeResults, setActiveResults] = useState<Map<string, string | null>>(new Map());
   const [error, setError] = useState<string | null>(null);
@@ -81,18 +75,67 @@ const TermTable: FC<TermTableProps> = ({
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [schedules, setSchedules] = useState<ScheduleInfo[] | null>(null);
+  const [info, setInfo] = useState<ScheduleInfo | null>(null);
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
 
   const { courses, courseMap, averagesMap } = useCourses();
-  const { schedules } = useProfile();
+  const { profile, schedules: scheduleList, scheduleMap, refetchSchedules, scheduleEntryMap, refetchScheduleAssignments } = useProfile();
   const router = useRouter();
 
   /** Runs every instance of activeKey changing (extremely regularly) */
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
   }, [activeKey]);
+
+  const fetchScheduleEntries: () => void = useCallback(() => {
+    if (!scheduleEntryMap || !scheduleId) {
+      return;
+    } else if (!scheduleEntryMap.has(scheduleId)) {
+      /** Schedule exists but it has no entries */
+      setScheduleRows([{
+        key: 'XX 0000',
+        course_id: 'XX 0000',
+      }]);
+      return;
+    }
+    let rows: TermTableRow[] = [];
+    for (const entry of scheduleEntryMap.get(scheduleId)!) {
+      rows.push({
+        key: entry.course_id!,
+        course_id: entry.course_id!,
+      });
+    }
+    if (rows.length === 0) {
+      rows.push({
+        key: 'XX 0000',
+        course_id: 'XX 0000',
+      });
+    }
+    setScheduleRows(rows);
+  }, [scheduleId, scheduleEntryMap]);
+
+  const fetchSchedules: () => void = useCallback(() => {
+    if (!scheduleList) {
+      return;
+    }
+    setSchedules(scheduleList);
+  }, [scheduleList]);
+
+  const fetchScheduleInfo: () => void = useCallback(() => {
+    if (!scheduleMap) {
+      return;
+    }
+    setInfo(scheduleMap.get(scheduleId!)!);
+  }, [scheduleId, scheduleMap]);
+
+  useEffect(() => {
+    fetchScheduleEntries();
+    fetchSchedules();
+    fetchScheduleInfo();
+  }, [fetchScheduleEntries, fetchSchedules]);
 
   /**
    * This function has a few moving parts to it.
@@ -115,6 +158,9 @@ const TermTable: FC<TermTableProps> = ({
    * is previously selected. 
    */
   const handleSelectRow: (key: string) => void = useCallback((key: string) => {
+    if (!scheduleRows) {
+      return;
+    }
     if (key.startsWith('XX')) {
       if (previousRow) {
         handleDeselect();
@@ -173,17 +219,17 @@ const TermTable: FC<TermTableProps> = ({
    */
   const handleDeselect: () => TermTableRow[] = useCallback(() => {
     if (!activeKey) {
-      return scheduleRows;
+      return scheduleRows || [];
     } else if (activeKey.startsWith('XX') && previousRow!.key.startsWith('XX')) {
       setPreviousRow(null);
       setActiveKey(null);
-      return scheduleRows;
+      return scheduleRows || [];
     }
-    let index = scheduleRows.findIndex((row: TermTableRow) => row.key === activeKey);
+    let index = scheduleRows!.findIndex((row: TermTableRow) => row.key === activeKey);
     const newRows = [
-      ...scheduleRows.slice(0, index),
-      { ...scheduleRows[index], key: previousRow!.key },
-      ...scheduleRows.slice(index + 1)
+      ...scheduleRows!.slice(0, index),
+      { ...scheduleRows![index], key: previousRow!.key },
+      ...scheduleRows!.slice(index + 1)
     ];
     setScheduleRows(newRows);
     removeFromDictionaries(activeKey!);
@@ -194,7 +240,7 @@ const TermTable: FC<TermTableProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (tableRef && !tableRef.current!.contains(event.target as Node) && scheduleSelected === term) {
+      if (tableRef && !tableRef.current!.contains(event.target as Node) && termSelected === term) {
         handleDeselect();
       }
     };
@@ -203,7 +249,7 @@ const TermTable: FC<TermTableProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [handleDeselect, scheduleSelected, term]);
+  }, [handleDeselect, termSelected, term]);
 
   const filterCourses: (query: string) => Course[] = useCallback((query: string) => {
     if (!courses) {
@@ -233,9 +279,9 @@ const TermTable: FC<TermTableProps> = ({
     try {
       const course_id = activeResults.get(key)!;
       let newRows: TermTableRow[] = [
-        ...scheduleRows.filter(row => row.key !== key && !row.key.startsWith('XX')),
+        ...scheduleRows!.filter(row => row.key !== key && !row.key.startsWith('XX')),
         { key: course_id, course_id: course_id },
-        ...scheduleRows.filter(row => row.key !== key && row.key.startsWith('XX')) 
+        ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) 
       ];
       if (!newRows.find((row: TermTableRow) => row.key.startsWith('XX'))) {
         /** Don't add if we already have an empty row */
@@ -265,8 +311,8 @@ const TermTable: FC<TermTableProps> = ({
 
   const removeInsertedCourse: (key: string) => Promise<void> = useCallback(async (key: string) => {
     try {
-      setScheduleRows((prev: TermTableRow[]) => {
-        const newRows = [...prev.filter(row => row.key !== key)];
+      setScheduleRows((prev: TermTableRow[] | null) => {
+        const newRows = [...prev!.filter(row => row.key !== key)];
         /** If there's an empty row available, activate it */
         if (newRows.find((row: TermTableRow) => row.key.startsWith('XX'))) {
           /** If we just deleted the empty row we were on */
@@ -302,12 +348,12 @@ const TermTable: FC<TermTableProps> = ({
    * Optional param to pass in a collection of rows to filter.
    */
   const addEmptyRow: (rows?: TermTableRow[]) => TermTableRow[] = useCallback((rows?) => {
-    if (scheduleRows.length == 7) {
+    if (scheduleRows!.length == 7) {
       /** Don't add more than seven courses */
       setError('Unable to insert more than seven courses.');
       return [];
     } 
-    let myRows = rows ? rows : activeKey ? handleDeselect() : scheduleRows;
+    let myRows = rows ? rows : activeKey ? handleDeselect() : scheduleRows!;
     const paddedNumber = emptyIndex.toString().padStart(4, '0');
     setEmptyIndex((prev) => prev + 1);
     const key = `XX ${paddedNumber}`;
@@ -384,6 +430,9 @@ const TermTable: FC<TermTableProps> = ({
   }, [error]);
 
   const incrementIndex: () => void = useCallback(() => {
+    if (!scheduleRows) {
+      return;
+    }
     if (activeIndex === scheduleRows.length) {
       setError('No more rows to select');
     } else {
@@ -399,6 +448,9 @@ const TermTable: FC<TermTableProps> = ({
   }, [activeIndex, scheduleRows]);
 
   const decrementIndex: () => void = useCallback(() => {
+    if (!scheduleRows) {
+      return;
+    }
     if (activeIndex === -1) {
       setError('No more rows to select');
     } else {
@@ -414,20 +466,20 @@ const TermTable: FC<TermTableProps> = ({
   }, [activeIndex, scheduleRows]);
 
   const handleShortcuts: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && scheduleSelected === term) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && termSelected === term) {
       addEmptyRow();
-    } else if (e.key === 'ArrowDown' && scheduleSelected === term) {
+    } else if (e.key === 'ArrowDown' && termSelected === term) {
       /** Start scrolling through items */
       incrementIndex();
-    } else if (e.key === 'ArrowUp' && scheduleSelected === term) {
+    } else if (e.key === 'ArrowUp' && termSelected === term) {
       decrementIndex();
-    } else if ((e.metaKey || e.ctrlKey) && e.key === 'Backspace' && scheduleSelected === term) {
+    } else if ((e.metaKey || e.ctrlKey) && e.key === 'Backspace' && termSelected === term) {
       if (!activeKey) {
         return;
       }
       removeInsertedCourse(activeKey);
     }
-  }, [setActiveIndex, activeIndex, scheduleSelected, scheduleRows]);
+  }, [setActiveIndex, activeIndex, termSelected]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleShortcuts);
@@ -438,7 +490,7 @@ const TermTable: FC<TermTableProps> = ({
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, key: string) => {
     /** Handles case of inserting rows with cmd-enter */
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && scheduleSelected === term) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && termSelected === term) {
       return;
     }
     switch (e.key) {
@@ -463,6 +515,9 @@ const TermTable: FC<TermTableProps> = ({
   }, [addActiveCourse, activeResults]);
 
   const averageGpa: number | null = useMemo(() => {
+    if (!scheduleRows) {
+      return null;
+    }
     let average = 0;
     let credits = 0;
     for (const row of scheduleRows) {
@@ -478,6 +533,9 @@ const TermTable: FC<TermTableProps> = ({
   }, [scheduleRows]);
 
   const numCredits: number | null = useMemo(() => {
+    if (!scheduleRows) {
+      return null;
+    }
     let numCredits = 0;
     for (const row of scheduleRows) {
       if (row.key.startsWith('XX')) {
@@ -536,6 +594,9 @@ const TermTable: FC<TermTableProps> = ({
   }, [activeResults, queryValues, rerenderCount, inputRefs]);
 
   const nextToolTipDisplayContent: JSX.Element = useMemo(() => {
+    if (!scheduleRows) {
+      return <></>;
+    }
     const nonEmpty = scheduleRows.filter(row => !row.key.startsWith('XX'));
     return (
       <p>
@@ -551,11 +612,58 @@ const TermTable: FC<TermTableProps> = ({
     )
   }, [scheduleRows, averageGpa]);
 
+  const replaceScheduleAssignment: (schedule: ScheduleInfo) => void = useCallback((schedule) => {
+    if (!scheduleEntryMap) {
+      return;
+    }
+    /** This rerenders the entire component, since we're effectively passing in a new scheduleId */
+    setTermScheduleMap(prev => {
+      const newMap = new Map(prev);
+      newMap.set(term, schedule.schedule_id);
+      return newMap;
+    });
+  }, [scheduleEntryMap]);
+
+  const createNewSchedule: (scheduleName: string) => void = useCallback(async (scheduleName) => {
+    if (!scheduleMap || !profile || !schedules) {
+      setError('One of schedule map, profile, or schedules was null.');
+      return;
+    }
+    try {
+      await createSchedule(profile!.id, scheduleName);
+      const curSchedules: ScheduleInfo[] = [...schedules!];
+      const newSchedules: ScheduleInfo[] = await refetchSchedules();
+      /** 
+       * Hopefully at this point the new schedule will be visible in the dropdown 
+       * curSchedules will help us find the difference between the new schedules and old.
+       */
+      const newSchedule = newSchedules!.find(schedule => {
+        return !curSchedules.some(oldSchedule => oldSchedule.schedule_id === schedule.schedule_id);
+      });
+      await createScheduleAssignment(newSchedule!.schedule_id!, term, profile!.id);
+      await refetchScheduleAssignments();
+
+      setTermScheduleMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(term, newSchedule?.schedule_id!);
+        return newMap;
+      });
+
+    } catch (e) {
+      setError(e as string);
+      console.error(e);
+    }
+  }, [scheduleMap, schedules, profile]);
+
   const scheduleOptions: Array<{ 
     label: string;
     customNode?: React.ReactNode;
     onClick: () => void;
   }> = useMemo(() => {
+    if (!schedules) {
+      return [];
+    }
+
     return [
       'Create a new schedule',
       ...schedules!,
@@ -572,10 +680,8 @@ const TermTable: FC<TermTableProps> = ({
           ) : undefined,
           helper: isCreateNew,
           onClick: () => {
-            if (isCreateNew) {
-    
-            } else {
-              replaceScheduleAssignment(term, schedule as ScheduleInfo);
+            if (!isCreateNew) {
+              replaceScheduleAssignment(schedule as ScheduleInfo);
             }
           }
         })
@@ -587,7 +693,7 @@ const TermTable: FC<TermTableProps> = ({
     <div 
       className="flex flex-col gap-2"
       onClick={() => {
-        setScheduleSelected(term);
+        setTermSelected(term!);
       }}
     >
       <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
@@ -595,6 +701,7 @@ const TermTable: FC<TermTableProps> = ({
           options={scheduleOptions}
           text={info ? info.name! : 'No schedule selected'}
           selectedOption={info ? info.name! : ''}
+          createNewSchedule={createNewSchedule}
         />
         <div className="flex flex-row gap-4 items-center">
           <div className="flex flex-row gap-2 items-center">
@@ -636,7 +743,7 @@ const TermTable: FC<TermTableProps> = ({
           </TableColumn>
         )}
         </TableHeader>
-        <TableBody items={scheduleRows!}>
+        <TableBody items={scheduleRows || []}>
           {(item) => (
             <TableRow 
               key={`${item.key}`} 

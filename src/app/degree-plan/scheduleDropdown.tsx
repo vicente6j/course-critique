@@ -14,12 +14,14 @@ export interface ScheduleDropdownProps {
   }>;
   selectedOption: string;
   text?: string;
+  createNewSchedule: (scheduleName: string) => void;
 }
 
 const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
   options,
   selectedOption,
   text,
+  createNewSchedule,
 }: ScheduleDropdownProps) => {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -41,6 +43,24 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       helperRef!.current!.focus();
     }
   }, [helperRef, activeHelper]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    switch (e.key) {
+      case 'Enter':
+        setIsOpen(false);
+        setActiveHelper(null);
+        createNewSchedule(helperValue);
+        setHelperValue('');
+        break;
+      case 'ArrowDown':
+        break;
+      case 'ArrowUp':
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+  }, [helperValue, createNewSchedule]);
  
   return (
     <div 
@@ -59,7 +79,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       {isOpen && (
         <div className="absolute top-[calc(100%+4px)] min-w-56 overflow-visible left-0 z-20 max-h-60 overflow-y-scroll">
           {options.map((option, index) => (
-            <div key={index} className="flex flex-row items-end py-1">
+            <div key={index} className="flex flex-row items-end">
               <button
                 key={index}
                 onClick={(e) => {
@@ -73,7 +93,11 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
                     setActiveHelper(null);
                   }
                 }}
-                className={`${selectedOption === option.label ? 'bg-gray-100' : ''} min-w-56 px-4 py-2 text-left hover:bg-gray-100 text-sm bg-white border border-gray-200 rounded-none`}
+                className={`
+                  ${selectedOption === option.label ? 'bg-gray-100' : ''} 
+                  min-w-56 px-4 py-2 text-left hover:bg-gray-100 text-sm bg-white rounded-none
+                  ${index === 0 ? 'border-t' : index === options.length - 1 ? 'border-b shadow-lg' : ''} border-l border-r border-gray-200`
+                }
               >
                 <div className="p-0 flex flex-row justify-between gap-4 items-center">
                   {option.customNode || option.label}
@@ -86,7 +110,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
               </button>
               {option.helper && activeHelper === option.label && (
                 <div className="flex items-center max-h-8">
-                  <div className="h-[2px] w-10 bg-gray-300 top-10" />
+                  <div className="h-[2px] w-5 bg-gray-300 top-10" />
                   <div className="flex flex-row gap-4 bg-white px-4 py-2 whitespace-nowrap items-center border border-gray-200 rounded-none shadow-md">
                     <p className="text-sm">Enter a schedule name</p>
                     <Input
@@ -95,18 +119,22 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
                       classNames={{
                         base: "min-w-24",
                         inputWrapper: "h-5 min-h-5 max-h-5 p-0 border-1 border-t-0 border-l-0 border-r-0 border-default-400 rounded-none group-data-[focus=true]:border-default-400",
+                        input: "p-0",
+                        clearButton: "p-0"
                       }}
                       placeholder={''}
                       value={helperValue}
                       onClear={onClear}
                       onValueChange={onValueChange}
                       ref={helperRef}
+                      onKeyDown={handleKeyDown}
                     />
                   </div>
                 </div>
               )} 
             </div>
           ))}
+          <div className="h-[1px] mt-0.5 w-0 shadow-lg" />
         </div>
       )}
 
