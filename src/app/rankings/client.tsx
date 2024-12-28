@@ -7,7 +7,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import { termOrder } from "../course/history";
 import { SearchIcon } from "../../../public/icons/searchIcon";
-import { useCourses } from "../contexts/course/provider";
+import { useCourses } from "../server-contexts/course/provider";
 import { CourseAveragesByTerm } from "../api/course";
 
 export interface RankingsPageClientProps {}

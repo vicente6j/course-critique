@@ -1,7 +1,7 @@
 import { Dispatch, FC, SetStateAction, useCallback, useState } from "react";
 import { Card, CardBody, Link, Spinner, Tab, Tabs } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
-import { useProfs } from "../contexts/prof/provider";
+import { useProfs } from "../server-contexts/prof/provider";
 import { CourseInfo } from "../api/course";
 
 export interface CourseHeaderProps {

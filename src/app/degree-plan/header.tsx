@@ -5,8 +5,8 @@ import { Skeleton } from "@nextui-org/skeleton";
 import { suffixDict } from "../profile/client";
 import { Link } from "@nextui-org/react";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
-import { useProfile } from "../contexts/profile/provider";
-import { useDegreePrograms } from "../contexts/degree-programs/provider";
+import { useProfile } from "../server-contexts/profile/provider";
+import { useDegreePrograms } from "../server-contexts/degree-programs/provider";
 
 export interface DegreePlanHeaderProps {}
 

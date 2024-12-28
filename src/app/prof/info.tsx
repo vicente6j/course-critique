@@ -1,6 +1,6 @@
 'use client'
 import { FC, useMemo } from "react";
-import { Prof, useProfs } from "../contexts/prof";
+import { Prof, useProfs } from "../server-contexts/prof";
 import { CompiledProfResponse, ProfResponse } from "./fetch";
 import { termOrder } from "../course/history";
 import { Link } from "@nextui-org/react";

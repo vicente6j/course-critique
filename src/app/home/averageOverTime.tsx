@@ -1,7 +1,7 @@
 'use client'
 
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useCourses } from "../contexts/course/provider";
+import { useCourses } from "../server-contexts/course/provider";
 import LineChart, { LineChartDataset, LineDataPoint } from "./lineChart";
 import CloseIcon from '@mui/icons-material/Close';
 import { Input } from "@nextui-org/input";

@@ -6,7 +6,7 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
 import { hexToRgb } from "@mui/material";
 import { allTerms, hexToRgba, termToSortableInteger } from "./averageOverTime";
-import { useCourses } from "../contexts/course/provider";
+import { useCourses } from "../server-contexts/course/provider";
 
 export interface LineDataPoint {
   x: string;

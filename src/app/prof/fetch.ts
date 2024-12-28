@@ -1,4 +1,4 @@
-import { Prof } from '../contexts/prof';
+import { Prof } from '../server-contexts/prof';
 import { movingAverages, SectionData, SectionDataTruncated } from '../course/fetch';
 import { PROD_DATA_ENDPOINT } from '../endpoints';
 

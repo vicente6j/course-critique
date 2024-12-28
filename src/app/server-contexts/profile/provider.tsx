@@ -20,6 +20,7 @@ export interface ProfileContextValue {
   termSelections: TermSelection[] | null;
   termSelectionsMap: Map<string, TermSelection> | null;
   error: string | null;
+  loading: boolean | null;
   refetchProfile: () => Promise<boolean>;
   refetchSchedules: () => Promise<ScheduleInfo[]>;
   refetchScheduleEntries: () => Promise<boolean>;
@@ -59,6 +60,7 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
 
   const [profile, setProfile] = useState<ProfileResponse | null>(initialProfile);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const [data, setData] = useState<{
     schedules: ScheduleInfo[];
@@ -104,6 +106,7 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
       scheduleAssignments: scheduleAssignmentsMap,
       termSelections: termSelectionsMap,
     });
+    setLoading(false);
   }, [data]);
 
   useEffect(() => {
@@ -238,6 +241,7 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
         termSelections: data.termSelections,
         termSelectionsMap: maps.termSelections,
         error: error,
+        loading: loading,
         refetchProfile: refetchProfile,
         refetchSchedules: refetchSchedules,
         refetchScheduleEntries: refetchScheduleEntries,

@@ -2,8 +2,8 @@
 import { FC, useCallback, useEffect, useState } from 'react';
 import profFetch, { CompiledCourse, CompiledProfResponse, ProfHistory, RelatedProf } from './fetch';
 import { CompiledProf } from '../course/fetch';
-import { Prof, ProfProvider } from '../contexts/prof';
-import { AllProfProvider } from '../contexts/allProf';
+import { Prof, ProfProvider } from '../server-contexts/prof';
+import { AllProfProvider } from '../server-contexts/allProf';
 import ProfClient from './client';
 import { Footer } from '../shared/footer';
 

@@ -10,7 +10,7 @@ import ProfessorOrCourseTable from "../shared/professorOrCourseTable";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import DonutChart, { getClientColorFromGPA } from "../shared/donutChart";
 import { CourseAveragesByTerm } from "../api/course";
-import { useCourses } from "../contexts/course/provider";
+import { useCourses } from "../server-contexts/course/provider";
 import { LineChartDataset, LineDataPoint } from "../home/lineChart";
 import LineChart from "./line-chart";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";

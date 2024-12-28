@@ -7,7 +7,7 @@ export interface ActionDropdownProps {
     label: string;
     onClick: () => void;
   }>;
-  trigger: React.ReactElement;
+  trigger?: React.ReactElement;
 }
 
 const ActionDropdown: FC<ActionDropdownProps> = ({
@@ -22,7 +22,12 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
           setIsOpen(true);
         }}
       >
-        {trigger}
+        {trigger ?? (
+          <MoreVertIcon 
+            style={{ width: '16px', height: '16px' }}
+            className={`cursor-pointer p-0 hover:bg-gray-200`}
+          />
+        )}
       </div>
 
       {isOpen && (

@@ -20,7 +20,7 @@ import { useAsyncList } from "@react-stately/data";
 import FlexCol from "../deprecated/design-system/flexCol";
 import { formatGPA, GradeTableColumn, GradeTableRow } from "./gradeTable";
 import { useRouter } from "next/navigation";
-import { useProfs } from "../contexts/prof/provider";
+import { useProfs } from "../server-contexts/prof/provider";
 
 export const professorCols: GradeTableColumn[] = [
   { key: "professor", label: "Professor", },

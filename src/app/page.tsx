@@ -1,5 +1,5 @@
 'use server'
-import { useProfile } from "./contexts/profile/provider";
+import { useProfile } from "./server-contexts/profile/provider";
 import AverageOverTime from "./home/averageOverTime";
 import { Footer } from "./shared/footer";
 import Navbar from "./shared/navbar";

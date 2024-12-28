@@ -4,15 +4,16 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckIcon from '@mui/icons-material/Check';
 import { Input } from "@nextui-org/input";
 import CreateIcon from '@mui/icons-material/Create';
+import { useProfile } from "../server-contexts/profile/provider";
 
 export interface ScheduleDropdownProps {
   options: Array<{ 
-    label: string;
+    label: string; /** schedule_id */
     customNode?: React.ReactNode;
     onClick: () => void;
     helper?: boolean;
   }>;
-  selectedOption: string;
+  selectedOption: string; /** schedule_id */
   text?: string;
   createNewSchedule: (scheduleName: string) => void;
 }
@@ -29,6 +30,8 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
   const [activeHelper, setActiveHelper] = useState<string | null>(null);
   const [helperValue, setHelperValue] = useState<string>('');
   const helperRef = useRef<HTMLInputElement | null>(null);
+
+  const { scheduleMap } = useProfile();
 
   const onValueChange = (value: string) => {
     setHelperValue(value || '');
@@ -100,7 +103,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
                 }
               >
                 <div className="p-0 flex flex-row justify-between gap-4 items-center">
-                  {option.customNode || option.label}
+                  {option.customNode || scheduleMap!.get(option.label)!.name}
                   {selectedOption === option.label && (
                     <CheckIcon 
                       style={{ width: '14px' }}

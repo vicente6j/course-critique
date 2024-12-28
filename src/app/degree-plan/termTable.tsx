@@ -17,13 +17,16 @@ import { Kbd } from "@nextui-org/kbd";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import InfoIcon from '@mui/icons-material/Info';
 import { CourseInfo } from "../api/course";
-import { useCourses } from "../contexts/course/provider";
-import { useProfile } from "../contexts/profile/provider";
+import { useCourses } from "../server-contexts/course/provider";
+import { useProfile } from "../server-contexts/profile/provider";
 import { createSchedule, ScheduleInfo } from "../api/schedule";
 import AddIcon from '@mui/icons-material/Add';
-import SelectionDropdown from "./scheduleDropdown";
 import ScheduleDropdown from "./scheduleDropdown";
-import { createScheduleAssignment } from "../api/schedule-assignments";
+import { createScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
+import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
+import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ActionDropdown from "../shared/actionDropdown";
 
 export interface TermTableColumn {
   key: string;
@@ -50,20 +53,12 @@ interface MutableRef<T> {
 
 export interface TermTableProps {
   term: string;
-  scheduleId: string | null;
-  termSelected: string;
-  setTermSelected: Dispatch<SetStateAction<string | null>>;
-  setTermScheduleMap: Dispatch<SetStateAction<Map<string, string>>>;
 }
 
 export type Course = CourseInfo | null;
 
 const TermTable: FC<TermTableProps> = ({
-  term,
-  scheduleId,
-  termSelected,
-  setTermSelected,
-  setTermScheduleMap,
+  term
 }: TermTableProps) => {
   
   const [emptyIndex, setEmptyIndex] = useState<number>(1);
@@ -75,14 +70,34 @@ const TermTable: FC<TermTableProps> = ({
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [schedules, setSchedules] = useState<ScheduleInfo[] | null>(null);
-  const [info, setInfo] = useState<ScheduleInfo | null>(null);
+
+  const [schedule, setSchedule] = useState<ScheduleInfo | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+
+  /**
+   * The purpose of this temp info object is to reduce the latency between
+   * creating a new schedule and actually seeing it on the client. e.g. I hit
+   * create a new schedule, but I have yet to retrieve the new schedule object
+   * from the back-end. So use this temp info object for rendering and swap it out
+   * later.
+   */
+  const [tempInfoObject, setTempInfoObject] = useState<ScheduleInfo | null>(null);
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
 
   const { courses, courseMap, averagesMap } = useCourses();
-  const { profile, schedules: scheduleList, scheduleMap, refetchSchedules, scheduleEntryMap, refetchScheduleAssignments } = useProfile();
+  const { handleUnselectTerm } = useTermSelectionContext();
+  const { termScheduleMap, setTermScheduleMap, termSelected, setTermSelected } = useDegreePlanContext();
+  const { profile, 
+    schedules, 
+    refetchSchedules, 
+    scheduleMap, 
+    scheduleEntryMap, 
+    scheduleAssignments, 
+    refetchScheduleAssignments 
+  } = useProfile();
+
   const router = useRouter();
 
   /** Runs every instance of activeKey changing (extremely regularly) */
@@ -90,10 +105,24 @@ const TermTable: FC<TermTableProps> = ({
     setRerenderCount(prev => prev! + 1);
   }, [activeKey]);
 
+  useEffect(() => {
+    setIsEditing(
+      scheduleRows ? scheduleRows!.some(schedule => schedule.key.startsWith('XX')) : false
+        && activeIndex !== null
+    );
+  }, [scheduleRows]);
+
+  const scheduleId: string | null = useMemo(() => {
+    if (!termScheduleMap) {
+      return null;
+    }
+    return termScheduleMap.get(term)!;
+  }, [termScheduleMap]);
+
   const fetchScheduleEntries: () => void = useCallback(() => {
     if (!scheduleEntryMap || !scheduleId) {
       return;
-    } else if (!scheduleEntryMap.has(scheduleId)) {
+    } else if (scheduleId === 'temp' || !scheduleEntryMap.has(scheduleId)) {
       /** Schedule exists but it has no entries */
       setScheduleRows([{
         key: 'XX 0000',
@@ -117,25 +146,21 @@ const TermTable: FC<TermTableProps> = ({
     setScheduleRows(rows);
   }, [scheduleId, scheduleEntryMap]);
 
-  const fetchSchedules: () => void = useCallback(() => {
-    if (!scheduleList) {
+  const fetchSchedule: () => void = useCallback(() => {
+    if (!scheduleMap || !scheduleId) {
+      return;
+    } else if (tempInfoObject && termSelected === term) { 
+      /** This makes sure that it's only the selected term which is updated */
+      setSchedule(tempInfoObject)
       return;
     }
-    setSchedules(scheduleList);
-  }, [scheduleList]);
-
-  const fetchScheduleInfo: () => void = useCallback(() => {
-    if (!scheduleMap) {
-      return;
-    }
-    setInfo(scheduleMap.get(scheduleId!)!);
-  }, [scheduleId, scheduleMap]);
+    setSchedule(scheduleMap.get(scheduleId)!);
+  }, [scheduleId, scheduleMap, tempInfoObject, termSelected, term]);
 
   useEffect(() => {
     fetchScheduleEntries();
-    fetchSchedules();
-    fetchScheduleInfo();
-  }, [fetchScheduleEntries, fetchSchedules]);
+    fetchSchedule();
+  }, [fetchScheduleEntries]);
 
   /**
    * This function has a few moving parts to it.
@@ -515,7 +540,7 @@ const TermTable: FC<TermTableProps> = ({
   }, [addActiveCourse, activeResults]);
 
   const averageGpa: number | null = useMemo(() => {
-    if (!scheduleRows) {
+    if (!scheduleRows || !averagesMap) {
       return null;
     }
     let average = 0;
@@ -524,16 +549,16 @@ const TermTable: FC<TermTableProps> = ({
       if (row.key.startsWith('XX')) {
         continue;
       }
-      const courseGpa = averagesMap?.get(row.key)?.GPA!;
+      const courseGpa = averagesMap.get(row.key)?.GPA!;
       const numCredits = Number(courseMap?.get(row.key)!.credits!);
       average = (average * credits + courseGpa * numCredits) / (credits + numCredits);
       credits += numCredits;
     }
     return average;
-  }, [scheduleRows]);
+  }, [scheduleRows, averagesMap]);
 
   const numCredits: number | null = useMemo(() => {
-    if (!scheduleRows) {
+    if (!scheduleRows || !courseMap) {
       return null;
     }
     let numCredits = 0;
@@ -544,7 +569,7 @@ const TermTable: FC<TermTableProps> = ({
       numCredits += Number(courseMap?.get(row.key)?.credits!);
     }
     return numCredits;
-  }, [scheduleRows]);
+  }, [scheduleRows, courseMap]);
 
   const formatEmptyCourseID: (key: string) => JSX.Element = useCallback((key: string) => {
     return (
@@ -612,48 +637,88 @@ const TermTable: FC<TermTableProps> = ({
     )
   }, [scheduleRows, averageGpa]);
 
-  const replaceScheduleAssignment: (schedule: ScheduleInfo) => void = useCallback((schedule) => {
-    if (!scheduleEntryMap) {
+  const replaceScheduleAssignment: (schedule: ScheduleInfo) => void = useCallback(async (schedule) => {
+    if (!profile || !scheduleAssignments) {
+      setError('Profile or assignments weren\'t found.');
       return;
     }
-    /** This rerenders the entire component, since we're effectively passing in a new scheduleId */
-    setTermScheduleMap(prev => {
-      const newMap = new Map(prev);
-      newMap.set(term, schedule.schedule_id);
-      return newMap;
-    });
-  }, [scheduleEntryMap]);
 
-  const createNewSchedule: (scheduleName: string) => void = useCallback(async (scheduleName) => {
-    if (!scheduleMap || !profile || !schedules) {
-      setError('One of schedule map, profile, or schedules was null.');
-      return;
-    }
     try {
-      await createSchedule(profile!.id, scheduleName);
-      const curSchedules: ScheduleInfo[] = [...schedules!];
-      const newSchedules: ScheduleInfo[] = await refetchSchedules();
-      /** 
-       * Hopefully at this point the new schedule will be visible in the dropdown 
-       * curSchedules will help us find the difference between the new schedules and old.
-       */
-      const newSchedule = newSchedules!.find(schedule => {
-        return !curSchedules.some(oldSchedule => oldSchedule.schedule_id === schedule.schedule_id);
-      });
-      await createScheduleAssignment(newSchedule!.schedule_id!, term, profile!.id);
-      await refetchScheduleAssignments();
-
+      /** This rerenders the entire component, since we're effectively passing in a new scheduleId */
       setTermScheduleMap(prev => {
         const newMap = new Map(prev);
-        newMap.set(term, newSchedule?.schedule_id!);
+        newMap.set(term, schedule.schedule_id);
         return newMap;
       });
+
+      if (scheduleAssignments.find(assignment => assignment.term === term)) {
+        await updateScheduleAssignment(term, schedule!.schedule_id!, profile!.id);
+      } else {
+        await createScheduleAssignment(schedule!.schedule_id!, term, profile!.id);
+      }
+      await refetchScheduleAssignments();
 
     } catch (e) {
       setError(e as string);
       console.error(e);
     }
-  }, [scheduleMap, schedules, profile]);
+
+  }, [profile, scheduleAssignments]);
+
+  const createNewSchedule: (scheduleName: string) => void = useCallback(async (scheduleName) => {
+    if (!profile || !schedules) {
+      setError('One of profile or schedules was null.');
+      return;
+    }
+
+    try {
+      const tempSchedule: ScheduleInfo = {
+        schedule_id: 'temp',
+        user_id: profile.id,
+        name: scheduleName,
+        created_at: '',
+        updated_at: '',
+      };
+      setTempInfoObject(tempSchedule);
+      /**
+       * Do this so that we can catch the brief case of a temp schedule_id and render what we want.
+       */
+      setTermScheduleMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(term, tempSchedule.schedule_id);
+        return newMap;
+      });
+
+      /**
+       * At this point the UX will have hopefully correctly rendered the name
+       * and the empty schedule.
+       */
+
+      await createSchedule(profile!.id, scheduleName);
+      const curSchedules: ScheduleInfo[] = [...schedules!];
+      const newSchedules: ScheduleInfo[] = await refetchSchedules();
+      /** 
+       * curSchedules will help us find the difference between the new schedules and old (i.e. 
+       * the new schedule we just created).
+       */
+      const newSchedule = newSchedules!.find(schedule => {
+        return !curSchedules.some(oldSchedule => oldSchedule.schedule_id === schedule.schedule_id);
+      });
+
+      if (scheduleAssignments?.find(assignment => assignment.term === term)) {
+        await updateScheduleAssignment(term, newSchedule!.schedule_id!, profile!.id);
+      } else {
+        await createScheduleAssignment(newSchedule!.schedule_id!, term, profile!.id);
+      }
+      await refetchScheduleAssignments();
+      /** Once this context finishes updating, termGrid will reapply declareTermScheduleMap and everything will rerender again */
+      setTempInfoObject(null);
+
+    } catch (e) {
+      setError(e as string);
+      console.error(e);
+    }
+  }, [scheduleMap, schedules, profile, scheduleAssignments]);
 
   const scheduleOptions: Array<{ 
     label: string;
@@ -671,7 +736,7 @@ const TermTable: FC<TermTableProps> = ({
       const isCreateNew = schedule === 'Create a new schedule';
       return (
         ({
-          label: isCreateNew ? schedule : (schedule as ScheduleInfo).name!,
+          label: isCreateNew ? schedule : (schedule as ScheduleInfo).schedule_id!,
           customNode: isCreateNew ? (
             <div className="flex flex-row items-center gap-2">
               <AddIcon style={{ width: '20px', height: '20px' }}/>
@@ -689,6 +754,20 @@ const TermTable: FC<TermTableProps> = ({
     });
   }, [schedules]);
 
+  const getOptions: (term: string) => Array<{ 
+    label: string;
+    onClick: () => void;
+  }> = useCallback((term) => {
+    return [
+      { 
+        label: 'Remove', 
+        onClick: () => {
+          handleUnselectTerm(term);
+        }
+      }
+    ]; 
+  }, []);
+
   return (
     <div 
       className="flex flex-col gap-2"
@@ -696,11 +775,17 @@ const TermTable: FC<TermTableProps> = ({
         setTermSelected(term!);
       }}
     >
+      <div className="flex flex-row gap-2 items-center">
+        <h1 className="heading-sm">{term}</h1>
+        <ActionDropdown
+          options={getOptions(term)}
+        />
+      </div>
       <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
         <ScheduleDropdown 
           options={scheduleOptions}
-          text={info ? info.name! : 'No schedule selected'}
-          selectedOption={info ? info.name! : ''}
+          text={schedule ? schedule.name! : 'No schedule selected'}
+          selectedOption={schedule ? schedule.schedule_id! : ''}
           createNewSchedule={createNewSchedule}
         />
         <div className="flex flex-row gap-4 items-center">
@@ -747,7 +832,7 @@ const TermTable: FC<TermTableProps> = ({
           {(item) => (
             <TableRow 
               key={`${item.key}`} 
-              className={`border-b border-gray-200 hover:bg-gray-100 ${item.key.startsWith('XX') ? '' : 'cursor-pointer'}`}
+              className={`border-b border-gray-200 hover:bg-gray-100 ${item.key.startsWith('XX') ? '' : ''}`}
               onClick={() => {
                 handleSelectRow(item.key);
               }}

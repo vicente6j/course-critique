@@ -14,8 +14,8 @@ import Info from "./info";
 import ProfessorOrCourseTable from "../shared/professorOrCourseTable";
 import SidePanel from "./sidepanel";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
-import { useCourses } from "../contexts/course/provider";
-import { useProfs } from "../contexts/prof/provider";
+import { useCourses } from "../server-contexts/course/provider";
+import { useProfs } from "../server-contexts/prof/provider";
 
 export interface CourseClientProps {
   courseID: string;

@@ -4,8 +4,8 @@ import { SearchIcon } from "../../../public/icons/searchIcon";
 import { useRouter } from 'next/navigation'; 
 import { VariableSizeList } from "react-window";
 import { Kbd } from "@nextui-org/kbd";
-import { useCourses } from "../contexts/course/provider";
-import { useProfs } from "../contexts/prof/provider";
+import { useCourses } from "../server-contexts/course/provider";
+import { useProfs } from "../server-contexts/prof/provider";
 import { CourseInfo } from "../api/course";
 import { ProfInfo } from "../api/prof";
 

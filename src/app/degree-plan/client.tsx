@@ -1,15 +1,17 @@
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import TermGrid from "./termGrid";
 import DegreePlanHeader from "./header";
-import { useProfile } from "../contexts/profile/provider";
+import { useProfile } from "../server-contexts/profile/provider";
 import CloseIcon from '@mui/icons-material/Close';
 import { ALL_TERMS, Metadata } from "../metadata";
-import { Skeleton } from "@nextui-org/skeleton";
 import { Link } from "@nextui-org/link";
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import ArrowLeftIcon from '@mui/icons-material/ArrowLeft';
 import AddIcon from '@mui/icons-material/Add';
 import { termToSortableInteger } from "../home/averageOverTime";
+import { Skeleton } from "@nextui-org/skeleton";
+import { useTermSelection } from "../hooks/useTermSelection";
+import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 
 export interface DegreePlanPageClientProps {}
 
@@ -17,34 +19,20 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
 
 }: DegreePlanPageClientProps) => {
 
-  const [termsSelected, setTermsSelected] = useState<string[] | null>(null);
+  const { termSelectionsMap, loading } = useProfile();
+  const { termsSelected, handleSelectTerm, setTermsSelected, handleUnselectTerm } = useTermSelectionContext();
+
   const [showUnselected, setShowUnselected] = useState<boolean>(false);
 
-  const { profile, termSelectionsMap } = useProfile();
-
   const fetchFromProfile: () => void = useCallback(() => {
-    if (!profile) {
-      return [];
+    if (!termSelectionsMap) {
+      return;
     }
-    if (termSelectionsMap) {
-      const sortedTerms = Array.from(termSelectionsMap.keys())
-        .sort((a: string, b: string) => termToSortableInteger(a) - termToSortableInteger(b));
-      
-      setTermsSelected(sortedTerms);
-    }
+    const sortedTerms = Array.from(termSelectionsMap.keys())
+      .sort((a: string, b: string) => termToSortableInteger(a) - termToSortableInteger(b));
+    
+    setTermsSelected(sortedTerms);
   }, [termSelectionsMap]);
-
-  const handleSelectTerm: (term: string) => void = useCallback(async (term) => {
-    setTermsSelected(prev => {
-      const newArr = [...prev!, term];
-      newArr.sort((a: string, b: string) => termToSortableInteger(a) - termToSortableInteger(b));
-      return newArr;
-    });
-  }, []);
-
-  const handleUnselectTerm: (term: string) => void = useCallback(async (term) => {
-    setTermsSelected(prev => [...prev!.filter(el => el !== term)]);
-  }, []);
 
   useEffect(() => {
     fetchFromProfile();
@@ -55,8 +43,8 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
       <div className="w-4/5 mx-auto my-8 flex flex-col gap-16">
         <div className="flex flex-col gap-8 w-full">
           <DegreePlanHeader />
-          <div className="flex flex-col gap-2">
-            <p className="heading-xs font-regular">Term Selections</p>
+          <div className="flex flex-col gap-4">
+            <p className="heading-xs font-regular">Terms Selected</p>
             <div className="flex flex-row gap-2 flex-wrap">
               {showUnselected ? (
                 <>
@@ -64,8 +52,9 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                     const isSelected = termsSelected!.includes(term);
                     return (
                       <div 
-                        className={`flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center cursor-pointer
-                          ${isSelected ? 'bg-gray-300 hover:bg-gray-200' : 'bg-transparent hover:bg-gray-200'}
+                        className={
+                          `flex flex-row h-fit gap-2 rounded-lg px-2 py-1 items-center cursor-pointer
+                          ${isSelected ? 'bg-gray-300 hover:bg-gray-200' : 'border border-gray-300 bg-transparent hover:bg-gray-200'}
                         `}
                         onClick={() => {
                           if (isSelected) {
@@ -100,20 +89,21 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
                 </>
               ) : (
                 <>
-                  {termsSelected?.map((term: string) => {
+                  {(loading ? ALL_TERMS : termsSelected)?.map((term: string) => {
                     return (
-                      <div 
-                        className="flex flex-row bg-gray-200 hover:bg-gray-300 h-fit gap-2 rounded-lg px-2 py-1 items-center cursor-pointer"
-                        onClick={() => {
-                          handleUnselectTerm(term);
-                        }}
-                        key={`key-${term}`}
-                      >
-                        <CloseIcon 
-                          style={{ width: '14px', height: '14px' }}
-                        />
-                        <p className="text-sm">{term}</p>
-                      </div>
+                      <Skeleton isLoaded={!loading} key={`key-${term}`}>
+                        <div 
+                          className="flex flex-row bg-gray-200 hover:bg-gray-300 h-fit gap-2 rounded-lg px-2 py-1 items-center cursor-pointer"
+                          onClick={() => {
+                            handleUnselectTerm(term);
+                          }}
+                        >
+                          <CloseIcon 
+                            style={{ width: '14px', height: '14px' }}
+                          />
+                          <p className="text-sm">{term}</p>
+                        </div>
+                      </Skeleton>
                     )
                   })}
                   <p 
@@ -129,10 +119,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
             </div>
           </div>
         </div>
-        <TermGrid 
-          termsSelected={termsSelected}
-          handleUnselectTerm={handleUnselectTerm}
-        />
+        <TermGrid />
       </div>
     </div>
   );
