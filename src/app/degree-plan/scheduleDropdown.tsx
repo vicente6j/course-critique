@@ -26,7 +26,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
 }: ScheduleDropdownProps) => {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [noneSelected, setNoneSelected] = useState<boolean>(selectedOption === '');
+  const [noneSelected, setNoneSelected] = useState<boolean>(selectedOption === 'Select a schedule');
   const [activeHelper, setActiveHelper] = useState<string | null>(null);
   const [helperValue, setHelperValue] = useState<string>('');
   const helperRef = useRef<HTMLInputElement | null>(null);
@@ -103,7 +103,11 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
                 }
               >
                 <div className="p-0 flex flex-row justify-between gap-4 items-center">
-                  {option.customNode || scheduleMap!.get(option.label)!.name}
+                  {option.label === 'Select a schedule' ? (
+                    option.label /** Handles case of 'Select a schedule' */
+                  ) : (
+                    option.customNode || scheduleMap!.get(option.label)!.name
+                  )}
                   {selectedOption === option.label && (
                     <CheckIcon 
                       style={{ width: '14px' }}

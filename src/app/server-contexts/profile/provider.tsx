@@ -24,7 +24,7 @@ export interface ProfileContextValue {
   refetchProfile: () => Promise<boolean>;
   refetchSchedules: () => Promise<ScheduleInfo[]>;
   refetchScheduleEntries: () => Promise<boolean>;
-  refetchScheduleAssignments: () => Promise<boolean>;
+  refetchScheduleAssignments: () => Promise<ScheduleAssignment[] | null>;
   refetchScheduleGrades: () => Promise<boolean>;
   refetchTermSelections: () => Promise<boolean>;
 }
@@ -169,13 +169,14 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     return true;
   }, [profile]);
 
-  const refetchScheduleAssignments: () => Promise<boolean> = useCallback(async () => {
+  const refetchScheduleAssignments: () => Promise<ScheduleAssignment[] | null> = useCallback(async () => {
     if (!profile?.id) {
       setError('No user ID found.');
-      return false;
+      return null;
     }
+    let newAssignments: ScheduleAssignment[] = [];
     try {
-      const newAssignments = await fetchAssignments(profile.id);
+      newAssignments = await fetchAssignments(profile.id);
       setData(prevData => ({
         ...prevData,
         scheduleAssignments: newAssignments,
@@ -186,9 +187,9 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
       }));
     } catch (error) {
       setError('Failed to reload schedule assignments.');
-      return false;
+      return null;
     }
-    return true;
+    return newAssignments;
   }, [profile]);
 
   const refetchScheduleGrades: () => Promise<boolean> = useCallback(async () => {

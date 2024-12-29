@@ -21,6 +21,8 @@ const TermGrid: FC<TermGridProps> = ({
   const { termsSelected } = useTermSelectionContext();
   const { setTermScheduleMap } = useDegreePlanContext();
 
+  const initLoadComplete = useRef<boolean>(false);
+
   /**
    * The purpose of this is to simply iterate throughout the assignments
    * we've obtained on the back-end, and if there's a term selection for it (to currently display),
@@ -30,7 +32,7 @@ const TermGrid: FC<TermGridProps> = ({
    * for (a) schedules that exist and have an assignment, and (b) a term selection.
    */
   const declareTermScheduleMap: () => void = useCallback(() => {
-    if (!scheduleAssignmentsMap || !scheduleEntryMap || !termSelectionsMap) {
+    if (loading || initLoadComplete.current || !scheduleAssignmentsMap || !scheduleEntryMap || !termSelectionsMap) {
       return;
     }
     let scheduleIdMap: Map<string, string> = new Map();
@@ -42,7 +44,9 @@ const TermGrid: FC<TermGridProps> = ({
       const schedule_id = assignment.schedule_id;
       scheduleIdMap.set(term, schedule_id);
     }
+
     setTermScheduleMap(scheduleIdMap);
+    initLoadComplete.current = true; /** Only run this upon init request */
   }, [scheduleAssignmentsMap, scheduleEntryMap, termSelectionsMap]);
 
   useEffect(() => {
