@@ -74,6 +74,7 @@ export const updateScheduleEntry = async (scheduleId: string, entryId: number, n
 }
 
 export const deleteScheduleEntry = async (scheduleId: string, entryId: number): Promise<void> => {
+  console.log('deleting entry...');
   const response = await fetch(`${PROD_ENDPOINT}/schedules/entries`, {
     method: 'DELETE',
     headers: {
@@ -87,5 +88,6 @@ export const deleteScheduleEntry = async (scheduleId: string, entryId: number): 
   if (!response.ok) {
     throw new Error(`Failed to delete schedule entry with schedule ID ${scheduleId} and entry ID ${entryId}. Status: ${response.status}.`);
   }
+  console.log('success');
 }
 

@@ -1,11 +1,16 @@
 import { createContext, Dispatch, FC, SetStateAction, useContext } from "react";
 import { useDegreePlan } from "../hooks/useDegreePlan";
+import { ScheduleInfo } from "../api/schedule";
 
 interface DegreePlanContextType {
   termSelected: string | null;
   setTermSelected: (term: string | null) => void;
   termScheduleMap: Map<string, string> | null;
   setTermScheduleMap: Dispatch<SetStateAction<Map<string, string> | null>>;
+  error: string | null;
+  replaceScheduleAssignment: (schedule: ScheduleInfo | string) => void;
+  createNewSchedule: (scheduleName: string) => void;
+  tempInfoObject: ScheduleInfo | null;
 }
 
 const DegreePlanContext = createContext<DegreePlanContextType | undefined>(undefined);

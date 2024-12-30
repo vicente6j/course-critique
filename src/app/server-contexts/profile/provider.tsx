@@ -22,8 +22,8 @@ export interface ProfileContextValue {
   error: string | null;
   loading: boolean | null;
   refetchProfile: () => Promise<boolean>;
-  refetchSchedules: () => Promise<ScheduleInfo[]>;
-  refetchScheduleEntries: () => Promise<boolean>;
+  refetchSchedules: () => Promise<ScheduleInfo[] | null>;
+  refetchScheduleEntries: () => Promise<ScheduleEntry[] | null>;
   refetchScheduleAssignments: () => Promise<ScheduleAssignment[] | null>;
   refetchScheduleGrades: () => Promise<boolean>;
   refetchTermSelections: () => Promise<boolean>;
@@ -128,10 +128,10 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     return true;
   }, [profile]);
 
-  const refetchSchedules: () => Promise<ScheduleInfo[]> = useCallback(async () => {
+  const refetchSchedules: () => Promise<ScheduleInfo[] | null> = useCallback(async () => {
     if (!profile?.id) {
       setError('No user ID found.');
-      return [];
+      return null;
     }
     let newSchedules: ScheduleInfo[] = [];
     try {
@@ -146,27 +146,38 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
       }));
     } catch (error) {
       setError('Failed to reload schedules.');
-      return [];
+      return null;
     }
     return newSchedules;
   }, [profile]);
 
-  const refetchScheduleEntries: () => Promise<boolean> = useCallback(async () => {
+  const refetchScheduleEntries: () => Promise<ScheduleEntry[] | null> = useCallback(async () => {
     if (!profile?.id) {
       setError('No user ID found.');
-      return false;
+      return null;
     }
+    let newEntries: ScheduleEntry[] = [];
     try {
-      const newEntries = await fetchScheduleEntries(profile.id);
+      newEntries = await fetchScheduleEntries(profile.id);
       setData(prevData => ({
         ...prevData,
         scheduleEntries: newEntries,
       }));
+      
+      const newEntryMap = new Map();
+      newEntries?.forEach(entry => {
+        const existing = newEntryMap.get(entry.schedule_id) || [];
+        newEntryMap.set(entry.schedule_id, [...existing, entry]);
+      });
+      setMaps(prevMaps => ({
+        ...prevMaps,
+        scheduleEntryMap: newEntryMap,
+      }));
+      return newEntries;
     } catch (error) {
       setError('Failed to reload schedule entries.');
-      return false;
+      return null;
     }
-    return true;
   }, [profile]);
 
   const refetchScheduleAssignments: () => Promise<ScheduleAssignment[] | null> = useCallback(async () => {

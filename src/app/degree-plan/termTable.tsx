@@ -22,11 +22,11 @@ import { useProfile } from "../server-contexts/profile/provider";
 import { createSchedule, ScheduleInfo } from "../api/schedule";
 import AddIcon from '@mui/icons-material/Add';
 import ScheduleDropdown from "./scheduleDropdown";
-import { createScheduleAssignment, deleteScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
 import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ActionDropdown from "../shared/actionDropdown";
+import { createScheduleEntry, deleteScheduleEntry } from "../api/schedule-entries";
 
 export interface TermTableColumn {
   key: string;
@@ -70,31 +70,41 @@ const TermTable: FC<TermTableProps> = ({
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
+  /** 
+   * The purpose of having both activeKey and activeIndex is activeKey represents the key of
+   * the row we're currently editing; this can be any value, even null. If we deselect a row,
+   * the activeKey goes back to its default null state.
+   * 
+   * However, the active index can never be null; it represents which row to begin from
+   * upon scrolling down or up with the arrow keys. i.e. activeKey represents an editing state,
+   * activeIndex a location.
+   */
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+
   const [schedule, setSchedule] = useState<ScheduleInfo | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  /**
-   * The purpose of this temp info object is to reduce the latency between
-   * creating a new schedule and actually seeing it on the client. e.g. I hit
-   * create a new schedule, but I have yet to retrieve the new schedule object
-   * from the back-end. So use this temp info object for rendering and swap it out
-   * later.
-   */
-  const [tempInfoObject, setTempInfoObject] = useState<ScheduleInfo | null>(null);
-
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
+  const initLoadComplete = useRef<boolean>(false);
+  const curIndex = useRef<number>(-1);
 
   const { courses, courseMap, averagesMap } = useCourses();
   const { handleUnselectTerm } = useTermSelectionContext();
-  const { termScheduleMap, setTermScheduleMap, termSelected, setTermSelected } = useDegreePlanContext();
-  const { profile, 
+  const { 
+    termScheduleMap, 
+    termSelected, 
+    setTermSelected, 
+    replaceScheduleAssignment,
+    tempInfoObject 
+  } = useDegreePlanContext();
+
+  const { 
     schedules, 
-    refetchSchedules, 
     scheduleMap, 
     scheduleEntryMap, 
-    scheduleAssignments, 
-    refetchScheduleAssignments 
+    refetchScheduleEntries,
+    loading: profileLoading
   } = useProfile();
 
   const router = useRouter();
@@ -115,14 +125,22 @@ const TermTable: FC<TermTableProps> = ({
     if (!termScheduleMap) {
       return null;
     }
+    initLoadComplete.current = false; /** Make sure we can call fetch schedule entries and rerender everything 
+    if the schedule ID changes */
     return termScheduleMap.get(term) || null;
   }, [termScheduleMap]);
 
   const fetchScheduleEntries: () => void = useCallback(() => {
-    if (!scheduleEntryMap) {
+    if (!scheduleEntryMap || profileLoading || initLoadComplete.current) {
+      /**
+       * Don't run this upon a few cases.
+       * (a) scheduleEntryMap is null--hasn't been fetched yet.
+       * (b) profile is still loading (this is essentially the same as above)
+       * (c) The init load has happened, i.e. we're just modifying an existing schedule
+       */
       return;
     } else if (!scheduleId || !scheduleEntryMap.has(scheduleId)) {
-      /** Schedule exists but it has no entries */
+      /** No assignment exists */
       setScheduleRows([{
         key: 'XX 0000',
         course_id: 'XX 0000',
@@ -134,6 +152,7 @@ const TermTable: FC<TermTableProps> = ({
       rows.push({
         key: entry.course_id!,
         course_id: entry.course_id!,
+        entry_id: entry.entry_id,
       });
     }
     if (rows.length === 0) {
@@ -142,6 +161,7 @@ const TermTable: FC<TermTableProps> = ({
         course_id: 'XX 0000',
       });
     }
+    initLoadComplete.current = true;
     setScheduleRows(rows);
   }, [scheduleId, scheduleEntryMap]);
 
@@ -182,29 +202,40 @@ const TermTable: FC<TermTableProps> = ({
    * scheduledRows, and we definitely want to deselect in the case that something
    * is previously selected. 
    */
-  const handleSelectRow: (key: string) => void = useCallback((key: string) => {
+  const handleSelectRow: (key: string, rows?: TermTableRow[]) => void = useCallback((key: string, rows?) => {
     if (!scheduleRows) {
       return;
     }
+
+    let newRows: TermTableRow[] = 
+      rows ? rows 
+      : previousRow ? handleDeselect() 
+      : scheduleRows;
+
     if (key.startsWith('XX')) {
-      if (previousRow) {
-        handleDeselect();
-        /** If we just deselected an empty row */
-        if (previousRow.key === key) {
-          return;
-        }
+      /** If we just deselected an empty row */
+      if (previousRow && previousRow.key === key) {
+        return;
       }
       /** Activate the empty row, either from initial render or from having already selected a real row. */
       setActiveKey(key);
-      setPreviousRow(scheduleRows.find(row => row.key === key)!);
+      let index = newRows.findIndex(row => row.key === key);
+      if (activeIndex !== index) {
+        setActiveIndex(index);
+      }
+      setPreviousRow(newRows.find(row => row.key === key)!);
       return;
     }
-    let newRows: TermTableRow[] = previousRow ? handleDeselect() : scheduleRows;
+
     const paddedNumber = emptyIndex.toString().padStart(4, '0');
     setEmptyIndex(prev => prev + 1);
-    let index = newRows.findIndex((row: TermTableRow) => row.key === key);
-    let prevRow = newRows.find((row: TermTableRow) => row.key === key);
+    let index = newRows.findIndex(row => row.key === key);
+    let prevRow = newRows.find(row => row.key === key);
     setPreviousRow(prevRow!);
+
+    if (activeIndex !== index) {
+      setActiveIndex(index);
+    }
 
     const newKey = `XX ${paddedNumber}`;
     newRows = [
@@ -212,6 +243,7 @@ const TermTable: FC<TermTableProps> = ({
       { ...newRows[index], key: newKey },
       ...newRows.slice(index + 1)
     ];
+
     setScheduleRows(newRows);
     setQueryValues((prev) => {
       const newDict = new Map(prev);
@@ -224,7 +256,7 @@ const TermTable: FC<TermTableProps> = ({
       return newDict;
     });
     setActiveKey(newKey);
-  }, [emptyIndex, scheduleRows, rerenderCount, activeKey, previousRow]);
+  }, [emptyIndex, scheduleRows, rerenderCount, activeKey, previousRow, activeIndex]);
 
   /**
    * This function basically either 
@@ -242,7 +274,10 @@ const TermTable: FC<TermTableProps> = ({
       setActiveKey(null);
       return scheduleRows || [];
     }
-    let index = scheduleRows!.findIndex((row: TermTableRow) => row.key === activeKey);
+    /**
+     * We're deselecting a real entry at this point.
+     */
+    let index = scheduleRows!.findIndex(row => row.key === activeKey);
     const newRows = [
       ...scheduleRows!.slice(0, index),
       { ...scheduleRows![index], key: previousRow!.key },
@@ -293,31 +328,54 @@ const TermTable: FC<TermTableProps> = ({
   }, []);
 
   const addActiveCourse: (key: string) => Promise<void> = useCallback(async (key: string) => {
+    if (!scheduleRows || !activeResults) {
+      setError('Missing required data');
+      return;
+    }
+
     try {
       const course_id = activeResults.get(key)!;
+      if (scheduleRows!.some(row => row.key === course_id)) {
+        setError('You already added this course.');
+        setRerenderCount(prev => prev! + 1); /** Activate the input ref again */
+        return;
+      }
+
       let newRows: TermTableRow[] = [
         ...scheduleRows!.filter(row => row.key !== key && !row.key.startsWith('XX')),
         { key: course_id, course_id: course_id },
         ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) 
       ];
-      if (!newRows.find((row: TermTableRow) => row.key.startsWith('XX'))) {
-        /** Don't add if we already have an empty row */
-        newRows = addEmptyRow(newRows);
+      if (!newRows.some(row => row.key.startsWith('XX'))) { 
+        newRows = addEmptyRow(newRows); /** Only add if we don't have an empty row */
       }
+
       /** At this point we might have already set scheduleRows, but it doesn't really matter */
       setScheduleRows(newRows);
       removeFromDictionaries(key);
 
       /** At this point we definitely have an empty row (or multiple), so select the first one */
-      let firstEmptyIndex = newRows.findIndex((row: TermTableRow) => row.key.startsWith('XX'));
+      let firstEmptyIndex = newRows.findIndex(row => row.key.startsWith('XX'));
       setActiveKey(newRows[firstEmptyIndex].key);
       setPreviousRow(newRows[firstEmptyIndex])
-      setRerenderCount((prev) => prev! + 1);
+      setRerenderCount(prev => prev! + 1);
+      setActiveIndex(firstEmptyIndex);
 
-      /** Insert into db */
-      if (course_id) {
-        // await insertIntoSchedule(info!.schedule_id, course_id);
-        // await refetchScheduleEntries();
+      if (course_id && scheduleId) { /** If there's an active schedule and courseId was real */
+        await createScheduleEntry(schedule!.schedule_id, course_id);
+        const newEntries = await refetchScheduleEntries();
+
+        /** It only remains to make sure we update the newRows with the right entry_id, so that we can delete it later */
+        setScheduleRows(prev => {
+          const insertIndex = prev!.findIndex(row => row.key === course_id)!;
+          const newArr = [
+            ...prev!.slice(0, insertIndex), 
+            { ...prev![insertIndex], entry_id: newEntries?.find(row => row.course_id === course_id)!.entry_id!},
+            ...prev!.slice(insertIndex + 1)
+          ];
+          console.log(newArr);
+          return newArr!;
+        })
       }
     } catch (error) {
       console.error(error);
@@ -325,31 +383,33 @@ const TermTable: FC<TermTableProps> = ({
     }
   }, [activeResults, scheduleRows]);
 
-  const removeInsertedCourse: (key: string) => Promise<void> = useCallback(async (key: string) => {
+  const removeInsertedCourse: (key: string) => Promise<void> = useCallback(async (key) => {
     try {
       const newRows = [...scheduleRows!.filter(row => row.key !== key)];
       setScheduleRows(newRows);
 
-      const activeIndex = scheduleRows?.findIndex(row => row.key === activeKey);
-      if (newRows.some((row: TermTableRow) => row.key.startsWith('XX'))) {
-        /** If we just deleted the empty row we were on */
-        if (activeIndex === newRows.length) {
-          setActiveKey(newRows[newRows.length - 1].key);
-          setPreviousRow(newRows[newRows.length - 1]);
-        } else {
-          let newRow = newRows[activeIndex!];
-          setActiveKey(newRow.key);
-          setPreviousRow(newRow);
-        }
+      let deletedIndex = scheduleRows!.findIndex(row => row.key === activeKey);
+
+      if (newRows.length > 0) {
+        handleSelectRow(
+          deletedIndex === 0 
+            ? newRows[deletedIndex].key 
+            : newRows[deletedIndex - 1].key, 
+          newRows
+        );
+        setActiveIndex(
+          deletedIndex === 0 ? deletedIndex : deletedIndex - 1
+        );
       } else {
-        setActiveKey(null);
         setPreviousRow(null);
+        setActiveKey(null);
+        setActiveIndex(-1);
       }
       removeFromDictionaries(key);
-      /** Delete from db */
-      if (!previousRow!.key.startsWith('XX')) {
-        // await deleteFromSchedule(info!.schedule_id, previousRow!.key);
-        // await refetchScheduleEntries();
+
+      if (!previousRow!.key.startsWith('XX') && schedule) {
+        await deleteScheduleEntry(schedule.schedule_id, Number(previousRow!.entry_id!));
+        await refetchScheduleEntries();
       }
     } catch (error) {
       console.error(error);
@@ -373,7 +433,7 @@ const TermTable: FC<TermTableProps> = ({
     const key = `XX ${paddedNumber}`;
 
     let newRows: TermTableRow[] = [];
-    let index = scheduleRows!.findIndex((row: TermTableRow) => row.key === activeKey);
+    let index = scheduleRows!.findIndex(row => row.key === activeKey);
     /** 
      * 1. If myRows is empty, just add the empty row and continue.
      * 2. If the current row selected isn't empty, just add the empty row underneath all the non
@@ -397,6 +457,9 @@ const TermTable: FC<TermTableProps> = ({
     setScheduleRows(newRows);
     setActiveKey(key);
     setPreviousRow(newRows.find(row => row.key === key)!);
+    
+    /** Purpose of this is depending on where we put the empty row, that's where our new index is */
+    setActiveIndex(newRows.findIndex(row => row.key === key)!);
     return newRows;
   }, [emptyIndex, scheduleRows, activeKey]);
 
@@ -447,36 +510,26 @@ const TermTable: FC<TermTableProps> = ({
     if (!scheduleRows) {
       return;
     }
-    let index = scheduleRows!.findIndex((row: TermTableRow) => row.key === activeKey);
-    if (index === scheduleRows.length) {
-      setError('No more rows to select');
-    } else {
-      setError('');
-    }
-    let newIndex = index === null ? 0 : Math.min(index + 1, scheduleRows.length);
+    let newIndex = Math.min(activeIndex + 1, scheduleRows.length);
     if (newIndex !== scheduleRows.length) {
       handleSelectRow(scheduleRows[newIndex].key);
     } else {
       handleDeselect();
     }
-  }, [activeKey, scheduleRows]);
+    setActiveIndex(newIndex);
+  }, [activeKey, scheduleRows, activeIndex]);
 
   const decrementIndex: () => void = useCallback(() => {
     if (!scheduleRows) {
       return;
     }
-    let index = scheduleRows!.findIndex((row: TermTableRow) => row.key === activeKey);
-    if (index === -1) {
-      setError('No more rows to select');
-    } else {
-      setError('');
-    }
-    let newIndex = index === null ? scheduleRows.length - 1 : Math.max(index - 1, -1);
+    let newIndex = Math.max(activeIndex -1, -1);
     if (newIndex !== -1) {
       handleSelectRow(scheduleRows[newIndex].key);
     } else {
       handleDeselect();
     }
+    setActiveIndex(newIndex);
   }, [activeKey, scheduleRows]);
 
   const handleShortcuts: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent) => {
@@ -624,110 +677,7 @@ const TermTable: FC<TermTableProps> = ({
         )}`}
       </p>
     )
-  }, [scheduleRows, averageGpa]);
-
-  const replaceScheduleAssignment: (schedule: ScheduleInfo | string) => void = useCallback(async (schedule) => {
-    if (!profile || !scheduleAssignments) {
-      setError('Profile or assignments weren\'t found.');
-      return;
-    }
-
-    try {
-      if (typeof schedule === 'string') {
-        if (schedule !== 'Select a schedule') {
-          setError('Invalid schedule selection');
-          return;
-        }
-
-        setTermScheduleMap(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(term);
-          return newMap;
-        });
-
-        /** Clears the selection */
-        await deleteScheduleAssignment(term, profile!.id);
-        await refetchScheduleAssignments();
-
-        return;
-      }
-
-      /** This rerenders the entire component, since we're effectively passing in a new scheduleId */
-      setTermScheduleMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(term, schedule.schedule_id);
-        return newMap;
-      });
-
-      if (scheduleAssignments.some(assignment => assignment.term === term)) {
-        await updateScheduleAssignment(term, schedule!.schedule_id!, profile!.id);
-      } else {
-        await createScheduleAssignment(schedule!.schedule_id!, term, profile!.id);
-      }
-      await refetchScheduleAssignments();
-
-    } catch (e) {
-      setError(e as string);
-      console.error(e);
-    }
-
-  }, [profile, scheduleAssignments, term]);
-
-  const createNewSchedule: (scheduleName: string) => void = useCallback(async (scheduleName) => {
-    if (!profile || !schedules) {
-      setError('One of profile or schedules was null.');
-      return;
-    }
-
-    try {
-      const tempSchedule: ScheduleInfo = {
-        schedule_id: 'temp',
-        user_id: profile.id,
-        name: scheduleName,
-        created_at: '',
-        updated_at: '',
-      };
-      setTempInfoObject(tempSchedule);
-      /**
-       * Do this so that we can catch the brief case of a temp schedule_id and render what we want.
-       */
-      setTermScheduleMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(term, tempSchedule.schedule_id);
-        return newMap;
-      });
-
-      /**
-       * At this point the UX will have hopefully correctly rendered the name
-       * and the empty schedule.
-       */
-
-      await createSchedule(profile!.id, scheduleName);
-      const curSchedules: ScheduleInfo[] = [...schedules!];
-      const newSchedules: ScheduleInfo[] = await refetchSchedules();
-      /** 
-       * curSchedules will help us find the difference between the new schedules and old (i.e. 
-       * the new schedule we just created).
-       */
-      const newSchedule = newSchedules!.find(schedule => {
-        return !curSchedules.some(oldSchedule => oldSchedule.schedule_id === schedule.schedule_id);
-      });
-
-      if (scheduleAssignments?.find(assignment => assignment.term === term)) {
-        await updateScheduleAssignment(term, newSchedule!.schedule_id!, profile!.id);
-      } else {
-        await createScheduleAssignment(newSchedule!.schedule_id!, term, profile!.id);
-      }
-      await refetchScheduleAssignments();
-
-      /** Once this context finishes updating, termGrid will reapply declareTermScheduleMap and everything will rerender again */
-      setTempInfoObject(null);
-
-    } catch (e) {
-      setError(e as string);
-      console.error(e);
-    }
-  }, [scheduleMap, schedules, profile, scheduleAssignments]);
+  }, [scheduleRows, averageGpa])
 
   const scheduleOptions: Array<{ 
     label: string;
@@ -739,9 +689,9 @@ const TermTable: FC<TermTableProps> = ({
     }
 
     return [
+      'Create a new schedule',
       'Select a schedule',
       ...schedules!,
-      'Create a new schedule',
     ]!.map((schedule: ScheduleInfo | string) => {
       const isCreateNew = schedule === 'Create a new schedule';
       const isSelect = schedule === 'Select a schedule';
@@ -792,7 +742,7 @@ const TermTable: FC<TermTableProps> = ({
           options={getOptions(term)}
         />
         {isEditing && (
-          <p className="text-sm text-gray-600 ">editing {schedule ? schedule.name! : ' an empty schedule'}...</p>
+          <p className="text-sm text-gray-600 ">{schedule ? `editing ${schedule.name}...` : ''}</p>
         )}
       </div>
       <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
@@ -800,7 +750,6 @@ const TermTable: FC<TermTableProps> = ({
           options={scheduleOptions}
           text={schedule ? schedule.name! : 'Select a schedule'}
           selectedOption={schedule ? schedule.schedule_id! : 'Select a schedule'}
-          createNewSchedule={createNewSchedule}
         />
         <div className="flex flex-row gap-4 items-center">
           <div className="flex flex-row gap-2 items-center">
@@ -885,7 +834,7 @@ const TermTable: FC<TermTableProps> = ({
                       <TableCell>
                         <DeleteIcon 
                           style={{ width: '20px' }} 
-                          className={`${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} hover:scale-110 `}
+                          className={`${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} hover:scale-110 cursor-pointer`}
                           onClick={(e) => {
                             e.stopPropagation(); 
                             removeInsertedCourse(item.key);
@@ -957,16 +906,18 @@ const TermTable: FC<TermTableProps> = ({
         )}
         <div className="flex flex-row items-center gap-2">
           <p className="text-sm text-gray-500">Select</p>
-          <Kbd 
-            onClick={incrementIndex}
-            keys={["down"]} 
-            className="opacity-100 border-none shadow-none bg-transparent cursor-pointer p-0 bg-none hover:bg-gray-200"
-          />
-          <Kbd 
-            onClick={decrementIndex}
-            keys={["up"]} 
-            className="opacity-100 border-none shadow-none bg-transparent cursor-pointer p-0 hover:bg-gray-200"
-          />
+          <div className="flex gap-1">
+            <Kbd 
+              onClick={incrementIndex}
+              keys={["down"]} 
+              className="opacity-100 border-none shadow-none bg-transparent cursor-pointer p-0 bg-none hover:bg-gray-200"
+            />
+            <Kbd 
+              onClick={decrementIndex}
+              keys={["up"]} 
+              className="opacity-100 border-none shadow-none bg-transparent cursor-pointer p-0 hover:bg-gray-200"
+            />
+          </div>
         </div>
         <div className="flex flex-row items-center">
           <Link 

@@ -5,6 +5,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import { Input } from "@nextui-org/input";
 import CreateIcon from '@mui/icons-material/Create';
 import { useProfile } from "../server-contexts/profile/provider";
+import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
 
 export interface ScheduleDropdownProps {
   options: Array<{ 
@@ -15,14 +16,12 @@ export interface ScheduleDropdownProps {
   }>;
   selectedOption: string; /** schedule_id */
   text?: string;
-  createNewSchedule: (scheduleName: string) => void;
 }
 
 const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
   options,
   selectedOption,
   text,
-  createNewSchedule,
 }: ScheduleDropdownProps) => {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -32,6 +31,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
   const helperRef = useRef<HTMLInputElement | null>(null);
 
   const { scheduleMap } = useProfile();
+  const { createNewSchedule } = useDegreePlanContext();
 
   const onValueChange = (value: string) => {
     setHelperValue(value || '');
@@ -82,7 +82,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       {isOpen && (
         <div className="absolute top-[calc(100%+4px)] min-w-56 overflow-visible left-0 z-20 max-h-60 overflow-y-scroll">
           {options.map((option, index) => (
-            <div key={index} className="flex flex-row items-end">
+            <div key={index} className="flex flex-row items-center">
               <button
                 key={index}
                 onClick={(e) => {
@@ -92,14 +92,17 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
                     setHelperValue('');
                   } else {
                     option.onClick();
-                    setIsOpen(false);
-                    setActiveHelper(null);
+                    setTimeout(() => {
+                      setIsOpen(false);
+                      setActiveHelper(null);
+                    }, 25);
                   }
                 }}
                 className={`
                   ${selectedOption === option.label ? 'bg-gray-100' : ''} 
                   min-w-56 px-4 py-2 text-left hover:bg-gray-100 text-sm bg-white rounded-none
-                  ${index === 0 ? 'border-t' : index === options.length - 1 ? 'border-b shadow-lg' : ''} border-l border-r border-gray-200`
+                  ${index === 0 ? 'border-t' : index === options.length - 1 ? 'border-b shadow-lg' : ''} 
+                  ${option.customNode ? 'border-b border-gray-200' : ''} border-l border-r border-gray-200`
                 }
               >
                 <div className="p-0 flex flex-row justify-between gap-4 items-center">
@@ -117,16 +120,16 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
               </button>
               {option.helper && activeHelper === option.label && (
                 <div className="flex items-center max-h-8">
-                  <div className="h-[2px] w-5 bg-gray-300 top-10" />
-                  <div className="flex flex-row gap-4 bg-white px-4 py-2 whitespace-nowrap items-center border border-gray-200 rounded-none shadow-md">
+                  <div className="h-[2px] w-10 bg-gray-300 top-10" />
+                  <div className="flex flex-row gap-4 bg-white px-4 py-2 whitespace-nowrap items-center border border-1 border-gray-200 rounded-none shadow-md">
                     <p className="text-sm">Enter a schedule name</p>
                     <Input
                       isClearable
                       variant="bordered"
                       classNames={{
-                        base: "min-w-24",
-                        inputWrapper: "h-5 min-h-5 max-h-5 p-0 border-1 border-t-0 border-l-0 border-r-0 border-default-400 rounded-none group-data-[focus=true]:border-default-400",
-                        input: "p-0",
+                        base: "min-w-32",
+                        inputWrapper: "p-0 h-5 min-h-5 max-h-5 border-1 border-t-0 border-r-0 border-l-0 rounded-none data-[hover=true]:border-default-200 group-data-[focus=true]:border-default-200",
+                        input: "pl-0",
                         clearButton: "p-0"
                       }}
                       placeholder={''}
@@ -147,7 +150,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
 
       {isOpen && (
         <div 
-          className="fixed inset-0 z-10" 
+          className={`fixed inset-0 z-10`} 
           onClick={(e) => {
             e.stopPropagation();  
             setIsOpen(false);
