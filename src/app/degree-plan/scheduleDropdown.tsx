@@ -6,6 +6,7 @@ import { Input } from "@nextui-org/input";
 import CreateIcon from '@mui/icons-material/Create';
 import { useProfile } from "../server-contexts/profile/provider";
 import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 
 export interface ScheduleDropdownProps {
   options: Array<{ 
@@ -16,22 +17,23 @@ export interface ScheduleDropdownProps {
   }>;
   selectedOption: string; /** schedule_id */
   text?: string;
+  term: string;
 }
 
 const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
   options,
   selectedOption,
   text,
+  term,
 }: ScheduleDropdownProps) => {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [noneSelected, setNoneSelected] = useState<boolean>(selectedOption === 'Select a schedule');
   const [activeHelper, setActiveHelper] = useState<string | null>(null);
   const [helperValue, setHelperValue] = useState<string>('');
   const helperRef = useRef<HTMLInputElement | null>(null);
 
   const { scheduleMap } = useProfile();
-  const { createNewSchedule } = useDegreePlanContext();
+  const { createNewSchedule, isEditing, termSelected } = useDegreePlanContext();
 
   const onValueChange = (value: string) => {
     setHelperValue(value || '');
@@ -72,12 +74,18 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
         setIsOpen(true);
       }}
     >
-      <div className="flex flex-row gap-2 items-center bg-gray-200 cursor-pointer px-4 py-1 rounded-md hover:bg-gray-300">
+      <div className="min-h-8 flex flex-row gap-2 items-center bg-gray-200 cursor-pointer px-4 py-1 rounded-md hover:bg-gray-300">
         <p className="text-sm">{text}</p>
-        <ArrowDropDownIcon 
-          style={{ width: '22px', height: '22px', color: noneSelected ? 'gray' : 'default' }}
-          className={`transition-transform p-0 ${isOpen ? 'rotate-180' : ''}`}
-        />
+        {term === termSelected && isEditing && selectedOption !== 'Select a schedule' ? (
+          <FiberManualRecordIcon 
+            style={{ width: '16px', height: '16px', paddingLeft: '4px', color: 'gray' }}
+          />
+        ) : (
+          <ArrowDropDownIcon 
+            style={{ width: '24px', height: '24px', color: 'gray' }}
+            className={`transition-transform p-0 ${isOpen ? 'rotate-180' : ''}`}
+          />
+        )}
       </div>
       {isOpen && (
         <div className="absolute top-[calc(100%+4px)] min-w-56 overflow-visible left-0 z-20 max-h-60 overflow-y-scroll">

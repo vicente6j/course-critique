@@ -17,6 +17,7 @@ export interface ProfileContextValue {
   scheduleAssignments: ScheduleAssignment[] | null;
   scheduleAssignmentsMap: Map<string, ScheduleAssignment> | null;
   scheduleGrades: ScheduleGrade[] | null;
+  scheduleGradeMap: Map<string, ScheduleGrade[]> | null;
   termSelections: TermSelection[] | null;
   termSelectionsMap: Map<string, TermSelection> | null;
   error: string | null;
@@ -80,11 +81,13 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     scheduleInfoMap: Map<string, ScheduleInfo>;
     scheduleEntryMap: Map<string, ScheduleEntry[]>;
     scheduleAssignments: Map<string, ScheduleAssignment>;
+    scheduleGrades: Map<string, ScheduleGrade[]>; /** Maps a schedule ID to the list of relevant schedule grades */
     termSelections: Map<string, TermSelection>;
   }>({
     scheduleInfoMap: new Map(),
     scheduleEntryMap: new Map(),
     scheduleAssignments: new Map(),
+    scheduleGrades: new Map(),
     termSelections: new Map(),
   });
 
@@ -96,6 +99,14 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
       const existing = scheduleEntryMap.get(entry.schedule_id) || [];
       scheduleEntryMap.set(entry.schedule_id, [...existing, entry]);
     });
+    
+    const scheduleGradeMap = new Map();
+    data.scheduleGrades.forEach(grade => {
+      if (!scheduleGradeMap.has(grade.schedule_id)) {
+        scheduleGradeMap.set(grade.schedule_id, []);
+      }
+      scheduleGradeMap.get(grade.schedule_id).push(grade);
+    });
 
     const scheduleAssignmentsMap = new Map(data.scheduleAssignments?.map(assignment => [assignment.term, assignment]));
     const termSelectionsMap = new Map(data.termSelections?.map(term => [term.term, term]));
@@ -104,6 +115,7 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
       scheduleInfoMap: scheduleInfoMap,
       scheduleEntryMap: scheduleEntryMap,
       scheduleAssignments: scheduleAssignmentsMap,
+      scheduleGrades: scheduleGradeMap,
       termSelections: termSelectionsMap,
     });
     setLoading(false);
@@ -250,6 +262,7 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
         scheduleAssignments: data.scheduleAssignments,
         scheduleAssignmentsMap: maps.scheduleAssignments,
         scheduleGrades: data.scheduleGrades,
+        scheduleGradeMap: maps.scheduleGrades,
         termSelections: data.termSelections,
         termSelectionsMap: maps.termSelections,
         error: error,

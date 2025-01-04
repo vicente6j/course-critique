@@ -276,8 +276,8 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 
   const searchbar: React.ReactNode = useMemo(() => {
     return (
-      <div className="relative">
-        <div className={`relative border-b p-0 pl-4 w-200 ${isFocused ? 'border-gray-300' : 'border-gray-400'}`}>
+      <div className="relative max-w-lg">
+        <div className={`relative border-b p-0 pl-4 ${isFocused ? 'border-gray-300' : 'border-gray-400'}`}>
           {activeCourse && (
             <div className="text-xs absolute t-0 l-0 ml-3.5 px-2 py-1 z-10">
               <span className="opacity-0">{query?.toUpperCase()}</span>
@@ -302,7 +302,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
           </div>
         </div>
         <div 
-          className={`${isFocused ? 'visible' : 'invisible'} absolute top-full w-full z-20 bg-white w-180 rounded-b-xl py-2 shadow-md`}
+          className={`${isFocused ? 'visible' : 'invisible'} absolute top-full z-20 bg-white w-[90%] rounded-b-xl py-2 shadow-md`}
           ref={dropdownRef}
           onMouseDown={(e) => {
             e.preventDefault(); /** Extremely important to not unblur before selecting */

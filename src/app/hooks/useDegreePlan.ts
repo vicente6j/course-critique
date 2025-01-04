@@ -12,6 +12,8 @@ interface UseDegreePlanValue {
   replaceScheduleAssignment: (schedule: ScheduleInfo | string) => void;
   createNewSchedule: (scheduleName: string) => void;
   tempInfoObject: ScheduleInfo | null;
+  isEditing: boolean | null;
+  setIsEditing: Dispatch<SetStateAction<boolean | null>>;
 }
 
 export const useDegreePlan = (
@@ -42,6 +44,7 @@ export const useDegreePlan = (
    */
   const [tempInfoObject, setTempInfoObject] = useState<ScheduleInfo | null>(null);
   const [error, setError] = useState<string | null>('');
+  const [isEditing, setIsEditing] = useState<boolean | null>(false);
 
   const { profile, schedules, refetchSchedules, scheduleAssignments, refetchScheduleAssignments } = useProfile();
 
@@ -123,7 +126,7 @@ export const useDegreePlan = (
 
       await createSchedule(profile!.id, scheduleName);
       const curSchedules: ScheduleInfo[] = [...schedules!];
-      const newSchedules: ScheduleInfo[] = await refetchSchedules();
+      const newSchedules: ScheduleInfo[] | null = await refetchSchedules();
       /** 
        * curSchedules will help us find the difference between the new schedules and old (i.e. 
        * the new schedule we just created).
@@ -160,6 +163,8 @@ export const useDegreePlan = (
     error,
     replaceScheduleAssignment,
     createNewSchedule,
-    tempInfoObject
+    tempInfoObject,
+    isEditing,
+    setIsEditing
   };
 };

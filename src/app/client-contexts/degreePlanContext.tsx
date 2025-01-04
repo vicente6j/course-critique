@@ -11,6 +11,8 @@ interface DegreePlanContextType {
   replaceScheduleAssignment: (schedule: ScheduleInfo | string) => void;
   createNewSchedule: (scheduleName: string) => void;
   tempInfoObject: ScheduleInfo | null;
+  isEditing: boolean | null;
+  setIsEditing: Dispatch<SetStateAction<boolean | null>>;
 }
 
 const DegreePlanContext = createContext<DegreePlanContextType | undefined>(undefined);

@@ -1,6 +1,6 @@
 'use client'
 import { ActiveElement, ChartData, ChartEvent } from "chart.js";
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Line } from "react-chartjs-2";
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
@@ -34,6 +34,7 @@ const LineChart: FC<LineChartProps> = ({
 }: LineChartProps) => {
 
   const [hoveredDatasetIndex, setHoveredDatasetIndex] = useState<number | null>(datasetIndex);
+  const activateAverageLine = useRef<boolean>(false);
 
   const { averagesMap } = useCourses();
 
@@ -42,6 +43,10 @@ const LineChart: FC<LineChartProps> = ({
     setHoveredDatasetIndex(datasetIndex);
   }, [datasetIndex]);
 
+  /**
+   * Here the index simply represents the dataset index on which to emphasize (make every other
+   * dataset nearly invisible). If index is -1, this suggests no dataset is hovered on.
+   */
   const adjustOpacities: (index: number) => LineChartDataset[] = useCallback((index: number) => {
     return datasets.map((dataset: LineChartDataset, i: number) => {
       const cssVar = courseColorDict?.get(dataset.label)!;
@@ -94,14 +99,14 @@ const LineChart: FC<LineChartProps> = ({
       annotation: {
         clip: false,  // Extremely important to allow drawing outside chart area
         annotations: [
-          ...(hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets 
+          ...(hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets && activateAverageLine.current
             ? [{
                 type: 'label',
                 xValue: allTerms[allTerms.length - 1],
                 yValue: averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA,
                 backgroundColor: 'transparent',
                 color: '#666',
-                content: `Avg: ${averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
+                content: `avg: ${averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
                 position: 'right',
                 xAdjust: 45,
                 font: {
@@ -111,12 +116,13 @@ const LineChart: FC<LineChartProps> = ({
             : []),
           ...datasets.map((dataset: LineChartDataset, idx: number) => {
             const cssVar = courseColorDict?.get(dataset.label)!;
+            const isHovering = hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets;
             return {
               type: 'label',
               xValue: allTerms[allTerms.length - 1],
               yValue: dataset.data[dataset.data.length - 1].y,
               backgroundColor: 'transparent',
-              color: hexToRgba(cssVar, 1),
+              color: !isHovering ? hexToRgba(cssVar, 1) : hoveredDatasetIndex === idx ? hexToRgba(cssVar, 1) : hexToRgba(cssVar, 0.1),
               content: `${dataset.label}`,
               position: 'right',
               xAdjust: 45,
@@ -201,18 +207,20 @@ const LineChart: FC<LineChartProps> = ({
           spanGaps: true,
         })),
         /** Average lines */
-        ...processedDatasets.map((dataset: LineChartDataset, index: number) => ({
-          label: `${dataset.label} Avg`,
-          data: termsToRender.map((term): LineDataPoint => ({
-            x: term,
-            y: averagesMap?.get(datasets[index].label)?.GPA ?? null
-          })),
-          borderColor: '#8d8d8d',
-          borderDash: [15, 15], // First number is dash length, second is gap length
-          borderWidth: 1,
-          pointRadius: 0,
-          hidden: hoveredDatasetIndex !== index, // Only show for hovered dataset
-        }))
+        ...(activateAverageLine.current ? [
+          ...processedDatasets.map((dataset: LineChartDataset, index: number) => ({
+            label: `${dataset.label} Avg`,
+            data: termsToRender.map((term): LineDataPoint => ({
+              x: term,
+              y: averagesMap?.get(datasets[index].label)?.GPA ?? null
+            })),
+            borderColor: '#8d8d8d',
+            borderDash: [15, 15], // First number is dash length, second is gap length
+            borderWidth: 1,
+            pointRadius: 0,
+            hidden: hoveredDatasetIndex !== index, // Only show for hovered dataset
+          }))
+        ] : [])
       ]
     };
   }, [datasets, hoveredDatasetIndex, adjustOpacities]);

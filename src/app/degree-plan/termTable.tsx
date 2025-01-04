@@ -26,7 +26,7 @@ import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ActionDropdown from "../shared/actionDropdown";
-import { createScheduleEntry, deleteScheduleEntry } from "../api/schedule-entries";
+import { createScheduleEntry, deleteScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
 
 export interface TermTableColumn {
   key: string;
@@ -38,7 +38,8 @@ export const columns: TermTableColumn[] = [
   { key: "course_id", label: "Course ID", width: 'w-[20%]' },
   { key: "course_name", label: "Course Name", width: 'w-[40%]' },
   { key: "GPA", label: "Average GPA", width: 'w-[20%]' },
-  { key: "num_credits", label: "Num Credits", width: 'w-[15%]' },
+  { key: "num_credits", label: "Num Credits", width: 'w-[10%]' },
+  { key: "grade", label: "Grade", width: 'w-[10%]' },
   { key: "actions", label: "", width: 'w-[5%]' },
 ];
 
@@ -63,6 +64,7 @@ const TermTable: FC<TermTableProps> = ({
   
   const [emptyIndex, setEmptyIndex] = useState<number>(1);
   const [scheduleRows, setScheduleRows] = useState<TermTableRow[] | null>(null);
+  const [entryGradeMap, setEntryGradeMap] = useState<Map<number, string> | null>(new Map());
   const [queryValues, setQueryValues] = useState<Map<string, string>>(new Map());
   const [activeResults, setActiveResults] = useState<Map<string, string | null>>(new Map());
   const [error, setError] = useState<string | null>(null);
@@ -82,27 +84,29 @@ const TermTable: FC<TermTableProps> = ({
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
   const [schedule, setSchedule] = useState<ScheduleInfo | null>(null);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
+  const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map);
   const tableRef = useRef<HTMLDivElement | null>(null);
   const initLoadComplete = useRef<boolean>(false);
-  const curIndex = useRef<number>(-1);
 
   const { courses, courseMap, averagesMap } = useCourses();
   const { handleUnselectTerm } = useTermSelectionContext();
+  
   const { 
     termScheduleMap, 
     termSelected, 
     setTermSelected, 
     replaceScheduleAssignment,
-    tempInfoObject 
+    tempInfoObject,
+    setIsEditing, 
   } = useDegreePlanContext();
 
   const { 
     schedules, 
     scheduleMap, 
     scheduleEntryMap, 
+    scheduleGradeMap,
     refetchScheduleEntries,
     loading: profileLoading
   } = useProfile();
@@ -145,6 +149,7 @@ const TermTable: FC<TermTableProps> = ({
         key: 'XX 0000',
         course_id: 'XX 0000',
       }]);
+      initLoadComplete.current = true;
       return;
     }
     let rows: TermTableRow[] = [];
@@ -165,6 +170,20 @@ const TermTable: FC<TermTableProps> = ({
     setScheduleRows(rows);
   }, [scheduleId, scheduleEntryMap]);
 
+  const fetchScheduleGrades: () => void = useCallback(() => {
+    if (!scheduleGradeMap) {
+      return;
+    } else if (!scheduleId || !scheduleGradeMap.has(scheduleId)!) {
+      /** There is no grade listed for the given scheduleId, or there is no schedule at all */
+      return;
+    }
+    let gradeMap: Map<number, string> = new Map();
+    for (const entry of scheduleGradeMap.get(scheduleId)!) {
+      gradeMap.set(entry.entry_id, entry.grade);
+    }
+    setEntryGradeMap(gradeMap);
+  }, [scheduleId, scheduleGradeMap]);
+
   const fetchSchedule: () => void = useCallback(() => {
     if (!scheduleMap || !scheduleId) {
       setSchedule(null);
@@ -179,8 +198,9 @@ const TermTable: FC<TermTableProps> = ({
 
   useEffect(() => {
     fetchScheduleEntries();
+    fetchScheduleGrades();
     fetchSchedule();
-  }, [fetchScheduleEntries]);
+  }, [fetchScheduleEntries, fetchScheduleGrades, fetchSchedule]);
 
   /**
    * This function has a few moving parts to it.
@@ -207,17 +227,21 @@ const TermTable: FC<TermTableProps> = ({
       return;
     }
 
-    let newRows: TermTableRow[] = 
-      rows ? rows 
-      : previousRow ? handleDeselect() 
-      : scheduleRows;
-
+    let newRows: TermTableRow[] = rows ? rows : previousRow ? handleDeselect() : scheduleRows;
     if (key.startsWith('XX')) {
-      /** If we just deselected an empty row */
-      if (previousRow && previousRow.key === key) {
-        return;
+      /** 
+       * Here there's three cases. Either 
+       *   (a) we're selecting an arbitrary empty row, in which case we simply have to activate it or 
+       *   (b) we're deselecting a real row. We can catch this case by checking to see if 
+       *     the previous row's key doesn't start with 'XX' or 
+       *   (c) we're deselecting an active empty row (I hit the empty row twice), in which case
+       *   we handle it the same as (b) and just return
+       */
+
+      if (previousRow && (!previousRow.key.startsWith('XX') || previousRow.key === key)) {
+        return; /** Handled deselect case above */
       }
-      /** Activate the empty row, either from initial render or from having already selected a real row. */
+      /** Activate the empty row */
       setActiveKey(key);
       let index = newRows.findIndex(row => row.key === key);
       if (activeIndex !== index) {
@@ -267,7 +291,7 @@ const TermTable: FC<TermTableProps> = ({
    * and returns.
    */
   const handleDeselect: () => TermTableRow[] = useCallback(() => {
-    if (!activeKey) {
+    if (!activeKey || !previousRow) {
       return scheduleRows || [];
     } else if (activeKey.startsWith('XX') && previousRow!.key.startsWith('XX')) {
       setPreviousRow(null);
@@ -327,53 +351,92 @@ const TermTable: FC<TermTableProps> = ({
     });
   }, []);
 
+  /**
+   * This handles the insertion of a course entry into either 
+   *   a. an empty schedule
+   *   b. a real schedule (scheduleId is non null). this thus requires
+   *     pinging the back-end to add to the schedule and fetch that entry
+   *     for updates
+   * @param key the key of the row to create an entry for (begins with 'XX' always)
+   */
   const addActiveCourse: (key: string) => Promise<void> = useCallback(async (key: string) => {
     if (!scheduleRows || !activeResults) {
-      setError('Missing required data');
+      setError('Missing required data.');
+      return;
+    } else if (!activeResults.get(key)) {
+      setError('Didn\'t find a course to add');
       return;
     }
 
     try {
-      const course_id = activeResults.get(key)!;
-      if (scheduleRows!.some(row => row.key === course_id)) {
+      const courseId = activeResults.get(key)!;
+
+      if (scheduleRows!.some(row => row.key === courseId)) {
         setError('You already added this course.');
         setRerenderCount(prev => prev! + 1); /** Activate the input ref again */
         return;
       }
 
-      let newRows: TermTableRow[] = [
-        ...scheduleRows!.filter(row => row.key !== key && !row.key.startsWith('XX')),
-        { key: course_id, course_id: course_id },
-        ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) 
-      ];
-      if (!newRows.some(row => row.key.startsWith('XX'))) { 
-        newRows = addEmptyRow(newRows); /** Only add if we don't have an empty row */
+      let newRows: TermTableRow[] = [];
+      let isUpdate: boolean = false;
+      if (previousRow && !previousRow.key.startsWith('XX')) {
+        /** 
+         * We have a real previous row we're replacing 
+         * Assume that all real rows are greedily at the front of the list
+        */
+        newRows = [
+          ...scheduleRows.slice(0, activeIndex),
+          { key: courseId, course_id: courseId, entry_id: scheduleRows[activeIndex].entry_id },
+          ...scheduleRows.slice(activeIndex + 1)
+        ];
+        isUpdate = true;
+      } else {
+        /** We're simply adding on an empty row */
+        newRows = [
+          ...scheduleRows!.filter(row => row.key !== key && !row.key.startsWith('XX')),
+          { key: courseId, course_id: courseId },
+          ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) /** In some cases we may have multiple emtpy rows,
+          which we want to carry over */
+        ];
       }
 
-      /** At this point we might have already set scheduleRows, but it doesn't really matter */
+      if (!newRows.some(row => row.key.startsWith('XX'))) { 
+        newRows = addEmptyRow(newRows, true); /** Only add if we don't have an empty row */
+      }
+
       setScheduleRows(newRows);
       removeFromDictionaries(key);
 
       /** At this point we definitely have an empty row (or multiple), so select the first one */
-      let firstEmptyIndex = newRows.findIndex(row => row.key.startsWith('XX'));
+      const firstEmptyIndex = newRows.findIndex(row => row.key.startsWith('XX'));
       setActiveKey(newRows[firstEmptyIndex].key);
-      setPreviousRow(newRows[firstEmptyIndex])
+      setPreviousRow(newRows[firstEmptyIndex]);
       setRerenderCount(prev => prev! + 1);
       setActiveIndex(firstEmptyIndex);
 
-      if (course_id && scheduleId) { /** If there's an active schedule and courseId was real */
-        await createScheduleEntry(schedule!.schedule_id, course_id);
+      if (isUpdate && scheduleId) {
+        let entryId: number = scheduleRows[activeIndex].entry_id as number;
+
+        await updateScheduleEntry(schedule!.schedule_id, entryId, courseId);
+        await refetchScheduleEntries();
+
+      } else if (scheduleId) {
+
+        await createScheduleEntry(schedule!.schedule_id, courseId);
+        /** This doesn't retrigger new schedule entries since initLoadComplete.current will be set to true */
         const newEntries = await refetchScheduleEntries();
 
-        /** It only remains to make sure we update the newRows with the right entry_id, so that we can delete it later */
+        /** 
+         * It only remains to make sure we update the newRows with the right entry_id, so that we can delete it later. 
+         * Note that here we don't actually trigger a rerender of the rows, since the objects remain the same.
+        */
         setScheduleRows(prev => {
-          const insertIndex = prev!.findIndex(row => row.key === course_id)!;
+          const insertIndex = prev!.findIndex(row => row.key === courseId)!;
           const newArr = [
             ...prev!.slice(0, insertIndex), 
-            { ...prev![insertIndex], entry_id: newEntries?.find(row => row.course_id === course_id)!.entry_id!},
+            { ...prev![insertIndex], entry_id: newEntries?.find(row => row.course_id === courseId)!.entry_id!},
             ...prev!.slice(insertIndex + 1)
           ];
-          console.log(newArr);
           return newArr!;
         })
       }
@@ -381,7 +444,7 @@ const TermTable: FC<TermTableProps> = ({
       console.error(error);
       setError('Unable to insert into schedule');
     }
-  }, [activeResults, scheduleRows]);
+  }, [activeResults, scheduleRows, activeIndex]);
 
   const removeInsertedCourse: (key: string) => Promise<void> = useCallback(async (key) => {
     try {
@@ -419,9 +482,12 @@ const TermTable: FC<TermTableProps> = ({
 
   /**
    * Adds an empty row to scheduled rows (based on the current empty index to avoid collisions).
-   * Optional param to pass in a collection of rows to filter.
+   * Optional param to pass in a collection of rows to filter. Optional param to return the 
+   * rows rather than set scheduleRows.
+   * @param rows optional rows to filter
+   * @param returnList optional param to return rather than set
    */
-  const addEmptyRow: (rows?: TermTableRow[]) => TermTableRow[] = useCallback((rows?) => {
+  const addEmptyRow: (rows?: TermTableRow[], returnList?: boolean) => TermTableRow[] = useCallback((rows?, returnList?) => {
     if (scheduleRows!.length == 7) {
       /** Don't add more than seven courses */
       setError('Unable to insert more than seven courses.');
@@ -436,23 +502,27 @@ const TermTable: FC<TermTableProps> = ({
     let index = scheduleRows!.findIndex(row => row.key === activeKey);
     /** 
      * 1. If myRows is empty, just add the empty row and continue.
-     * 2. If the current row selected isn't empty, just add the empty row underneath all the non
-     * empty ones. Otherwise, add the empty row directly underneath our current row.
+     * 2. If the current row selected is a real course (and potentially has real courses underneath it), 
+     *    just add the empty row underneath all the non empty ones. 
+     *    Otherwise, add the empty row directly underneath our current row.
      */
     if (myRows.length === 0) {
       newRows = [{ key: key, course_id: 'XX 0000 '}];
-    } else if (index! < 0 || index! >= myRows.length || !myRows[index!].key.startsWith('XX')) {
+    } else if (index < 0 || index >= myRows.length || !myRows[index].key.startsWith('XX')) {
       newRows = [ 
         ...myRows.filter(row => !row.key.startsWith('XX')), 
-        { key: key, course_id: 'XX 0000' }, 
-        ...myRows.filter(row => row.key.startsWith('XX'))
+        { key: key, course_id: 'XX 0000' }, /** add it right underneath the real rows, even if there are other empty rows */
+        ...myRows.filter(row => row.key.startsWith('XX')) /** rest of the empty rows */
       ];
     } else {
       newRows = [
-        ...myRows.slice(0, index! + 1),
-        { key: key, course_id: 'XX 0000' }, 
-        ...myRows.slice(index! + 1)
+        ...myRows.slice(0, index + 1), /** use this filter to capture empty rows potentially above our current row */
+        { key: key, course_id: 'XX 0000' }, /** finally, add the empty row */
+        ...myRows.slice(index + 1)
       ];
+    }
+    if (returnList) {
+      return newRows;
     }
     setScheduleRows(newRows);
     setActiveKey(key);
@@ -588,11 +658,11 @@ const TermTable: FC<TermTableProps> = ({
     let average = 0;
     let credits = 0;
     for (const row of scheduleRows) {
-      if (row.key.startsWith('XX')) {
+      if (row.key.startsWith('XX') || !averagesMap.has(row.key)) {
         continue;
       }
-      const courseGpa = averagesMap.get(row.key)?.GPA!;
-      const numCredits = Number(courseMap?.get(row.key)!.credits!);
+      const courseGpa = averagesMap.get(row.key)!.GPA!;
+      const numCredits = Number(courseMap!.get(row.key)!.credits!);
       average = (average * credits + courseGpa * numCredits) / (credits + numCredits);
       credits += numCredits;
     }
@@ -660,24 +730,73 @@ const TermTable: FC<TermTableProps> = ({
     );
   }, [activeResults, queryValues, rerenderCount, inputRefs]);
 
+  const formatGradeInput: (key: string) => JSX.Element = useCallback((key) => {
+    return (
+      <TableCell>
+        <div className="relative max-h-xs rounded-none border-b border-gray-400 py-1 pr-1 z-10">
+          <div className="absolute text-search bg-transparent outline-none !cursor-text !z-10">
+            {/** Use uppercase here on all formatting */}
+            {activeResults.has(key) && activeResults.get(key) ? (
+              <>
+                <span className="opacity-0">
+                  {activeResults.get(key)?.slice(0, queryValues.get(key)!.length).toUpperCase()}
+                </span>
+                <span className="text-gray-400">
+                  {activeResults.get(key)!.slice(queryValues.get(key)!.length).toUpperCase()}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-400">
+                  {queryValues.has(key) && queryValues.get(key)!.length > 0 ? '' : '+XX 0000'}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="flex flex-row gap-0 items-center">
+            {/** onFocus=(stop propagation) needed to prevent row from being selected */}
+            <input
+              id={`searchbar-${key}`}
+              type="text"
+              ref={(el) => {
+                if (el) {
+                  {/** This gets updated on each render, but it's fine (don't check if the map contains it) */}
+                  inputRefs.current.set(key, { current: el });
+                }
+              }}
+              value={queryValues.get(key)?.toUpperCase()}
+              onChange={(e) => onSearchChange(e.target.value, key)}
+              onFocus={(e) => e.stopPropagation()}
+              onKeyDown={(e) => handleKeyDown(e, key)}
+              placeholder=""
+              className={`text-search bg-transparent z-2 outline-none w-80`}
+            />
+          </div>
+        </div>
+      </TableCell>
+    );
+  }, [activeResults, queryValues, rerenderCount, inputRefs]);
+
   const nextToolTipDisplayContent: JSX.Element = useMemo(() => {
-    if (!scheduleRows) {
+    if (!scheduleRows || !averagesMap) {
       return <></>;
     }
-    const nonEmpty = scheduleRows.filter(row => !row.key.startsWith('XX'));
+    const nonEmptyAndNonNan = scheduleRows.filter(row => !row.key.startsWith('XX') && averagesMap!.has(row.key));
+    const numItems = nonEmptyAndNonNan.length;
+
     return (
       <p>
-        {`Weighted by number of credits for each class. ${nonEmpty.length !== 0 ? (
+        {`Weighted by number of credits for each class. ${numItems !== 0 ? (
           `The value ${Number(averageGpa).toFixed(2)} is currently averaging 
-            ${nonEmpty.map((row => {
+            ${nonEmptyAndNonNan.map((row => {
               return ` ${row.key}`
-            }))} (${nonEmpty.length} items)`
+            }))} (${numItems} items)`
         ) : (
           ''
         )}`}
       </p>
     )
-  }, [scheduleRows, averageGpa])
+  }, [scheduleRows, averageGpa, averagesMap])
 
   const scheduleOptions: Array<{ 
     label: string;
@@ -741,15 +860,13 @@ const TermTable: FC<TermTableProps> = ({
         <ActionDropdown
           options={getOptions(term)}
         />
-        {isEditing && (
-          <p className="text-sm text-gray-600 ">{schedule ? `editing ${schedule.name}...` : ''}</p>
-        )}
       </div>
       <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
         <ScheduleDropdown 
           options={scheduleOptions}
           text={schedule ? schedule.name! : 'Select a schedule'}
           selectedOption={schedule ? schedule.schedule_id! : 'Select a schedule'}
+          term={term}
         />
         <div className="flex flex-row gap-4 items-center">
           <div className="flex flex-row gap-2 items-center">
@@ -803,32 +920,41 @@ const TermTable: FC<TermTableProps> = ({
               {(columnKey) => {
 
                 const value = getKeyValue(item, columnKey);
-                const isEmptyRow = item.key.startsWith('XX');
+                const isEmptyOrEditing = item.key.startsWith('XX');
                 let course: Course | null = null;
-                let averageGpa: number | null = null;
+                let averageGpa: number | string | null = null;
                 if (activeResults.has(item.key) && activeResults.get(item.key)) {
                   course = courseMap?.get(activeResults.get(item.key)!)!; 
-                  averageGpa = averagesMap?.get(activeResults.get(item.key)!)?.GPA!;
+                  averageGpa = averagesMap?.get(activeResults.get(item.key)!)?.GPA! || 'N/A';
                 }
                 const isActive = item.key === activeKey;
 
-                if (isEmptyRow) {
+                if (isEmptyOrEditing) {
                   if (columnKey == 'course_id') {
                     return formatEmptyCourseID(item.key);
                   } else if (columnKey == 'course_name') {
                     return <TableCell className="text-gray-400">{course ? course.course_name : ''}</TableCell>;
                   } else if (columnKey == 'GPA') {
-                    if (!averageGpa) {
+                    if (averageGpa === 'N/A') {
+                      return (
+                        <TableCell className="text-gray-400 font-semi-bold">
+                          {averageGpa}
+                        </TableCell>
+                      );
+                    } else if (!averageGpa) {
                       return <TableCell>{''}</TableCell>;
+                    } else {
+                      let color = formatGPA(Number(averageGpa));
+                      return (
+                        <TableCell style={{ color: color }} className="font-semibold">
+                          {Number(averageGpa).toFixed(2)}
+                        </TableCell>
+                      );
                     }
-                    let color = formatGPA(Number(averageGpa));
-                    return (
-                      <TableCell style={{ color: color }} className="font-loose">
-                        {averageGpa.toFixed(2)}
-                      </TableCell>
-                    );
                   } else if (columnKey == 'num_credits') {
                     return <TableCell className="text-gray-400">{course ? course.credits : ''}</TableCell>;
+                  } else if (columnKey == 'grade') {
+                    return <TableCell>{''}</TableCell>; /** Don't display anything for grade */
                   } else if (columnKey == 'actions') {
                     return (
                       <TableCell>
@@ -846,15 +972,24 @@ const TermTable: FC<TermTableProps> = ({
                 }
 
                 course = courseMap?.get(item.key)!;
-                averageGpa = averagesMap?.get(item.key)?.GPA!;
+                averageGpa = averagesMap?.get(item.key)?.GPA || 'N/A'; /** would be N/A if the course if pass/fail */
+                let grade = entryGradeMap?.get(item.entry_id as number) || 'N/A';
 
                 if (columnKey === 'GPA') {
-                  let color = formatGPA(Number(averageGpa));
-                  return (
-                    <TableCell style={{ color: color }} className="font-semibold">
-                      {Number(averageGpa).toFixed(2)}
-                    </TableCell>
-                  );
+                  if (averageGpa === 'N/A') {
+                    return (
+                      <TableCell className="text-gray-400 font-semi-bold">
+                        {averageGpa}
+                      </TableCell>
+                    );
+                  } else {
+                    let color = formatGPA(Number(averageGpa));
+                    return (
+                      <TableCell style={{ color: color }} className="font-semibold">
+                        {Number(averageGpa).toFixed(2)}
+                      </TableCell>
+                    );
+                  }
                 } else if (columnKey === 'course_id') {
                   return (
                     <TableCell>
@@ -874,13 +1009,20 @@ const TermTable: FC<TermTableProps> = ({
                   );
                 } else if (columnKey == 'num_credits') {
                   return <TableCell className="text-sm">{course.credits}</TableCell>;
-                } else {
-                  return (
-                    <TableCell>
-                     {''} {/** Don't need to put anything here (just empty) */}
-                    </TableCell>
-                  );
-                }
+                } else if (columnKey == 'grade') {
+                  if (grade === 'N/A') {
+                    return (
+                      <TableCell className="text-sm text-gray-400">
+                        {'--'}
+                      </TableCell>
+                    )
+                  }
+                } 
+                return (
+                  <TableCell>
+                   {''} {/** Don't need to put anything here (just empty) */}
+                  </TableCell>
+                );
               }}
             </TableRow>
           )}
