@@ -44,7 +44,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
         <div className="flex flex-col gap-8 w-full">
           <DegreePlanHeader />
           <div className="flex flex-col gap-4">
-            <p className="heading-xs font-regular">Terms Selected</p>
+            <p className="heading-sm font-regular">Terms Selected</p>
             <div className="flex flex-row gap-2 flex-wrap">
               {showUnselected ? (
                 <>

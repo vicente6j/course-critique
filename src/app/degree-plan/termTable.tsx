@@ -45,7 +45,7 @@ export const columns: TermTableColumn[] = [
 
 export interface TermTableRow {
   key: string;
-  [key: string]: number | string;
+  [key: string]: number | string | boolean;
 }
 
 interface MutableRef<T> {
@@ -64,13 +64,23 @@ const TermTable: FC<TermTableProps> = ({
   
   const [emptyIndex, setEmptyIndex] = useState<number>(1);
   const [scheduleRows, setScheduleRows] = useState<TermTableRow[] | null>(null);
-  const [entryGradeMap, setEntryGradeMap] = useState<Map<number, string> | null>(new Map());
   const [queryValues, setQueryValues] = useState<Map<string, string>>(new Map());
   const [activeResults, setActiveResults] = useState<Map<string, string | null>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [previousRow, setPreviousRow] = useState<TermTableRow | null>(null);
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+
+  /**
+   * Maps each schedule entry to a corresponding grade. Note that there cannot be a grade for an empty row,
+   * or a row which does not have a valid course ID, since assigning a grade to such a row
+   * doesn't make any sense.
+   */
+  const [entryGradeMap, setEntryGradeMap] = useState<Map<number, string>>(new Map());
+  
+  /** E.g. CS 1332, for currently editing the grade for row with key CS 1332 */
+  const [activeEntryId, setActiveEntryId] = useState<number | null>(null);
+  const [previousGrade, setPreviousGrade] = useState<string | null>(null);
 
   /** 
    * The purpose of having both activeKey and activeIndex is activeKey represents the key of
@@ -82,11 +92,12 @@ const TermTable: FC<TermTableProps> = ({
    * activeIndex a location.
    */
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [activeCol, setActiveCol] = useState<number>(0);
 
   const [schedule, setSchedule] = useState<ScheduleInfo | null>(null);
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
-  const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map);
+  const gradeInputRefs = useRef<Map<number, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
   const initLoadComplete = useRef<boolean>(false);
 
@@ -113,10 +124,13 @@ const TermTable: FC<TermTableProps> = ({
 
   const router = useRouter();
 
-  /** Runs every instance of activeKey changing (extremely regularly) */
+  /** 
+   * Runs every instance of activeKey or activeGradeKey changing 
+   * (extremely regularly). 
+  */
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
-  }, [activeKey]);
+  }, [activeKey, activeEntryId]);
 
   useEffect(() => {
     setIsEditing(
@@ -124,6 +138,36 @@ const TermTable: FC<TermTableProps> = ({
         && activeKey !== null
     );
   }, [scheduleRows, activeKey]);
+
+  /** 
+   * On every rerender try to activate the
+   * row indicated by 'activeKey' (if it's available).
+   * Also try to activate the grade cell indicated by
+   * 'activeGradeKey' (if it's available).
+   */
+  useEffect(() => {
+    if (activeKey) {
+      const inputRef = inputRefs.current.get(activeKey);
+      if (inputRef?.current) {
+        inputRef!.current.focus();
+      }
+    }
+    if (activeEntryId) {
+      const gradeRef = gradeInputRefs.current.get(activeEntryId);
+      if (gradeRef?.current) {
+        gradeRef!.current.focus();
+      }
+    }
+  }, [rerenderCount]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const scheduleId: string | null = useMemo(() => {
     if (!termScheduleMap) {
@@ -148,6 +192,8 @@ const TermTable: FC<TermTableProps> = ({
       setScheduleRows([{
         key: 'XX 0000',
         course_id: 'XX 0000',
+        isHovering: false,
+        isHoveringOnGrade: false,
       }]);
       initLoadComplete.current = true;
       return;
@@ -158,12 +204,16 @@ const TermTable: FC<TermTableProps> = ({
         key: entry.course_id!,
         course_id: entry.course_id!,
         entry_id: entry.entry_id,
+        isHovering: false,
+        isHoveringOnGrade: false,
       });
     }
     if (rows.length === 0) {
       rows.push({
         key: 'XX 0000',
         course_id: 'XX 0000',
+        isHovering: false,
+        isHoveringOnGrade: false,
       });
     }
     initLoadComplete.current = true;
@@ -220,14 +270,21 @@ const TermTable: FC<TermTableProps> = ({
    * 2. The row selected doesn't start with 'XX'. i.e. it's a real row.
    * In this case, we definitely want to add the updated edit row to our
    * scheduledRows, and we definitely want to deselect in the case that something
-   * is previously selected. 
+   * is previously selected. Moreover,
+   *  -- 1. Add an entry to query values to represent the string which the user is now querying
+   *  -- 2. Add an entry to active results to represent the filtered suggestions as a result
+   *    of the query
    */
   const handleSelectRow: (key: string, rows?: TermTableRow[]) => void = useCallback((key: string, rows?) => {
     if (!scheduleRows) {
       return;
     }
 
-    let newRows: TermTableRow[] = rows ? rows : previousRow ? handleDeselect() : scheduleRows;
+    let newRows: TermTableRow[] = rows 
+      ? rows 
+      : previousRow ? handleDeselect() 
+      : scheduleRows;
+
     if (key.startsWith('XX')) {
       /** 
        * Here there's three cases. Either 
@@ -264,17 +321,17 @@ const TermTable: FC<TermTableProps> = ({
     const newKey = `XX ${paddedNumber}`;
     newRows = [
       ...newRows.slice(0, index),
-      { ...newRows[index], key: newKey },
+      { ...newRows[index], key: newKey }, /** Maintains old entry and hover state */
       ...newRows.slice(index + 1)
     ];
 
     setScheduleRows(newRows);
-    setQueryValues((prev) => {
+    setQueryValues(prev => {
       const newDict = new Map(prev);
       newDict.set(newKey, key);
       return newDict;
     });
-    setActiveResults((prev) => {
+    setActiveResults(prev => {
       const newDict = new Map(prev);
       newDict.set(newKey, key);
       return newDict;
@@ -300,11 +357,12 @@ const TermTable: FC<TermTableProps> = ({
     }
     /**
      * We're deselecting a real entry at this point.
+     * Remove from all dictionaries and reset the scheduleRows using previousRow.
      */
     let index = scheduleRows!.findIndex(row => row.key === activeKey);
-    const newRows = [
+    let newRows = [
       ...scheduleRows!.slice(0, index),
-      { ...scheduleRows![index], key: previousRow!.key },
+      { ...scheduleRows![index], key: previousRow!.key }, /** Maintains previous row hover state and entry */
       ...scheduleRows!.slice(index + 1)
     ];
     setScheduleRows(newRows);
@@ -314,18 +372,41 @@ const TermTable: FC<TermTableProps> = ({
     return newRows;
   }, [activeKey, scheduleRows, previousRow]);
 
+  const handleSelectGrade: (entryId: number) => void = useCallback((entryId) => {
+    setActiveEntryId(entryId);
+    if (entryGradeMap.get(entryId)) {
+      setPreviousGrade(entryGradeMap.get(entryId)!);
+    }
+  }, []);
+
+  const handleDeselectGrade: () => void = useCallback(() => {
+    if (!activeEntryId) {
+      return;
+    } 
+    /** Reset the entry grade map */
+    if (previousGrade) {
+      setEntryGradeMap(prev => {
+        const newDict = new Map(prev);
+        newDict.set(activeEntryId!, previousGrade);
+        return newDict;
+      });
+    }
+    setPreviousGrade(null);
+    setActiveEntryId(null);
+  }, [activeEntryId, previousGrade]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (tableRef && !tableRef.current!.contains(event.target as Node) && termSelected === term) {
         handleDeselect();
+        handleDeselectGrade();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [handleDeselect, termSelected, term]);
+  }, [handleDeselect, handleDeselectGrade, termSelected, term]);
 
   const filterCourses: (query: string) => Course[] = useCallback((query: string) => {
     if (!courses) {
@@ -338,13 +419,13 @@ const TermTable: FC<TermTableProps> = ({
     });
   }, [courses]);
 
-  const removeFromDictionaries: (key: string) => void = useCallback((key: string) => {
-    setQueryValues((prev) => {
+  const removeFromDictionaries: (key: string) => void = useCallback((key) => {
+    setQueryValues(prev => {
       const newDict = new Map(prev);
       newDict.delete(key);
       return newDict;
     });
-    setActiveResults((prev) => {
+    setActiveResults(prev => {
       const newDict = new Map(prev);
       newDict.delete(key);
       return newDict;
@@ -386,7 +467,7 @@ const TermTable: FC<TermTableProps> = ({
         */
         newRows = [
           ...scheduleRows.slice(0, activeIndex),
-          { key: courseId, course_id: courseId, entry_id: scheduleRows[activeIndex].entry_id },
+          { key: courseId, course_id: courseId, entry_id: scheduleRows[activeIndex].entry_id, isHovering: false, isHoveringOnGrade: false },
           ...scheduleRows.slice(activeIndex + 1)
         ];
         isUpdate = true;
@@ -394,7 +475,7 @@ const TermTable: FC<TermTableProps> = ({
         /** We're simply adding on an empty row */
         newRows = [
           ...scheduleRows!.filter(row => row.key !== key && !row.key.startsWith('XX')),
-          { key: courseId, course_id: courseId },
+          { key: courseId, course_id: courseId, isHovering: false, isHoveringOnGrade: false, }, /** notice we don't have an entryId yet */
           ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) /** In some cases we may have multiple emtpy rows,
           which we want to carry over */
         ];
@@ -507,17 +588,17 @@ const TermTable: FC<TermTableProps> = ({
      *    Otherwise, add the empty row directly underneath our current row.
      */
     if (myRows.length === 0) {
-      newRows = [{ key: key, course_id: 'XX 0000 '}];
+      newRows = [{ key: key, course_id: 'XX 0000', isHovering: false, isHoveringOnGrade: false, }];
     } else if (index < 0 || index >= myRows.length || !myRows[index].key.startsWith('XX')) {
       newRows = [ 
         ...myRows.filter(row => !row.key.startsWith('XX')), 
-        { key: key, course_id: 'XX 0000' }, /** add it right underneath the real rows, even if there are other empty rows */
+        { key: key, course_id: 'XX 0000', isHovering: false, isHoveringOnGrade: false, }, /** add it right underneath the real rows, even if there are other empty rows */
         ...myRows.filter(row => row.key.startsWith('XX')) /** rest of the empty rows */
       ];
     } else {
       newRows = [
         ...myRows.slice(0, index + 1), /** use this filter to capture empty rows potentially above our current row */
-        { key: key, course_id: 'XX 0000' }, /** finally, add the empty row */
+        { key: key, course_id: 'XX 0000', isHovering: false, isHoveringOnGrade: false, }, /** finally, add the empty row */
         ...myRows.slice(index + 1)
       ];
     }
@@ -536,8 +617,10 @@ const TermTable: FC<TermTableProps> = ({
   /**
    * Handles search value changing. Plus, manually retriggers a rerender in the case that
    * the key is the same (most of the time).
+   * @param value value which is queried
+   * @param key key of the row which is queried on
    */
-  const onSearchChange: (value: string, key: string) => void = useCallback((value: string, key: string) => {
+  const onSearchChange: (value: string, key: string) => void = useCallback((value, key) => {
     setQueryValues((prev) => {
       const newDict = new Map(prev);
       newDict.set(key, value);
@@ -553,28 +636,22 @@ const TermTable: FC<TermTableProps> = ({
       }
       return newDict;
     });
-    setActiveKey(key);
     setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
   }, [filterCourses]);
 
-  useEffect(() => {
-    if (!activeKey) {
-      return;
-    }
-    const inputRef = inputRefs.current.get(activeKey);
-    if (inputRef?.current) {
-      inputRef!.current.focus();
-    }
-  }, [rerenderCount]);
-
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError('');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
+   /**
+   * Handles grade value changing.
+   * @param value value which is queried
+   * @param entryId entryId of the row which is queried on
+   */
+  const onGradeChange: (value: string, entryId: number) => void = useCallback((value, entryId) => {
+    setEntryGradeMap(prev => {
+      const newDict = new Map(prev);
+      newDict.set(entryId, value);
+      return newDict;
+    });
+    setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
+  }, []);
 
   const incrementIndex: () => void = useCallback(() => {
     if (!scheduleRows) {
@@ -625,20 +702,33 @@ const TermTable: FC<TermTableProps> = ({
     };
   }, [handleShortcuts]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, key: string) => {
-    /** Handles case of inserting rows with cmd-enter */
+  type KeyDownType = 'course' | 'grade';
+  const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, key: string | number, type: KeyDownType) => void = useCallback((
+    e, 
+    key,
+    type,
+  ) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && termSelected === term) {
+      /** Handles case of inserting rows with cmd-enter (don't do anything) */
       return;
     }
+
     switch (e.key) {
       case 'Enter':
-        if (!activeResults.get(key) || activeResults.get(key)!.length === 0) {
-          return;
-        }
-        addActiveCourse(key);
-        const inputRef = inputRefs.current.get(key);
-        if (inputRef?.current) {
-          inputRef.current.blur();
+        if (type === 'course') {
+          key = key as string;
+          /** Treat this enter command like inserting a course */
+          if (!activeResults.get(key) || activeResults.get(key)!.length === 0) {
+            return;
+          }
+          addActiveCourse(key);
+          const inputRef = inputRefs.current.get(key);
+          if (inputRef?.current) {
+            inputRef.current.blur();
+          }
+        } else {
+          /** Verify valid grade and insert */
+
         }
         break;
       case 'ArrowDown':
@@ -683,25 +773,37 @@ const TermTable: FC<TermTableProps> = ({
     return numCredits;
   }, [scheduleRows, courseMap]);
 
-  const formatEmptyCourseID: (key: string) => JSX.Element = useCallback((key: string) => {
+  const formatEmptyCourseID: (item: TermTableRow) => JSX.Element = useCallback((item) => {
+    const inActiveResults = activeResults.has(item.key) && activeResults.get(item.key);
+    const inQueryValues = queryValues.has(item.key) && queryValues.get(item.key)!.length > 0;
     return (
-      <TableCell>
+      <TableCell
+        className={`text-sm ${item.isHovering && 'bg-gray-100'}`}
+        onClick={() => handleSelectRow(item.key)}
+        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
+        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+      >
         <div className="relative rounded-lg max-h-xs rounded-none border-b border-gray-400 py-1 pr-1 z-10">
           <div className="absolute text-search bg-transparent outline-none !cursor-text !z-10">
             {/** Use uppercase here on all formatting */}
-            {activeResults.has(key) && activeResults.get(key) ? (
+            {inActiveResults ? (
               <>
+                {/**
+                 * This achieves the effect of putting a 'suggestion' in front of what you type
+                 * (first span is for spacing, second span is for autofill).
+                 */}
                 <span className="opacity-0">
-                  {activeResults.get(key)?.slice(0, queryValues.get(key)!.length).toUpperCase()}
+                  {activeResults.get(item.key)?.slice(0, queryValues.get(item.key)!.length).toUpperCase()}
                 </span>
                 <span className="text-gray-400">
-                  {activeResults.get(key)!.slice(queryValues.get(key)!.length).toUpperCase()}
+                  {activeResults.get(item.key)!.slice(queryValues.get(item.key)!.length).toUpperCase()}
                 </span>
               </>
             ) : (
               <>
+                {/** Placeholder text which can't actually be modified */}
                 <span className="text-gray-400">
-                  {queryValues.has(key) && queryValues.get(key)!.length > 0 ? '' : '+XX 0000'}
+                  {inQueryValues ? '' : '+XX 0000'}
                 </span>
               </>
             )}
@@ -709,18 +811,18 @@ const TermTable: FC<TermTableProps> = ({
           <div className="flex flex-row gap-0 items-center">
             {/** onFocus=(stop propagation) needed to prevent row from being selected */}
             <input
-              id={`searchbar-${key}`}
+              id={`searchbar-${item.key}`}
               type="text"
               ref={(el) => {
                 if (el) {
                   {/** This gets updated on each render, but it's fine (don't check if the map contains it) */}
-                  inputRefs.current.set(key, { current: el });
+                  inputRefs.current.set(item.key, { current: el });
                 }
               }}
-              value={queryValues.get(key)?.toUpperCase()}
-              onChange={(e) => onSearchChange(e.target.value, key)}
+              value={queryValues.get(item.key)?.toUpperCase()}
+              onChange={(e) => onSearchChange(e.target.value, item.key)}
               onFocus={(e) => e.stopPropagation()}
-              onKeyDown={(e) => handleKeyDown(e, key)}
+              onKeyDown={(e) => handleKeyDown(e, item.key, 'course')}
               placeholder=""
               className={`text-search bg-transparent z-2 outline-none w-80`}
             />
@@ -730,44 +832,30 @@ const TermTable: FC<TermTableProps> = ({
     );
   }, [activeResults, queryValues, rerenderCount, inputRefs]);
 
-  const formatGradeInput: (key: string) => JSX.Element = useCallback((key) => {
+  const formatGradeInput: (item: TermTableRow) => JSX.Element = useCallback((item) => {
+    const entryId = item.entry_id as number;
     return (
-      <TableCell>
+      <TableCell
+        className={`text-sm ${item.isHoveringGrade && 'bg-gray-100'}`}
+        onClick={() => handleSelectGrade(entryId)}
+        onMouseEnter={() => handleSetHoverState(item.key, 'grade', true)}
+        onMouseLeave={() => handleSetHoverState(item.key, 'grade', false)}
+      >
         <div className="relative max-h-xs rounded-none border-b border-gray-400 py-1 pr-1 z-10">
-          <div className="absolute text-search bg-transparent outline-none !cursor-text !z-10">
-            {/** Use uppercase here on all formatting */}
-            {activeResults.has(key) && activeResults.get(key) ? (
-              <>
-                <span className="opacity-0">
-                  {activeResults.get(key)?.slice(0, queryValues.get(key)!.length).toUpperCase()}
-                </span>
-                <span className="text-gray-400">
-                  {activeResults.get(key)!.slice(queryValues.get(key)!.length).toUpperCase()}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-gray-400">
-                  {queryValues.has(key) && queryValues.get(key)!.length > 0 ? '' : '+XX 0000'}
-                </span>
-              </>
-            )}
-          </div>
           <div className="flex flex-row gap-0 items-center">
             {/** onFocus=(stop propagation) needed to prevent row from being selected */}
             <input
-              id={`searchbar-${key}`}
+              id={`searchbar-${entryId}`}
               type="text"
               ref={(el) => {
                 if (el) {
-                  {/** This gets updated on each render, but it's fine (don't check if the map contains it) */}
-                  inputRefs.current.set(key, { current: el });
+                  gradeInputRefs.current.set(entryId, { current: el });
                 }
               }}
-              value={queryValues.get(key)?.toUpperCase()}
-              onChange={(e) => onSearchChange(e.target.value, key)}
+              value={entryGradeMap.get(entryId)?.toUpperCase()}
+              onChange={(e) => onGradeChange(e.target.value, entryId)}
               onFocus={(e) => e.stopPropagation()}
-              onKeyDown={(e) => handleKeyDown(e, key)}
+              onKeyDown={(e) => handleKeyDown(e, entryId, 'grade')}
               placeholder=""
               className={`text-search bg-transparent z-2 outline-none w-80`}
             />
@@ -848,6 +936,23 @@ const TermTable: FC<TermTableProps> = ({
     ]; 
   }, []);
 
+  type HoverType = 'grade' | 'row';
+  const handleSetHoverState: (key: string, type: HoverType, active: boolean) => void = useCallback((
+    key, 
+    type, 
+    active
+  ) => {
+    setScheduleRows(prev => {
+      return prev!.map(row => {
+        if (type === 'row') {
+          return row.key === key ? { ...row, isHovering: active } : row
+        } else {
+          return row.key === key ? { ...row, isHoveringGrade: active } : row
+        }
+      });
+    })
+  }, []);
+
   return (
     <div 
       className="flex flex-col gap-2"
@@ -899,133 +1004,147 @@ const TermTable: FC<TermTableProps> = ({
         ref={tableRef}
       >
         <TableHeader columns={columns}>
-        {(column) => (
-          <TableColumn 
-            className={column.width}
-            key={column.key}
-          >
-            {column.label}
-          </TableColumn>
-        )}
+        {(column) => {
+          const isWhitespace = column.key === 'actions';
+          return (
+            <TableColumn 
+              className={`${column.width}`}
+              key={column.key}
+            >
+              {column.label}
+            </TableColumn>
+          );
+        }}
         </TableHeader>
         <TableBody items={scheduleRows || []}>
-          {(item) => (
-            <TableRow 
-              key={`${item.key}`} 
-              className={`border-b border-gray-200 hover:bg-gray-100 ${item.key.startsWith('XX') ? '' : ''}`}
-              onClick={() => {
-                handleSelectRow(item.key);
-              }}
-            >
-              {(columnKey) => {
+          {(item) => {
+            return (
+              <TableRow 
+                key={`${item.key}`} 
+                className={`border-b border-gray-200`}
+              >
+                {(columnKey) => {
 
-                const value = getKeyValue(item, columnKey);
-                const isEmptyOrEditing = item.key.startsWith('XX');
-                let course: Course | null = null;
-                let averageGpa: number | string | null = null;
-                if (activeResults.has(item.key) && activeResults.get(item.key)) {
-                  course = courseMap?.get(activeResults.get(item.key)!)!; 
-                  averageGpa = averagesMap?.get(activeResults.get(item.key)!)?.GPA! || 'N/A';
-                }
-                const isActive = item.key === activeKey;
+                  const value = getKeyValue(item, columnKey);
+                  const isEmptyOrEditing = item.key.startsWith('XX');
+                  
+                  const entryId = item.entry_id as number || -1;
+                  const isEditingGrade = activeEntryId === entryId;
 
-                if (isEmptyOrEditing) {
-                  if (columnKey == 'course_id') {
-                    return formatEmptyCourseID(item.key);
-                  } else if (columnKey == 'course_name') {
-                    return <TableCell className="text-gray-400">{course ? course.course_name : ''}</TableCell>;
-                  } else if (columnKey == 'GPA') {
-                    if (averageGpa === 'N/A') {
-                      return (
-                        <TableCell className="text-gray-400 font-semi-bold">
-                          {averageGpa}
+                  let course: Course | null = null;
+                  let averageGpa: number | string | null = null;
+                  let grade: string | null = null;
+                  /**
+                   * Every row will necessarily have either
+                   *  (a) an entry in activeResults (e.g. XX 0000 -> CS 1332)
+                   *   or (b) a real course ID key (e.g. just CS 1332)
+                   *   or (c) neither (if it's completely new and empty)
+                   */
+                  if (activeResults.has(item.key) && activeResults.get(item.key)) {
+                    course = courseMap?.get(activeResults.get(item.key)!)!; 
+                    averageGpa = averagesMap?.get(activeResults.get(item.key)!)?.GPA! || 'N/A';
+                  } else if (!isEmptyOrEditing) {
+                    course = courseMap?.get(item.key)!;
+                    averageGpa = averagesMap?.get(item.key)?.GPA || 'N/A';
+                  }
+
+                  if (entryGradeMap.has(entryId) && entryGradeMap.get(entryId)) {
+                    grade = entryGradeMap.get(entryId)!;
+                  }
+                  const isActive = item.key === activeKey;
+
+                  if (columnKey === 'course_id') {
+                    return isEmptyOrEditing 
+                      ? formatEmptyCourseID(item)
+                      : (
+                        <TableCell
+                          className={`${item.isHovering && 'bg-gray-100'}`}
+                          onClick={() => handleSelectRow(item.key)}
+                          onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
+                          onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+                        >
+                          <Link 
+                            onClick={() => {
+                              router.push(`/course?courseID=${value.toString()}`);
+                            }}
+                            className={`text-sm hover:underline cursor-pointer`}
+                          >
+                            {course!.id}
+                          </Link>
                         </TableCell>
                       );
-                    } else if (!averageGpa) {
-                      return <TableCell>{''}</TableCell>;
-                    } else {
-                      let color = formatGPA(Number(averageGpa));
-                      return (
-                        <TableCell style={{ color: color }} className="font-semibold">
-                          {Number(averageGpa).toFixed(2)}
-                        </TableCell>
-                      );
-                    }
-                  } else if (columnKey == 'num_credits') {
-                    return <TableCell className="text-gray-400">{course ? course.credits : ''}</TableCell>;
-                  } else if (columnKey == 'grade') {
-                    return <TableCell>{''}</TableCell>; /** Don't display anything for grade */
-                  } else if (columnKey == 'actions') {
+                  } else if (columnKey === 'course_name') {
                     return (
-                      <TableCell>
-                        <DeleteIcon 
-                          style={{ width: '20px' }} 
-                          className={`${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} hover:scale-110 cursor-pointer`}
-                          onClick={(e) => {
-                            e.stopPropagation(); 
-                            removeInsertedCourse(item.key);
-                          }}
-                        />
-                      </TableCell>
-                    );
-                  }
-                }
-
-                course = courseMap?.get(item.key)!;
-                averageGpa = averagesMap?.get(item.key)?.GPA || 'N/A'; /** would be N/A if the course if pass/fail */
-                let grade = entryGradeMap?.get(item.entry_id as number) || 'N/A';
-
-                if (columnKey === 'GPA') {
-                  if (averageGpa === 'N/A') {
-                    return (
-                      <TableCell className="text-gray-400 font-semi-bold">
-                        {averageGpa}
-                      </TableCell>
-                    );
-                  } else {
-                    let color = formatGPA(Number(averageGpa));
-                    return (
-                      <TableCell style={{ color: color }} className="font-semibold">
-                        {Number(averageGpa).toFixed(2)}
-                      </TableCell>
-                    );
-                  }
-                } else if (columnKey === 'course_id') {
-                  return (
-                    <TableCell>
-                      <Link 
-                        onClick={() => {
-                          router.push(`/course?courseID=${value.toString()}`);
-                        }}
-                        className="text-sm hover:underline cursor-pointer"
+                      <TableCell 
+                        className={`text-sm ${item.isHovering && 'bg-gray-100'}`}
+                        onClick={() => handleSelectRow(item.key)}
+                        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
+                        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
                       >
-                        {course.id}
-                      </Link>
-                    </TableCell>
-                  );
-                } else if (columnKey == 'course_name') {
-                  return (
-                    <TableCell className="text-sm">{course.course_name}</TableCell>
-                  );
-                } else if (columnKey == 'num_credits') {
-                  return <TableCell className="text-sm">{course.credits}</TableCell>;
-                } else if (columnKey == 'grade') {
-                  if (grade === 'N/A') {
+                        {course ? course.course_name : ''}
+                      </TableCell>
+                    );
+                  } else if (columnKey === 'GPA') {
+                    const isNA = averageGpa === 'N/A';
+                    const color = isNA || !averageGpa ? 'gray' : formatGPA(Number(averageGpa));
                     return (
-                      <TableCell className="text-sm text-gray-400">
-                        {'--'}
+                      <TableCell 
+                        style={{ color: color }} 
+                        className={`font-semibold ${item.isHovering && 'bg-gray-100'}`}
+                        onClick={() => handleSelectRow(item.key)}
+                        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
+                        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+                      >
+                        {isNA ? 'N/A' : !averageGpa ? '' : Number(averageGpa).toFixed(2)}
+                      </TableCell>
+                    );
+                  } else if (columnKey === 'num_credits') {
+                    return (
+                      <TableCell 
+                        className={`text-sm border-r border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
+                        onClick={() => handleSelectRow(item.key)}
+                        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
+                        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+                      >
+                        {course ? course.credits : ''}
                       </TableCell>
                     )
+                  } else if (columnKey === 'grade') {
+                    return isEditingGrade 
+                      ? formatGradeInput(item)
+                      : (
+                        <TableCell
+                          className={`text-sm ${item.isHoveringGrade && 'bg-gray-100'}`}
+                          onClick={() => handleSelectGrade(entryId)}
+                          onMouseEnter={() => handleSetHoverState(item.key, 'grade', true)}
+                          onMouseLeave={() => handleSetHoverState(item.key, 'grade', false)}
+                        >
+                          {grade ? grade : ''}
+                        </TableCell>
+                      );
+                  } else {
+                    return isEmptyOrEditing ?
+                      (
+                        <TableCell>
+                          <DeleteIcon 
+                            style={{ width: '20px' }} 
+                            className={`${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} hover:scale-110 cursor-pointer`}
+                            onClick={(e) => {
+                              e.stopPropagation(); 
+                              removeInsertedCourse(item.key);
+                            }}
+                          />
+                        </TableCell>
+                      ) : (
+                        <TableCell>
+                          {''}
+                        </TableCell>
+                      );
                   }
-                } 
-                return (
-                  <TableCell>
-                   {''} {/** Don't need to put anything here (just empty) */}
-                  </TableCell>
-                );
-              }}
-            </TableRow>
-          )}
+                }}
+              </TableRow>
+            );
+          }}
         </TableBody>
       </Table>
       <div className="flex flex-row justify-end gap-4 items-center">
