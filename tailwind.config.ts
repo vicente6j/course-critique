@@ -48,6 +48,13 @@ const config: Config = {
           900: "#001731",
         },
       },
+      backgroundColor: {
+        'grade-a': 'var(--color-dark-green)',
+        'grade-b': 'var(--color-light-green)',
+        'grade-c': 'var(--color-yellow)',
+        'grade-d': 'var(--color-pink)',
+        'grade-f': 'var(--color-red)',
+      },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":

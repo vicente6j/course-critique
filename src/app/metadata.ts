@@ -29,4 +29,8 @@ export const GRADE_COLORS: string[] = [
   '#FE466C',
   '#9CC7FF',
   '#2D7FF9',
-]
+];
+
+export const POSSIBLE_GRADES: string[] = [
+  'A', 'B', 'C', 'D', 'F', 'W'
+];

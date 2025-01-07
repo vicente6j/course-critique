@@ -9,7 +9,7 @@ import {
   TableCell,
   getKeyValue,
 } from "@nextui-org/table";
-import { formatGPA } from "../shared/gradeTable";
+import { formatGPA, getGradeClass, gradeColorDict } from "../shared/gradeTable";
 import { Link } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -27,6 +27,8 @@ import { useTermSelectionContext } from "../client-contexts/termSelectionContext
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ActionDropdown from "../shared/actionDropdown";
 import { createScheduleEntry, deleteScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
+import { connect } from "http2";
+import { POSSIBLE_GRADES } from "../metadata";
 
 export interface TermTableColumn {
   key: string;
@@ -36,11 +38,11 @@ export interface TermTableColumn {
 
 export const columns: TermTableColumn[] = [
   { key: "course_id", label: "Course ID", width: 'w-[20%]' },
-  { key: "course_name", label: "Course Name", width: 'w-[40%]' },
-  { key: "GPA", label: "Average GPA", width: 'w-[20%]' },
-  { key: "num_credits", label: "Num Credits", width: 'w-[10%]' },
-  { key: "grade", label: "Grade", width: 'w-[10%]' },
-  { key: "actions", label: "", width: 'w-[5%]' },
+  { key: "course_name", label: "Course Name", width: 'w-[35%]' },
+  { key: "GPA", label: "Average GPA", width: 'w-[15%]' },
+  { key: "num_credits", label: "Num Credits", width: 'w-[15%]' },
+  { key: "grade", label: "Grade", width: 'w-[15%]' },
+  { key: "actions", label: "", width: 'w-0' },
 ];
 
 export interface TermTableRow {
@@ -72,14 +74,13 @@ const TermTable: FC<TermTableProps> = ({
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
   /**
-   * Maps each schedule entry to a corresponding grade. Note that there cannot be a grade for an empty row,
-   * or a row which does not have a valid course ID, since assigning a grade to such a row
-   * doesn't make any sense.
+   * Maps each schedule key to a corresponding grade, INCLUDING empty ones. There can
+   * be a grade for an empty row, even though it doesn't really make sense, it's fine.
    */
-  const [entryGradeMap, setEntryGradeMap] = useState<Map<number, string>>(new Map());
+  const [gradeValues, setGradeValues] = useState<Map<string, string>>(new Map());
   
   /** E.g. CS 1332, for currently editing the grade for row with key CS 1332 */
-  const [activeEntryId, setActiveEntryId] = useState<number | null>(null);
+  const [activeGradeKey, setActiveGradeKey] = useState<string | null>(null);
   const [previousGrade, setPreviousGrade] = useState<string | null>(null);
 
   /** 
@@ -97,7 +98,7 @@ const TermTable: FC<TermTableProps> = ({
   const [schedule, setSchedule] = useState<ScheduleInfo | null>(null);
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
-  const gradeInputRefs = useRef<Map<number, MutableRef<HTMLInputElement>>>(new Map());
+  const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
   const initLoadComplete = useRef<boolean>(false);
 
@@ -130,7 +131,7 @@ const TermTable: FC<TermTableProps> = ({
   */
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
-  }, [activeKey, activeEntryId]);
+  }, [activeKey, activeGradeKey]);
 
   useEffect(() => {
     setIsEditing(
@@ -152,8 +153,8 @@ const TermTable: FC<TermTableProps> = ({
         inputRef!.current.focus();
       }
     }
-    if (activeEntryId) {
-      const gradeRef = gradeInputRefs.current.get(activeEntryId);
+    if (activeGradeKey) {
+      const gradeRef = gradeInputRefs.current.get(activeGradeKey);
       if (gradeRef?.current) {
         gradeRef!.current.focus();
       }
@@ -195,7 +196,6 @@ const TermTable: FC<TermTableProps> = ({
         isHovering: false,
         isHoveringOnGrade: false,
       }]);
-      initLoadComplete.current = true;
       return;
     }
     let rows: TermTableRow[] = [];
@@ -216,23 +216,32 @@ const TermTable: FC<TermTableProps> = ({
         isHoveringOnGrade: false,
       });
     }
-    initLoadComplete.current = true;
     setScheduleRows(rows);
   }, [scheduleId, scheduleEntryMap]);
 
   const fetchScheduleGrades: () => void = useCallback(() => {
-    if (!scheduleGradeMap) {
+    if (!scheduleGradeMap || !scheduleRows || initLoadComplete.current) {
       return;
     } else if (!scheduleId || !scheduleGradeMap.has(scheduleId)!) {
       /** There is no grade listed for the given scheduleId, or there is no schedule at all */
+      setGradeValues(new Map(scheduleRows.map(row => [row.key, ''])));
+      initLoadComplete.current = true;
       return;
     }
-    let gradeMap: Map<number, string> = new Map();
+    let gradeMap: Map<string, string> = new Map();
     for (const entry of scheduleGradeMap.get(scheduleId)!) {
-      gradeMap.set(entry.entry_id, entry.grade);
+      const courseId = scheduleRows.find(row => row.entry_id === entry.entry_id)!.key; /** Must exist, since each entry in scheduleGradeMap has a real entryId */
+      gradeMap.set(courseId, entry.grade);
     }
-    setEntryGradeMap(gradeMap);
-  }, [scheduleId, scheduleGradeMap]);
+    /** Add the null rows */
+    for (const row of scheduleRows) {
+      if (!gradeMap.has(row.key)) {
+        gradeMap.set(row.key, '');
+      }
+    }
+    initLoadComplete.current = true; /** Set init load complete at the end of schedule grades */
+    setGradeValues(gradeMap);
+  }, [scheduleId, scheduleGradeMap, scheduleRows]);
 
   const fetchSchedule: () => void = useCallback(() => {
     if (!scheduleMap || !scheduleId) {
@@ -278,6 +287,10 @@ const TermTable: FC<TermTableProps> = ({
   const handleSelectRow: (key: string, rows?: TermTableRow[]) => void = useCallback((key: string, rows?) => {
     if (!scheduleRows) {
       return;
+    }
+
+    if (activeGradeKey) {
+      handleDeselectGrade();
     }
 
     let newRows: TermTableRow[] = rows 
@@ -337,7 +350,7 @@ const TermTable: FC<TermTableProps> = ({
       return newDict;
     });
     setActiveKey(newKey);
-  }, [emptyIndex, scheduleRows, rerenderCount, activeKey, previousRow, activeIndex]);
+  }, [emptyIndex, scheduleRows, rerenderCount, activeKey, previousRow, activeIndex, activeGradeKey]);
 
   /**
    * This function basically either 
@@ -349,64 +362,31 @@ const TermTable: FC<TermTableProps> = ({
    */
   const handleDeselect: () => TermTableRow[] = useCallback(() => {
     if (!activeKey || !previousRow) {
-      return scheduleRows || [];
-    } else if (activeKey.startsWith('XX') && previousRow!.key.startsWith('XX')) {
-      setPreviousRow(null);
-      setActiveKey(null);
-      return scheduleRows || [];
+      return scheduleRows!;
+    } 
+    
+    let newRows: TermTableRow[] = [];
+    if (!previousRow!.key.startsWith('XX')) {
+      /**
+       * We're deselecting a real entry at this point.
+       * Remove from all dictionaries and reset the scheduleRows using previousRow.
+       */
+      let index = scheduleRows!.findIndex(row => row.key === activeKey);
+      newRows = [
+        ...scheduleRows!.slice(0, index),
+        { ...scheduleRows![index], key: previousRow!.key }, /** Maintains previous row hover state and entry */
+        ...scheduleRows!.slice(index + 1)
+      ];
+      setScheduleRows(newRows);
+      removeFromDictionaries(activeKey!);
+    } else {
+      newRows = scheduleRows!;
     }
-    /**
-     * We're deselecting a real entry at this point.
-     * Remove from all dictionaries and reset the scheduleRows using previousRow.
-     */
-    let index = scheduleRows!.findIndex(row => row.key === activeKey);
-    let newRows = [
-      ...scheduleRows!.slice(0, index),
-      { ...scheduleRows![index], key: previousRow!.key }, /** Maintains previous row hover state and entry */
-      ...scheduleRows!.slice(index + 1)
-    ];
-    setScheduleRows(newRows);
-    removeFromDictionaries(activeKey!);
     setPreviousRow(null);
     setActiveKey(null);
+
     return newRows;
   }, [activeKey, scheduleRows, previousRow]);
-
-  const handleSelectGrade: (entryId: number) => void = useCallback((entryId) => {
-    setActiveEntryId(entryId);
-    if (entryGradeMap.get(entryId)) {
-      setPreviousGrade(entryGradeMap.get(entryId)!);
-    }
-  }, []);
-
-  const handleDeselectGrade: () => void = useCallback(() => {
-    if (!activeEntryId) {
-      return;
-    } 
-    /** Reset the entry grade map */
-    if (previousGrade) {
-      setEntryGradeMap(prev => {
-        const newDict = new Map(prev);
-        newDict.set(activeEntryId!, previousGrade);
-        return newDict;
-      });
-    }
-    setPreviousGrade(null);
-    setActiveEntryId(null);
-  }, [activeEntryId, previousGrade]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (tableRef && !tableRef.current!.contains(event.target as Node) && termSelected === term) {
-        handleDeselect();
-        handleDeselectGrade();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [handleDeselect, handleDeselectGrade, termSelected, term]);
 
   const filterCourses: (query: string) => Course[] = useCallback((query: string) => {
     if (!courses) {
@@ -639,17 +619,73 @@ const TermTable: FC<TermTableProps> = ({
     setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
   }, [filterCourses]);
 
-   /**
+  const handleSelectGrade: (key: string) => void = useCallback((key) => {
+    if (activeGradeKey && activeGradeKey === key) { 
+      handleDeselectGrade();
+      return;
+    } 
+    if (activeKey) {
+      handleDeselect();
+      key = previousRow!.key;
+    }
+
+    if (gradeValues.get(key)!.length > 0) {
+      setPreviousGrade(gradeValues.get(key)!);
+    }
+    setActiveGradeKey(key);
+
+    /** Suggested grade at this point should be null. */
+  }, [gradeValues, activeGradeKey, activeKey, handleDeselect, previousRow]);
+
+  const handleDeselectGrade: () => void = useCallback(() => {
+    if (!activeGradeKey) {
+      return;
+    } 
+    /** Reset the entry grade map */
+    if (previousGrade) {
+      setGradeValues(prev => {
+        const newDict = new Map(prev);
+        newDict.set(activeGradeKey!, previousGrade);
+        return newDict;
+      });
+    }
+    setPreviousGrade(null);
+    setActiveGradeKey(null);
+  }, [activeGradeKey, previousGrade]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tableRef && !tableRef.current!.contains(event.target as Node) && termSelected === term) {
+        handleDeselect();
+        handleDeselectGrade();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [handleDeselect, handleDeselectGrade, termSelected, term]);
+
+  /**
    * Handles grade value changing.
    * @param value value which is queried
-   * @param entryId entryId of the row which is queried on
+   * @param key the key which is used
    */
-  const onGradeChange: (value: string, entryId: number) => void = useCallback((value, entryId) => {
-    setEntryGradeMap(prev => {
+  const onGradeChange: (value: string, key: string) => void = useCallback((value, key) => {
+    value = value.toUpperCase();
+    if (!POSSIBLE_GRADES.some(el => el === value) && value !== '') {
+      setError('Must insert a valid grade (A, B, C, D, F, W)');
+      return;
+    }
+    setGradeValues(prev => {
       const newDict = new Map(prev);
-      newDict.set(entryId, value);
+      newDict.set(key, value);
       return newDict;
     });
+    if (value !== '') {
+      setPreviousGrade(null);
+      setActiveGradeKey(null);
+    }
     setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
   }, []);
 
@@ -703,7 +739,7 @@ const TermTable: FC<TermTableProps> = ({
   }, [handleShortcuts]);
 
   type KeyDownType = 'course' | 'grade';
-  const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, key: string | number, type: KeyDownType) => void = useCallback((
+  const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, key: string, type: KeyDownType) => void = useCallback((
     e, 
     key,
     type,
@@ -716,7 +752,6 @@ const TermTable: FC<TermTableProps> = ({
     switch (e.key) {
       case 'Enter':
         if (type === 'course') {
-          key = key as string;
           /** Treat this enter command like inserting a course */
           if (!activeResults.get(key) || activeResults.get(key)!.length === 0) {
             return;
@@ -833,37 +868,51 @@ const TermTable: FC<TermTableProps> = ({
   }, [activeResults, queryValues, rerenderCount, inputRefs]);
 
   const formatGradeInput: (item: TermTableRow) => JSX.Element = useCallback((item) => {
-    const entryId = item.entry_id as number;
+    const key = item.key;
     return (
       <TableCell
-        className={`text-sm ${item.isHoveringGrade && 'bg-gray-100'}`}
-        onClick={() => handleSelectGrade(entryId)}
+        className={`text-sm ${item.isHoveringOnGrade && 'bg-gray-100'}`}
+        onClick={() => handleSelectGrade(item.key)}
         onMouseEnter={() => handleSetHoverState(item.key, 'grade', true)}
         onMouseLeave={() => handleSetHoverState(item.key, 'grade', false)}
       >
-        <div className="relative max-h-xs rounded-none border-b border-gray-400 py-1 pr-1 z-10">
+        <div className="relative w-fit border-b border-gray-400 py-1 pr-2 z-10">
+          <div className="absolute text-search bg-transparent outline-none !cursor-text !z-10">
+            {/** 
+             * Placeholder text which can't actually be modified.
+             * Note that it DOES NOT MATTER whether the user has typed something in the grade
+             * field before; no matter what, we arbitrarily display this +X symbol to indicate
+             * that something should be typed to continue (or just deselect).
+             * This means that we don't actually display the value which lives in gradeValues
+             * if there is one.
+             */}
+            <span className="text-gray-400">
+              {'+X'}
+            </span>
+          </div>
+          {/** Input field is necessary here in order to properly give border to div */}
           <div className="flex flex-row gap-0 items-center">
             {/** onFocus=(stop propagation) needed to prevent row from being selected */}
             <input
-              id={`searchbar-${entryId}`}
+              id={`searchbar-${key}`}
               type="text"
               ref={(el) => {
                 if (el) {
-                  gradeInputRefs.current.set(entryId, { current: el });
+                  gradeInputRefs.current.set(key, { current: el });
                 }
               }}
-              value={entryGradeMap.get(entryId)?.toUpperCase()}
-              onChange={(e) => onGradeChange(e.target.value, entryId)}
+              value={''} /** Should NOT actually display anything */
+              onChange={(e) => onGradeChange(e.target.value, key)}
               onFocus={(e) => e.stopPropagation()}
-              onKeyDown={(e) => handleKeyDown(e, entryId, 'grade')}
+              onKeyDown={(e) => handleKeyDown(e, key, 'grade')}
               placeholder=""
-              className={`text-search bg-transparent z-2 outline-none w-80`}
+              className={`text-search bg-transparent z-2 outline-none w-5`}
             />
           </div>
         </div>
       </TableCell>
     );
-  }, [activeResults, queryValues, rerenderCount, inputRefs]);
+  }, [activeGradeKey, gradeValues, gradeInputRefs, handleSelectGrade]);
 
   const nextToolTipDisplayContent: JSX.Element = useMemo(() => {
     if (!scheduleRows || !averagesMap) {
@@ -947,7 +996,7 @@ const TermTable: FC<TermTableProps> = ({
         if (type === 'row') {
           return row.key === key ? { ...row, isHovering: active } : row
         } else {
-          return row.key === key ? { ...row, isHoveringGrade: active } : row
+          return row.key === key ? { ...row, isHoveringOnGrade: active } : row
         }
       });
     })
@@ -1005,10 +1054,9 @@ const TermTable: FC<TermTableProps> = ({
       >
         <TableHeader columns={columns}>
         {(column) => {
-          const isWhitespace = column.key === 'actions';
           return (
             <TableColumn 
-              className={`${column.width}`}
+              className={`${column.width} ${column.key === 'actions' ? 'bg-transparent' : ''}`}
               key={column.key}
             >
               {column.label}
@@ -1021,19 +1069,26 @@ const TermTable: FC<TermTableProps> = ({
             return (
               <TableRow 
                 key={`${item.key}`} 
-                className={`border-b border-gray-200`}
               >
                 {(columnKey) => {
 
                   const value = getKeyValue(item, columnKey);
                   const isEmptyOrEditing = item.key.startsWith('XX');
-                  
-                  const entryId = item.entry_id as number || -1;
-                  const isEditingGrade = activeEntryId === entryId;
+
+                  let hasGradeValue: boolean = false;
+                  let grade: string | null = null;
+                  if (!isEmptyOrEditing) {
+                    hasGradeValue = gradeValues.has(item.key) && gradeValues.get(item.key)!.length > 0;
+                    grade = gradeValues.get(item.key)!;
+                  } else {
+                    hasGradeValue = previousRow && gradeValues.has(previousRow!.key) && gradeValues.get(previousRow!.key)!.length > 0 || false;
+                    if (hasGradeValue) {
+                      grade = gradeValues.get(previousRow!.key)!;
+                    }
+                  }
 
                   let course: Course | null = null;
                   let averageGpa: number | string | null = null;
-                  let grade: string | null = null;
                   /**
                    * Every row will necessarily have either
                    *  (a) an entry in activeResults (e.g. XX 0000 -> CS 1332)
@@ -1047,10 +1102,6 @@ const TermTable: FC<TermTableProps> = ({
                     course = courseMap?.get(item.key)!;
                     averageGpa = averagesMap?.get(item.key)?.GPA || 'N/A';
                   }
-
-                  if (entryGradeMap.has(entryId) && entryGradeMap.get(entryId)) {
-                    grade = entryGradeMap.get(entryId)!;
-                  }
                   const isActive = item.key === activeKey;
 
                   if (columnKey === 'course_id') {
@@ -1058,7 +1109,7 @@ const TermTable: FC<TermTableProps> = ({
                       ? formatEmptyCourseID(item)
                       : (
                         <TableCell
-                          className={`${item.isHovering && 'bg-gray-100'}`}
+                          className={`${item.isHovering && 'bg-gray-100'} border-b border-gray-200`}
                           onClick={() => handleSelectRow(item.key)}
                           onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
                           onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
@@ -1076,7 +1127,7 @@ const TermTable: FC<TermTableProps> = ({
                   } else if (columnKey === 'course_name') {
                     return (
                       <TableCell 
-                        className={`text-sm ${item.isHovering && 'bg-gray-100'}`}
+                        className={`text-sm border-b border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
                         onClick={() => handleSelectRow(item.key)}
                         onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
                         onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
@@ -1090,7 +1141,7 @@ const TermTable: FC<TermTableProps> = ({
                     return (
                       <TableCell 
                         style={{ color: color }} 
-                        className={`font-semibold ${item.isHovering && 'bg-gray-100'}`}
+                        className={`font-semibold border-b border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
                         onClick={() => handleSelectRow(item.key)}
                         onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
                         onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
@@ -1101,28 +1152,38 @@ const TermTable: FC<TermTableProps> = ({
                   } else if (columnKey === 'num_credits') {
                     return (
                       <TableCell 
-                        className={`text-sm border-r border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
+                        className={`text-sm border-b border-r border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
                         onClick={() => handleSelectRow(item.key)}
                         onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
                         onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
                       >
                         {course ? course.credits : ''}
                       </TableCell>
-                    )
+                    );
                   } else if (columnKey === 'grade') {
-                    return isEditingGrade 
-                      ? formatGradeInput(item)
-                      : (
-                        <TableCell
-                          className={`text-sm ${item.isHoveringGrade && 'bg-gray-100'}`}
-                          onClick={() => handleSelectGrade(entryId)}
-                          onMouseEnter={() => handleSetHoverState(item.key, 'grade', true)}
-                          onMouseLeave={() => handleSetHoverState(item.key, 'grade', false)}
-                        >
-                          {grade ? grade : ''}
-                        </TableCell>
-                      );
-                  } else {
+                    return hasGradeValue && activeGradeKey !== item.key ? (
+                      /** 
+                       * Two things have to be true in order to display this simple table cell.
+                       * Firstly, there has to be a real grade value for the row. e.g.
+                       *   - CS 1332 -> A is an entry.
+                       * Secondly, if there's an active grade key (upon selecting a grade cell),
+                       * it must not equal this row. i.e. this is a row which hasn't been selected
+                       * and which has a real grade.
+                       */
+                      <TableCell
+                        className={`
+                          ${item.isHoveringOnGrade && 'bg-gray-100'} 
+                          ${grade ? `${getGradeClass(grade)}` : ''} 
+                          border-b border-gray-200`
+                        }
+                        onClick={() => handleSelectGrade(item.key)}
+                        onMouseEnter={() => handleSetHoverState(item.key, 'grade', true)}
+                        onMouseLeave={() => handleSetHoverState(item.key, 'grade', false)}
+                      >
+                        {grade}
+                      </TableCell>
+                    ) : formatGradeInput(item); /** Otherwise, handle empty action */
+                  } else if (columnKey === 'actions') {
                     return isEmptyOrEditing ?
                       (
                         <TableCell>
@@ -1136,10 +1197,18 @@ const TermTable: FC<TermTableProps> = ({
                           />
                         </TableCell>
                       ) : (
-                        <TableCell>
+                        <TableCell
+                          className="invisible p-0"
+                        >
                           {''}
                         </TableCell>
                       );
+                  } else {
+                    return (
+                      <TableCell>
+                        {''}
+                      </TableCell>
+                    );
                   }
                 }}
               </TableRow>
