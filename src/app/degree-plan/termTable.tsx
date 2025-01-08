@@ -9,7 +9,7 @@ import {
   TableCell,
   getKeyValue,
 } from "@nextui-org/table";
-import { formatGPA, getGradeClass, gradeColorDict } from "../shared/gradeTable";
+import { formatGPA, gradeColorDictHex } from "../shared/gradeTable";
 import { Link } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -29,6 +29,7 @@ import ActionDropdown from "../shared/actionDropdown";
 import { createScheduleEntry, deleteScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
 import { connect } from "http2";
 import { POSSIBLE_GRADES } from "../metadata";
+import { hexToRgba } from "../home/averageOverTime";
 
 export interface TermTableColumn {
   key: string;
@@ -41,8 +42,8 @@ export const columns: TermTableColumn[] = [
   { key: "course_name", label: "Course Name", width: 'w-[35%]' },
   { key: "GPA", label: "Average GPA", width: 'w-[15%]' },
   { key: "num_credits", label: "Num Credits", width: 'w-[15%]' },
-  { key: "grade", label: "Grade", width: 'w-[15%]' },
-  { key: "actions", label: "", width: 'w-0' },
+  { key: "grade", label: "Grade", width: 'w-[14%]' },
+  { key: "actions", label: "", width: 'w-[1%]' },
 ];
 
 export interface TermTableRow {
@@ -82,6 +83,7 @@ const TermTable: FC<TermTableProps> = ({
   /** E.g. CS 1332, for currently editing the grade for row with key CS 1332 */
   const [activeGradeKey, setActiveGradeKey] = useState<string | null>(null);
   const [previousGrade, setPreviousGrade] = useState<string | null>(null);
+  const [showPrevious, setShowPrevious] = useState<boolean | null>(false);
 
   /** 
    * The purpose of having both activeKey and activeIndex is activeKey represents the key of
@@ -94,6 +96,9 @@ const TermTable: FC<TermTableProps> = ({
    */
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [activeCol, setActiveCol] = useState<number>(0);
+  const [hoverRow, setHoverRow] = useState<string | null>(null);
+  const [hoverGrade, setHoverGrade] = useState<string | null>(null);
+  const [disablePointerEvents, setDisablePointerEvents] = useState<boolean>(false);
 
   const [schedule, setSchedule] = useState<ScheduleInfo | null>(null);
 
@@ -126,12 +131,13 @@ const TermTable: FC<TermTableProps> = ({
   const router = useRouter();
 
   /** 
-   * Runs every instance of activeKey or activeGradeKey changing 
-   * (extremely regularly). 
+   * Runs every instance of activeKey or activeGradeKey, hoverRow,
+   * or hoverGrade changing (extremely regularly -- needed to update the base
+   * NextUI table). 
   */
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
-  }, [activeKey, activeGradeKey]);
+  }, [activeKey, activeGradeKey, hoverRow, hoverGrade, showPrevious]);
 
   useEffect(() => {
     setIsEditing(
@@ -193,8 +199,6 @@ const TermTable: FC<TermTableProps> = ({
       setScheduleRows([{
         key: 'XX 0000',
         course_id: 'XX 0000',
-        isHovering: false,
-        isHoveringOnGrade: false,
       }]);
       return;
     }
@@ -204,16 +208,12 @@ const TermTable: FC<TermTableProps> = ({
         key: entry.course_id!,
         course_id: entry.course_id!,
         entry_id: entry.entry_id,
-        isHovering: false,
-        isHoveringOnGrade: false,
       });
     }
     if (rows.length === 0) {
       rows.push({
         key: 'XX 0000',
         course_id: 'XX 0000',
-        isHovering: false,
-        isHoveringOnGrade: false,
       });
     }
     setScheduleRows(rows);
@@ -455,7 +455,7 @@ const TermTable: FC<TermTableProps> = ({
         /** We're simply adding on an empty row */
         newRows = [
           ...scheduleRows!.filter(row => row.key !== key && !row.key.startsWith('XX')),
-          { key: courseId, course_id: courseId, isHovering: false, isHoveringOnGrade: false, }, /** notice we don't have an entryId yet */
+          { key: courseId, course_id: courseId, }, /** notice we don't have an entryId yet */
           ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) /** In some cases we may have multiple emtpy rows,
           which we want to carry over */
         ];
@@ -567,18 +567,19 @@ const TermTable: FC<TermTableProps> = ({
      *    just add the empty row underneath all the non empty ones. 
      *    Otherwise, add the empty row directly underneath our current row.
      */
+    const emptyRow: TermTableRow = { key: key, course_id: key };
     if (myRows.length === 0) {
-      newRows = [{ key: key, course_id: 'XX 0000', isHovering: false, isHoveringOnGrade: false, }];
+      newRows = [emptyRow];
     } else if (index < 0 || index >= myRows.length || !myRows[index].key.startsWith('XX')) {
       newRows = [ 
         ...myRows.filter(row => !row.key.startsWith('XX')), 
-        { key: key, course_id: 'XX 0000', isHovering: false, isHoveringOnGrade: false, }, /** add it right underneath the real rows, even if there are other empty rows */
+        emptyRow, /** add it right underneath the real rows, even if there are other empty rows */
         ...myRows.filter(row => row.key.startsWith('XX')) /** rest of the empty rows */
       ];
     } else {
       newRows = [
         ...myRows.slice(0, index + 1), /** use this filter to capture empty rows potentially above our current row */
-        { key: key, course_id: 'XX 0000', isHovering: false, isHoveringOnGrade: false, }, /** finally, add the empty row */
+        emptyRow, /** finally, add the empty row */
         ...myRows.slice(index + 1)
       ];
     }
@@ -653,19 +654,6 @@ const TermTable: FC<TermTableProps> = ({
     setActiveGradeKey(null);
   }, [activeGradeKey, previousGrade]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (tableRef && !tableRef.current!.contains(event.target as Node) && termSelected === term) {
-        handleDeselect();
-        handleDeselectGrade();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [handleDeselect, handleDeselectGrade, termSelected, term]);
-
   /**
    * Handles grade value changing.
    * @param value value which is queried
@@ -689,6 +677,36 @@ const TermTable: FC<TermTableProps> = ({
     setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
   }, []);
 
+  type KeyDownType = 'course' | 'grade';
+  const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, key: string, type: KeyDownType) => void = useCallback((e, key, type) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && termSelected === term) {
+      /** Handles case of inserting rows with cmd-enter (don't do anything) */
+      return;
+    }
+    switch (e.key) {
+      case 'Enter':
+        if (type === 'course') {
+          /** Treat this enter command like inserting a course */
+          if (!activeResults.get(key) || activeResults.get(key)!.length === 0) {
+            return;
+          }
+          addActiveCourse(key);
+          const inputRef = inputRefs.current.get(key);
+          if (inputRef?.current) {
+            inputRef.current.blur();
+          }
+        }
+        break;
+      case 'ArrowDown':
+        break;
+      case 'ArrowUp':
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+  }, [addActiveCourse, activeResults]);
+
   const incrementIndex: () => void = useCallback(() => {
     if (!scheduleRows) {
       return;
@@ -700,6 +718,8 @@ const TermTable: FC<TermTableProps> = ({
       handleDeselect();
     }
     setActiveIndex(newIndex);
+    setHoverRow(null); /** Prevent the user from hovering immediately after */
+    setDisablePointerEvents(true);
   }, [activeKey, scheduleRows, activeIndex]);
 
   const decrementIndex: () => void = useCallback(() => {
@@ -713,68 +733,73 @@ const TermTable: FC<TermTableProps> = ({
       handleDeselect();
     }
     setActiveIndex(newIndex);
+    setHoverRow(null);
+    setDisablePointerEvents(true);
   }, [activeKey, scheduleRows]);
 
   const handleShortcuts: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && termSelected === term) {
+    const metaKey = e.metaKey || e.ctrlKey;
+    const correctTerm = termSelected === term;
+
+    if (metaKey && e.key === 'Enter' && correctTerm) {
       addEmptyRow();
-    } else if (e.key === 'ArrowDown' && termSelected === term) {
-      /** Start scrolling through items */
+    } else if (e.key === 'ArrowDown' && correctTerm) {
       incrementIndex();
-    } else if (e.key === 'ArrowUp' && termSelected === term) {
+    } else if (e.key === 'ArrowUp' && correctTerm) {
       decrementIndex();
-    } else if ((e.metaKey || e.ctrlKey) && e.key === 'Backspace' && termSelected === term) {
-      if (!activeKey) {
-        return;
-      }
+    } else if (metaKey && e.key === 'Backspace' && correctTerm && activeKey && !activeGradeKey) {
       removeInsertedCourse(activeKey);
+    } else if (activeGradeKey) {
+      /** Want to show the previous grade */
+      setShowPrevious(metaKey);
+      if (e.key === 'Backspace') {
+        setPreviousGrade(null); /** Remove it */
+      }
+    } 
+  }, [activeKey, termSelected, activeGradeKey]);
+
+  const handleClickOutside: (event: MouseEvent) => void = useCallback((event) => {
+    if (tableRef && !tableRef.current!.contains(event.target as Node) && termSelected === term) {
+      handleDeselect();
+      handleDeselectGrade();
     }
-  }, [activeKey, termSelected]);
+  }, [termSelected, tableRef, handleDeselect, handleDeselectGrade]);
 
   useEffect(() => {
+    /**
+     * For the case of deselecting command on a grade cell (release previous grade).
+     * @param e keyboard event
+     */
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Meta' || e.key === 'Control') {
+        setShowPrevious(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('keydown', handleShortcuts);
+    window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleShortcuts);
+      window.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [handleShortcuts]);
+  }, [handleShortcuts, handleClickOutside]);
 
-  type KeyDownType = 'course' | 'grade';
-  const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, key: string, type: KeyDownType) => void = useCallback((
-    e, 
-    key,
-    type,
-  ) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && termSelected === term) {
-      /** Handles case of inserting rows with cmd-enter (don't do anything) */
-      return;
-    }
-
-    switch (e.key) {
-      case 'Enter':
-        if (type === 'course') {
-          /** Treat this enter command like inserting a course */
-          if (!activeResults.get(key) || activeResults.get(key)!.length === 0) {
-            return;
-          }
-          addActiveCourse(key);
-          const inputRef = inputRefs.current.get(key);
-          if (inputRef?.current) {
-            inputRef.current.blur();
-          }
-        } else {
-          /** Verify valid grade and insert */
-
-        }
-        break;
-      case 'ArrowDown':
-        break;
-      case 'ArrowUp':
-        break;
-      default:
-        return;
-    }
-    e.preventDefault();
-  }, [addActiveCourse, activeResults]);
+  useEffect(() => {
+    /**
+     * Allows users to reenable pointer events after moving the cursor (helps eliminate flickering).
+     */
+    const handleMouseMove = () => {
+      if (disablePointerEvents) {
+        setDisablePointerEvents(false);
+        setRerenderCount(prev => prev! + 1);
+      }
+    };
+  
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [disablePointerEvents]);
 
   const averageGpa: number | null = useMemo(() => {
     if (!scheduleRows || !averagesMap) {
@@ -811,12 +836,13 @@ const TermTable: FC<TermTableProps> = ({
   const formatEmptyCourseID: (item: TermTableRow) => JSX.Element = useCallback((item) => {
     const inActiveResults = activeResults.has(item.key) && activeResults.get(item.key);
     const inQueryValues = queryValues.has(item.key) && queryValues.get(item.key)!.length > 0;
+    const shouldBeHighlighted = item.key === hoverRow || item.key === activeKey;
     return (
       <TableCell
-        className={`text-sm ${item.isHovering && 'bg-gray-100'}`}
+        className={`text-sm ${shouldBeHighlighted && 'bg-gray-100'}`}
         onClick={() => handleSelectRow(item.key)}
-        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
-        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+        onMouseEnter={() => setHoverRow(item.key)}
+        onMouseLeave={() => setHoverRow(null)}
       >
         <div className="relative rounded-lg max-h-xs rounded-none border-b border-gray-400 py-1 pr-1 z-10">
           <div className="absolute text-search bg-transparent outline-none !cursor-text !z-10">
@@ -865,16 +891,19 @@ const TermTable: FC<TermTableProps> = ({
         </div>
       </TableCell>
     );
-  }, [activeResults, queryValues, rerenderCount, inputRefs]);
+  }, [activeResults, queryValues, rerenderCount, inputRefs, activeKey]);
 
   const formatGradeInput: (item: TermTableRow) => JSX.Element = useCallback((item) => {
     const key = item.key;
     return (
       <TableCell
-        className={`text-sm ${item.isHoveringOnGrade && 'bg-gray-100'}`}
+        className={`
+          border-b border-gray-200 text-sm 
+          ${(item.key === hoverGrade || activeGradeKey === item.key) && 'bg-gray-100'}
+        `}
         onClick={() => handleSelectGrade(item.key)}
-        onMouseEnter={() => handleSetHoverState(item.key, 'grade', true)}
-        onMouseLeave={() => handleSetHoverState(item.key, 'grade', false)}
+        onMouseEnter={() => setHoverGrade(item.key)}
+        onMouseLeave={() => setHoverGrade(null)}
       >
         <div className="relative w-fit border-b border-gray-400 py-1 pr-2 z-10">
           <div className="absolute text-search bg-transparent outline-none !cursor-text !z-10">
@@ -886,9 +915,11 @@ const TermTable: FC<TermTableProps> = ({
              * This means that we don't actually display the value which lives in gradeValues
              * if there is one.
              */}
-            <span className="text-gray-400">
-              {'+X'}
-            </span>
+            {(!showPrevious || !previousGrade || activeGradeKey !== item.key) && (
+              <span className="text-gray-400">
+                {'+X'}
+              </span>
+            )}
           </div>
           {/** Input field is necessary here in order to properly give border to div */}
           <div className="flex flex-row gap-0 items-center">
@@ -901,7 +932,7 @@ const TermTable: FC<TermTableProps> = ({
                   gradeInputRefs.current.set(key, { current: el });
                 }
               }}
-              value={''} /** Should NOT actually display anything */
+              value={showPrevious && previousGrade && activeGradeKey === item.key ? previousGrade : ''} /** Only display if cmd is pressed */
               onChange={(e) => onGradeChange(e.target.value, key)}
               onFocus={(e) => e.stopPropagation()}
               onKeyDown={(e) => handleKeyDown(e, key, 'grade')}
@@ -912,7 +943,7 @@ const TermTable: FC<TermTableProps> = ({
         </div>
       </TableCell>
     );
-  }, [activeGradeKey, gradeValues, gradeInputRefs, handleSelectGrade]);
+  }, [gradeInputRefs, hoverGrade, showPrevious, previousGrade, activeGradeKey]);
 
   const nextToolTipDisplayContent: JSX.Element = useMemo(() => {
     if (!scheduleRows || !averagesMap) {
@@ -920,7 +951,6 @@ const TermTable: FC<TermTableProps> = ({
     }
     const nonEmptyAndNonNan = scheduleRows.filter(row => !row.key.startsWith('XX') && averagesMap!.has(row.key));
     const numItems = nonEmptyAndNonNan.length;
-
     return (
       <p>
         {`Weighted by number of credits for each class. ${numItems !== 0 ? (
@@ -985,22 +1015,14 @@ const TermTable: FC<TermTableProps> = ({
     ]; 
   }, []);
 
-  type HoverType = 'grade' | 'row';
-  const handleSetHoverState: (key: string, type: HoverType, active: boolean) => void = useCallback((
-    key, 
-    type, 
-    active
-  ) => {
-    setScheduleRows(prev => {
-      return prev!.map(row => {
-        if (type === 'row') {
-          return row.key === key ? { ...row, isHovering: active } : row
-        } else {
-          return row.key === key ? { ...row, isHoveringOnGrade: active } : row
-        }
-      });
-    })
-  }, []);
+  useEffect(() => {
+    if (hoverRow) {
+      setHoverGrade(null);
+    }
+    if (hoverGrade) {
+      setHoverRow(null);
+    }
+  }, [hoverRow, hoverGrade]);
 
   return (
     <div 
@@ -1056,7 +1078,7 @@ const TermTable: FC<TermTableProps> = ({
         {(column) => {
           return (
             <TableColumn 
-              className={`${column.width} ${column.key === 'actions' ? 'bg-transparent' : ''}`}
+              className={`${column.width} ${column.key === 'actions' && 'bg-transparent'}`}
               key={column.key}
             >
               {column.label}
@@ -1068,7 +1090,7 @@ const TermTable: FC<TermTableProps> = ({
           {(item) => {
             return (
               <TableRow 
-                key={`${item.key}`} 
+                key={`${item.key} ${hoverRow}`} 
               >
                 {(columnKey) => {
 
@@ -1103,16 +1125,25 @@ const TermTable: FC<TermTableProps> = ({
                     averageGpa = averagesMap?.get(item.key)?.GPA || 'N/A';
                   }
                   const isActive = item.key === activeKey;
+                  /** 
+                   * Hover row indicates where the cursor currently is, but we should also be able
+                   * to highlight a row based on whetehr it's currently active.
+                   */
+                  const shouldBeHighlighted = isActive || hoverRow === item.key;
 
                   if (columnKey === 'course_id') {
                     return isEmptyOrEditing 
                       ? formatEmptyCourseID(item)
                       : (
                         <TableCell
-                          className={`${item.isHovering && 'bg-gray-100'} border-b border-gray-200`}
+                          className={`
+                            ${shouldBeHighlighted && 'bg-gray-100'} 
+                            border-b border-gray-200
+                            ${disablePointerEvents && 'pointer-events-none'}
+                          `}
                           onClick={() => handleSelectRow(item.key)}
-                          onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
-                          onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+                          onMouseEnter={() => setHoverRow(item.key)}
+                          onMouseLeave={() => setHoverRow(null)}
                         >
                           <Link 
                             onClick={() => {
@@ -1127,10 +1158,14 @@ const TermTable: FC<TermTableProps> = ({
                   } else if (columnKey === 'course_name') {
                     return (
                       <TableCell 
-                        className={`text-sm border-b border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
+                        className={`
+                          text-sm border-b border-gray-200 
+                          ${shouldBeHighlighted && 'bg-gray-100'}
+                          ${disablePointerEvents && 'pointer-events-none'}
+                        `}
                         onClick={() => handleSelectRow(item.key)}
-                        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
-                        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+                        onMouseEnter={() => setHoverRow(item.key)}
+                        onMouseLeave={() => setHoverRow(null)}
                       >
                         {course ? course.course_name : ''}
                       </TableCell>
@@ -1141,10 +1176,14 @@ const TermTable: FC<TermTableProps> = ({
                     return (
                       <TableCell 
                         style={{ color: color }} 
-                        className={`font-semibold border-b border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
+                        className={`
+                          font-semibold border-b border-gray-200 
+                          ${shouldBeHighlighted && 'bg-gray-100'}
+                          ${disablePointerEvents && 'pointer-events-none'}
+                        `}
                         onClick={() => handleSelectRow(item.key)}
-                        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
-                        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+                        onMouseEnter={() => setHoverRow(item.key)}
+                        onMouseLeave={() => setHoverRow(null)}
                       >
                         {isNA ? 'N/A' : !averageGpa ? '' : Number(averageGpa).toFixed(2)}
                       </TableCell>
@@ -1152,10 +1191,14 @@ const TermTable: FC<TermTableProps> = ({
                   } else if (columnKey === 'num_credits') {
                     return (
                       <TableCell 
-                        className={`text-sm border-b border-r border-gray-200 ${item.isHovering && 'bg-gray-100'}`}
+                        className={`
+                          text-sm border-b border-r border-gray-200 
+                          ${shouldBeHighlighted && 'bg-gray-100'}
+                          ${disablePointerEvents && 'pointer-events-none'}
+                        `}
                         onClick={() => handleSelectRow(item.key)}
-                        onMouseEnter={() => handleSetHoverState(item.key, 'row', true)}
-                        onMouseLeave={() => handleSetHoverState(item.key, 'row', false)}
+                        onMouseEnter={() => setHoverRow(item.key)}
+                        onMouseLeave={() => setHoverRow(null)}
                       >
                         {course ? course.credits : ''}
                       </TableCell>
@@ -1172,37 +1215,36 @@ const TermTable: FC<TermTableProps> = ({
                        */
                       <TableCell
                         className={`
-                          ${item.isHoveringOnGrade && 'bg-gray-100'} 
-                          ${grade ? `${getGradeClass(grade)}` : ''} 
+                          ${(item.key === hoverGrade || activeGradeKey === item.key) && 'bg-gray-100'} 
+                          ${disablePointerEvents && 'pointer-events-none'}
                           border-b border-gray-200`
                         }
                         onClick={() => handleSelectGrade(item.key)}
-                        onMouseEnter={() => handleSetHoverState(item.key, 'grade', true)}
-                        onMouseLeave={() => handleSetHoverState(item.key, 'grade', false)}
+                        onMouseEnter={() => setHoverGrade(item.key)}
+                        onMouseLeave={() => setHoverGrade(null)}
                       >
                         {grade}
                       </TableCell>
                     ) : formatGradeInput(item); /** Otherwise, handle empty action */
                   } else if (columnKey === 'actions') {
-                    return isEmptyOrEditing ?
-                      (
-                        <TableCell>
-                          <DeleteIcon 
-                            style={{ width: '20px' }} 
-                            className={`${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} hover:scale-110 cursor-pointer`}
-                            onClick={(e) => {
-                              e.stopPropagation(); 
-                              removeInsertedCourse(item.key);
-                            }}
-                          />
-                        </TableCell>
-                      ) : (
-                        <TableCell
-                          className="invisible p-0"
-                        >
-                          {''}
-                        </TableCell>
-                      );
+                    return isEmptyOrEditing ? (
+                      <TableCell>
+                        <DeleteIcon 
+                          style={{ width: '20px' }} 
+                          className={`${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} hover:scale-110 cursor-pointer`}
+                          onClick={(e) => {
+                            e.stopPropagation(); 
+                            removeInsertedCourse(item.key);
+                          }}
+                        />
+                      </TableCell>
+                    ) : (
+                      <TableCell
+                        className="invisible p-0"
+                      >
+                        {''}
+                      </TableCell>
+                    );
                   } else {
                     return (
                       <TableCell>

@@ -67,23 +67,13 @@ export const formatGPA: (gpa: number) => string = (gpa: number) => {
   return color;
 }
 
-export const gradeColorDict: Record<string, string> = {
-  'A': 'var(--color-dark-green)',
-  'B': 'var(--color-light-green)',
-  'C': 'var(--color-yellow)',
-  'D': 'var(--color-pink)',
-  'F': 'var(--color-red)'
-};
-
-export const getGradeClass = (grade: string) => {
-  const gradeClasses: Record<string, string> = {
-    'A': 'bg-grade-a bg-opacity-10',
-    'B': 'bg-grade-b bg-opacity-20',
-    'C': 'bg-grade-c bg-opacity-20',
-    'D': 'bg-grade-d bg-opacity-20',
-    'F': 'bg-grade-f bg-opacity-20'
-  };
-  return gradeClasses[grade] || '';
+export const gradeColorDictHex: Record<string, string> = {
+  'A': '#168921',
+  'B': '#11AF22',
+  'C': '#FCB400',
+  'D': '#FF9999',
+  'F': '#FE466C',
+  'W': '#666666',
 };
 
 const GradeTable: FC<TableProps> = ({

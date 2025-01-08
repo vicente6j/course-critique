@@ -42,7 +42,7 @@
   --font-weight-regular: 400;
   --font-weight-loose: 300;
 
-  /** colors */
+  /** Colors */
   --color-google-red: #e8706f;
   --color-prussian-blue-rgb: 62, 87, 122;
   --color-prussian-blue-light-rgb: 68, 96, 136;
@@ -61,11 +61,11 @@
   --color-yellow: #FCB400;
   --color-light-green: #11AF22;
   --color-dark-green: #168921;
+  --color-pink: #FF9999;
+  --color-red: #FE466C;
   --color-light-blue: #9CC7FF;
   --color-dark-blue: #2D7FF9;
   --color-cyan: #18BFFF;
-  --color-pink: #FF9999;
-  --color-red: #FE466C;
   --color-next-table: #f4f4f5;
 }
 

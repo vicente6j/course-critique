@@ -41,6 +41,7 @@ export const termToSortableInteger: (term: string) => number = (term) => {
 }
 
 export const hexToRgba: (hex: string, opacity: number) => string = (hex, opacity) => {
+  console.log(hex);
   hex = hex.replace(/^#/, '');
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
