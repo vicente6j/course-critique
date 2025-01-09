@@ -39,11 +39,11 @@ export interface TermTableColumn {
 
 export const columns: TermTableColumn[] = [
   { key: "course_id", label: "Course ID", width: 'w-[20%]' },
-  { key: "course_name", label: "Course Name", width: 'w-[35%]' },
+  { key: "course_name", label: "Course Name", width: 'w-[40%]' },
   { key: "GPA", label: "Average GPA", width: 'w-[15%]' },
   { key: "num_credits", label: "Num Credits", width: 'w-[15%]' },
-  { key: "grade", label: "Grade", width: 'w-[14%]' },
-  { key: "actions", label: "", width: 'w-[1%]' },
+  { key: "grade", label: "Grade", width: 'w-[10%]' },
+  { key: "actions", label: "", width: 'w-0' },
 ];
 
 export interface TermTableRow {
@@ -330,6 +330,7 @@ const TermTable: FC<TermTableProps> = ({
     if (activeIndex !== index) {
       setActiveIndex(index);
     }
+    setActiveCol(0);
 
     const newKey = `XX ${paddedNumber}`;
     newRows = [
@@ -625,18 +626,25 @@ const TermTable: FC<TermTableProps> = ({
       handleDeselectGrade();
       return;
     } 
+    let rows: TermTableRow[] = scheduleRows!;
     if (activeKey) {
-      handleDeselect();
+      rows = handleDeselect();
       key = previousRow!.key;
-    }
+    } 
 
     if (gradeValues.get(key)!.length > 0) {
       setPreviousGrade(gradeValues.get(key)!);
     }
     setActiveGradeKey(key);
 
+    let index = rows.findIndex(row => row.key === key);
+    if (index && activeIndex !== index) {
+      setActiveIndex(index);
+    }
+    setActiveCol(1);
+
     /** Suggested grade at this point should be null. */
-  }, [gradeValues, activeGradeKey, activeKey, handleDeselect, previousRow]);
+  }, [gradeValues, activeGradeKey, activeKey, handleDeselect, previousRow, scheduleRows]);
 
   const handleDeselectGrade: () => void = useCallback(() => {
     if (!activeGradeKey) {
@@ -713,29 +721,77 @@ const TermTable: FC<TermTableProps> = ({
     }
     let newIndex = Math.min(activeIndex + 1, scheduleRows.length);
     if (newIndex !== scheduleRows.length) {
-      handleSelectRow(scheduleRows[newIndex].key);
+      if (activeCol === 0) {
+        handleSelectRow(scheduleRows[newIndex].key);
+      } else {
+        handleSelectGrade(scheduleRows[newIndex].key);
+      }
     } else {
-      handleDeselect();
+      if (activeCol === 0) {
+        handleDeselect();
+      } else {
+        handleDeselectGrade();
+      }
     }
     setActiveIndex(newIndex);
     setHoverRow(null); /** Prevent the user from hovering immediately after */
     setDisablePointerEvents(true);
-  }, [activeKey, scheduleRows, activeIndex]);
+  }, [activeKey, scheduleRows, activeIndex, activeCol]);
 
   const decrementIndex: () => void = useCallback(() => {
     if (!scheduleRows) {
       return;
     }
-    let newIndex = Math.max(activeIndex -1, -1);
+    let newIndex = Math.max(activeIndex - 1, -1);
     if (newIndex !== -1) {
-      handleSelectRow(scheduleRows[newIndex].key);
+      if (activeCol === 0) {
+        handleSelectRow(scheduleRows[newIndex].key);
+      } else {
+        handleSelectGrade(scheduleRows[newIndex].key);
+      }
     } else {
-      handleDeselect();
+      if (activeCol === 0) {
+        handleDeselect();
+      } else {
+        handleDeselectGrade();
+      }
     }
     setActiveIndex(newIndex);
     setHoverRow(null);
     setDisablePointerEvents(true);
-  }, [activeKey, scheduleRows]);
+  }, [activeIndex, scheduleRows, activeCol]);
+
+  const incrementCol: () => void = useCallback(() => {
+    if (!scheduleRows || activeIndex === -1 || activeIndex === scheduleRows.length || activeCol === 1) {
+      return;
+    }
+    handleSelectGrade(scheduleRows[activeIndex].key);
+    setActiveCol(1);
+    setHoverRow(null);
+    setDisablePointerEvents(true);
+  }, [activeCol, scheduleRows, activeIndex]);
+
+  useEffect(() => {
+    if (termSelected === term) {
+      console.log('index is ', activeIndex);
+    }
+  }, [activeIndex]);
+
+  useEffect(() => {
+    if (termSelected === term) {
+      console.log('col is ', activeCol);
+    }
+  }, [activeCol]);
+
+  const decrementCol: () => void = useCallback(() => {
+    if (!scheduleRows || activeIndex === -1 || activeIndex === scheduleRows.length || activeCol == 0) {
+      return;
+    }
+    handleSelectRow(scheduleRows[activeIndex].key);
+    setActiveCol(0);
+    setHoverRow(null);
+    setDisablePointerEvents(true);
+  }, [activeCol, scheduleRows, activeIndex]);
 
   const handleShortcuts: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent) => {
     const metaKey = e.metaKey || e.ctrlKey;
@@ -747,6 +803,10 @@ const TermTable: FC<TermTableProps> = ({
       incrementIndex();
     } else if (e.key === 'ArrowUp' && correctTerm) {
       decrementIndex();
+    } else if (e.key === 'ArrowLeft' && correctTerm) {
+      decrementCol();
+    } else if (e.key === 'ArrowRight' && correctTerm) {
+      incrementCol();
     } else if (metaKey && e.key === 'Backspace' && correctTerm && activeKey && !activeGradeKey) {
       removeInsertedCourse(activeKey);
     } else if (activeGradeKey) {
