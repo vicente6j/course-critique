@@ -8,11 +8,13 @@ interface DegreePlanContextType {
   termScheduleMap: Map<string, string> | null;
   setTermScheduleMap: Dispatch<SetStateAction<Map<string, string> | null>>;
   error: string | null;
-  replaceScheduleAssignment: (schedule: ScheduleInfo | string) => void;
-  createNewSchedule: (scheduleName: string) => void;
+  replaceScheduleAssignment: (schedule: ScheduleInfo | null) => void;
+  createNewSchedule: (scheduleName: string) => Promise<ScheduleInfo | null>;
   tempInfoObject: ScheduleInfo | null;
   isEditing: boolean | null;
   setIsEditing: Dispatch<SetStateAction<boolean | null>>;
+  scheduleEdited: string | null;
+  setScheduleEdited: Dispatch<SetStateAction<string | null>>;
 }
 
 const DegreePlanContext = createContext<DegreePlanContextType | undefined>(undefined);

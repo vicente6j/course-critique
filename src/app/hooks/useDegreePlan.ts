@@ -9,11 +9,13 @@ interface UseDegreePlanValue {
   termSelected: string | null;
   setTermSelected: (term: string | null) => void;
   error: string | null;
-  replaceScheduleAssignment: (schedule: ScheduleInfo | string) => void;
-  createNewSchedule: (scheduleName: string) => void;
+  replaceScheduleAssignment: (schedule: ScheduleInfo | null) => void;
+  createNewSchedule: (scheduleName: string) => Promise<ScheduleInfo | null>;
   tempInfoObject: ScheduleInfo | null;
   isEditing: boolean | null;
   setIsEditing: Dispatch<SetStateAction<boolean | null>>;
+  scheduleEdited: string | null;
+  setScheduleEdited: Dispatch<SetStateAction<string | null>>;
 }
 
 export const useDegreePlan = (
@@ -45,22 +47,18 @@ export const useDegreePlan = (
   const [tempInfoObject, setTempInfoObject] = useState<ScheduleInfo | null>(null);
   const [error, setError] = useState<string | null>('');
   const [isEditing, setIsEditing] = useState<boolean | null>(false);
+  const [scheduleEdited, setScheduleEdited] = useState<string | null>(null);
 
   const { profile, schedules, refetchSchedules, scheduleAssignments, refetchScheduleAssignments } = useProfile();
 
-  const replaceScheduleAssignment: (schedule: ScheduleInfo | string) => void = useCallback(async (schedule) => {
+  const replaceScheduleAssignment: (schedule: ScheduleInfo | null) => void = useCallback(async (schedule) => {
     if (!profile || !scheduleAssignments || !termSelected) {
       setError('Profile or assignments or termSelected weren\'t found.');
       return;
     }
 
     try {
-      if (typeof schedule === 'string') {
-        if (schedule !== 'Select a schedule') {
-          setError('Invalid schedule selection');
-          return;
-        }
-
+      if (schedule === null) {
         setTermScheduleMap(prev => {
           const newMap = new Map(prev);
           newMap.delete(termSelected);
@@ -95,13 +93,23 @@ export const useDegreePlan = (
 
   }, [profile, scheduleAssignments, termSelected]);
 
-  const createNewSchedule: (scheduleName: string) => void = useCallback(async (scheduleName) => {
-    if (!profile || !schedules || !termSelected) {
+  /**
+   * Return the new schedule after creation
+   * (in order to update e.g. schedule dropdown).
+   * @param scheduleName name of new schedule
+   * @returns the new schedule object
+   */
+  const createNewSchedule: (scheduleName: string) => Promise<ScheduleInfo | null> = useCallback(async (scheduleName) => {
+    if (!profile || !schedules) {
       setError('One of profile or schedules or termSelected was null.');
-      return;
+      return null;
     }
+    /** There might not be a term selected, but still create the schedule */
 
     try {
+      /**
+       * Do this so that we can catch the brief case of a temp schedule_id and render what we want.
+       */
       const tempSchedule: ScheduleInfo = {
         schedule_id: 'temp',
         user_id: profile.id,
@@ -110,19 +118,19 @@ export const useDegreePlan = (
         updated_at: '',
       };
       setTempInfoObject(tempSchedule);
-      /**
-       * Do this so that we can catch the brief case of a temp schedule_id and render what we want.
-       */
-      setTermScheduleMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(termSelected, tempSchedule.schedule_id);
-        return newMap;
-      });
 
-      /**
-       * At this point the UX will have hopefully correctly rendered the name
-       * and the empty schedule.
-       */
+      /** If we're currently working on a degree plan */
+      if (termSelected) {
+        setTermScheduleMap(prev => {
+          const newMap = new Map(prev);
+          newMap.set(termSelected, tempSchedule.schedule_id);
+          return newMap;
+        });
+        /**
+         * At this point the UX will have hopefully correctly rendered the name
+         * and the empty schedule.
+         */
+      }
 
       await createSchedule(profile!.id, scheduleName);
       const curSchedules: ScheduleInfo[] = [...schedules!];
@@ -135,24 +143,34 @@ export const useDegreePlan = (
         return !curSchedules.some(oldSchedule => oldSchedule.schedule_id === schedule.schedule_id);
       });
 
-      if (scheduleAssignments?.find(assignment => assignment.term === termSelected)) {
-        await updateScheduleAssignment(termSelected, newSchedule!.schedule_id!, profile!.id);
-      } else {
-        await createScheduleAssignment(newSchedule!.schedule_id!, termSelected, profile!.id);
-      }
-      await refetchScheduleAssignments();
+      /** 
+       * Again, if we have a term selected, update it to the new schedule we just added
+       * and ping the schedule assignment API.
+       */
+      if (termSelected) {
 
-      setTermScheduleMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(termSelected, newSchedule!.schedule_id);
-        return newMap;
-      });
+        if (scheduleAssignments?.find(assignment => assignment.term === termSelected)) {
+          await updateScheduleAssignment(termSelected, newSchedule!.schedule_id!, profile!.id);
+        } else {
+          await createScheduleAssignment(newSchedule!.schedule_id!, termSelected, profile!.id);
+        }
+        await refetchScheduleAssignments();
+  
+        setTermScheduleMap(prev => {
+          const newMap = new Map(prev);
+          newMap.set(termSelected, newSchedule!.schedule_id);
+          return newMap;
+        });
+      }
       setTempInfoObject(null);
+
+      return newSchedule!;
 
     } catch (e) {
       setError(e as string);
       console.error(e);
     }
+    return null;
   }, [schedules, profile, scheduleAssignments, termSelected]);
 
   return {
@@ -165,6 +183,8 @@ export const useDegreePlan = (
     createNewSchedule,
     tempInfoObject,
     isEditing,
-    setIsEditing
+    setIsEditing,
+    scheduleEdited,
+    setScheduleEdited
   };
 };

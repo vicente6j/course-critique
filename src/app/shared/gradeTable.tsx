@@ -82,7 +82,11 @@ const GradeTable: FC<TableProps> = ({
 }: TableProps) => {
 
   return (
-    <Table removeWrapper aria-label="Example static collection table" className="w-600">
+    <Table 
+      removeWrapper 
+      aria-label="Example static collection table" 
+      className="max-w-600"
+    >
       <TableHeader columns={forTerm ? termColumns : columns}>
       {(column) => {
         return (

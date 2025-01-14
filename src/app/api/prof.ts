@@ -59,7 +59,7 @@ export interface HotResponse {
 export type DataType = 'averages' | 'byCourse' | 'byTerm';
 
 export const fetchProfData = async (type: DataType) => {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
     const URL = 
       type === 'averages' ? MOCK_PROF_AVERAGES_JSON 
       : type === 'byCourse' ? '' 
@@ -91,8 +91,8 @@ export const fetchProfData = async (type: DataType) => {
   return res.json();
 }
 
-export const fetchProfInfo = async (): Promise<ProfAverages[]> => {
-  if (process.env.NODE_ENV === 'development') {
+export const fetchProfInfo = async (): Promise<ProfInfo[]> => {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
     const res = await fetch(MOCK_PROF_INFO_JSON, { 
       cache: 'force-cache' 
     });
@@ -112,7 +112,7 @@ export const fetchProfInfo = async (): Promise<ProfAverages[]> => {
 }
 
 export const fetchProfHotCourses = async (): Promise<HotResponse[]> => {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
     return [];
   }
   const res = await fetch(HOT_COURSES_JSON, {

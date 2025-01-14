@@ -7,6 +7,7 @@ import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Toolti
 import { hexToRgb } from "@mui/material";
 import { allTerms, hexToRgba, termToSortableInteger } from "./averageOverTime";
 import { useCourses } from "../server-contexts/course/provider";
+import zoomPlugin from 'chartjs-plugin-zoom';
 
 export interface LineDataPoint {
   x: string;
@@ -25,7 +26,13 @@ export interface LineChartProps {
   courseColorDict: Map<string, string>;
 }
 
-ChartJS.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale, annotationPlugin);
+interface LabelPosition {
+  value: number;
+  isLabel: boolean;
+  datasetIndex: number;
+}
+
+ChartJS.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale, annotationPlugin, zoomPlugin);
 
 const LineChart: FC<LineChartProps> = ({
   datasets,
@@ -34,7 +41,6 @@ const LineChart: FC<LineChartProps> = ({
 }: LineChartProps) => {
 
   const [hoveredDatasetIndex, setHoveredDatasetIndex] = useState<number | null>(datasetIndex);
-  const activateAverageLine = useRef<boolean>(false);
 
   const { averagesMap } = useCourses();
 
@@ -56,6 +62,38 @@ const LineChart: FC<LineChartProps> = ({
       }
     });
   }, [datasets, courseColorDict]);
+
+  const adjustedLabelYCoordinates: LabelPosition[] | null = useMemo(() => {
+    if (!datasets) {
+      return null;
+    }
+    const positions: LabelPosition[] = [];
+    datasets.forEach((dataset, idx) => {
+      const regular = dataset.data[dataset.data.length - 1].y;
+      positions.push({
+        value: regular!,
+        isLabel: true,
+        datasetIndex: idx
+      });
+    });
+
+    if (hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1) {
+      positions.push({
+        value: averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA!,
+        isLabel: false,
+        datasetIndex: hoveredDatasetIndex
+      });
+    }
+    positions.sort((a, b) => b.value - a.value);
+    const minSpacing = 0.25;
+
+    for (let i = 1; i < positions.length; i++) {
+      if (positions[i - 1].value - positions[i].value < minSpacing) {
+        positions[i].value = positions[i - 1].value - minSpacing;
+      }
+    }
+    return positions;
+  }, [datasets, hoveredDatasetIndex]);
 
   const options: any = useMemo(() => ({
     responsive: true,
@@ -80,6 +118,37 @@ const LineChart: FC<LineChartProps> = ({
       }
     },
     plugins: {
+      zoom: {
+        pan: {
+          enabled: true,
+          mode: 'x',
+          modifierKey: 'ctrl',
+        },
+        zoom: {
+          wheel: {
+            enabled: true,
+            modifierKey: 'ctrl',
+            sensitivity: 0.5,
+          },
+          pinch: {
+            enabled: true,
+            speed: 0.1,
+          },
+          mode: 'x',
+          drag: {
+            enabled: true,
+            backgroundColor: 'rgba(127,127,127,0.2)',
+            borderColor: 'rgb(127,127,127)',
+            borderWidth: 1,
+          }
+        },
+        limits: {
+          y: {
+            min: 0,
+            max: 4.2,
+          }
+        },
+      },
       title: {
         display: '',
         text: 'Grades Per Term',
@@ -99,11 +168,11 @@ const LineChart: FC<LineChartProps> = ({
       annotation: {
         clip: false,  // Extremely important to allow drawing outside chart area
         annotations: [
-          ...(hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets && activateAverageLine.current
+          ...(hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets && adjustedLabelYCoordinates
             ? [{
                 type: 'label',
                 xValue: allTerms[allTerms.length - 1],
-                yValue: averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA,
+                yValue: adjustedLabelYCoordinates.find(el => el.datasetIndex === hoveredDatasetIndex && !el.isLabel)?.value,
                 backgroundColor: 'transparent',
                 color: '#666',
                 content: `avg: ${averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
@@ -114,13 +183,16 @@ const LineChart: FC<LineChartProps> = ({
                 }
               }]
             : []),
-          ...datasets.map((dataset: LineChartDataset, idx: number) => {
+          ...datasets.map((dataset, idx) => {
             const cssVar = courseColorDict?.get(dataset.label)!;
             const isHovering = hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets;
+            const adjustedPosition = adjustedLabelYCoordinates?.find(el => el.datasetIndex === idx && el.isLabel)?.value 
+              ?? dataset.data[dataset.data.length - 1].y;
+
             return {
               type: 'label',
               xValue: allTerms[allTerms.length - 1],
-              yValue: dataset.data[dataset.data.length - 1].y,
+              yValue: adjustedPosition,
               backgroundColor: 'transparent',
               color: !isHovering ? hexToRgba(cssVar, 1) : hoveredDatasetIndex === idx ? hexToRgba(cssVar, 1) : hexToRgba(cssVar, 0.1),
               content: `${dataset.label}`,
@@ -169,7 +241,7 @@ const LineChart: FC<LineChartProps> = ({
         }
       },
     },
-  }), [adjustOpacities, hoveredDatasetIndex, datasets]);
+  }), [adjustOpacities, hoveredDatasetIndex, datasets, adjustedLabelYCoordinates]);
 
   const finalData: ChartData<'line', LineDataPoint[]> = useMemo(() => {
     const processedDatasets = hoveredDatasetIndex !== null 
@@ -207,7 +279,7 @@ const LineChart: FC<LineChartProps> = ({
           spanGaps: true,
         })),
         /** Average lines */
-        ...(activateAverageLine.current ? [
+        ...([
           ...processedDatasets.map((dataset: LineChartDataset, index: number) => ({
             label: `${dataset.label} Avg`,
             data: termsToRender.map((term): LineDataPoint => ({
@@ -220,7 +292,7 @@ const LineChart: FC<LineChartProps> = ({
             pointRadius: 0,
             hidden: hoveredDatasetIndex !== index, // Only show for hovered dataset
           }))
-        ] : [])
+        ])
       ]
     };
   }, [datasets, hoveredDatasetIndex, adjustOpacities]);

@@ -8,28 +8,27 @@ const Banner: FC<BannerProps> = ({
 
 }: BannerProps) => {
   return (
-    <div className="flex flex-row gap-4 border rounded-lg bg-levels-gray-blue p-4">
+    <div className="flex flex-row gap-4 border rounded-lg bg-gray-200 p-4">
       <InfoIcon style={{ width: '20px' }} />
       <p className="text-sm">
-        Welcome to the <span className="font-semi-bold">updated version</span> of Course Critique!
-        I've had this idea to update Course Critique for a while now, and it's finally come together
-        in a way that I think is quite cool {':)'} If you have suggestions on ideas or areas to 
-        improve please don't hesitate to 
+        Welcome to an updated version of Course Critique! I think you'll enjoy
+        this newer and hopefully improved version of the site. If you have any questions or feedback, please don't hesitate
+        to 
         <a 
           href="mailto:vmiranda6@gatech.edu" 
           target="_blank"
-          className="text-blue-500"
+          className="text-blue-500 hover:text-blue-700"
         >
           {' '}reach out{' '}
         </a>
-        to my personal email or leave feedback 
+        to my gatech email or leave feedback 
         <a 
           href="https://docs.google.com/forms/d/e/1FAIpQLSdzaegtAi1IE0QqtOPUGzMXzNOnsxk-h17CIykt66sn3E84lA/viewform?usp=header" 
           target="_blank"
-          className="text-blue-500"
+          className="text-blue-500 hover:text-blue-700"
         > 
           {' '}here
-        </a>!  
+        </a>.
       </p>
     </div>
   );

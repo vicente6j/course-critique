@@ -3,6 +3,7 @@ import { Card, CardBody, Link, Spinner, Tab, Tabs } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { useProfs } from "../server-contexts/prof/provider";
 import { CourseInfo } from "../api/course";
+import { RadioGroup, Radio } from "@nextui-org/react";
 
 export interface CourseHeaderProps {
   info: CourseInfo | null;
@@ -18,7 +19,9 @@ const CourseHeader: FC<CourseHeaderProps> = ({
   setSelectedTab,
 }: CourseHeaderProps) => {
 
+  const [addedToSchedule, setAddedToSchedule] = useState(false);
   const [seeOthers, setSeeOthers] = useState<boolean>(false);
+  
   const { profMap } = useProfs();
   const router = useRouter();
 
@@ -68,7 +71,28 @@ const CourseHeader: FC<CourseHeaderProps> = ({
             </>
           )}
         </div>
+        <RadioGroup
+          value={addedToSchedule ? 'add-to' : ''}
+          onValueChange={() => {
+            setAddedToSchedule(true);
+          }}
+          size="sm"
+        >
+          <Radio 
+            value="add-to"
+            onClick={(e) => {
+              if (addedToSchedule) {
+                e.preventDefault();
+                setAddedToSchedule(false);
+              }
+            }}
+            size="sm"
+          >
+            Add to schedule
+          </Radio>
+        </RadioGroup>
       </div>
+
       <Tabs 
         aria-label="Options"
         variant="underlined"

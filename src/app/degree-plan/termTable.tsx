@@ -21,7 +21,6 @@ import { useCourses } from "../server-contexts/course/provider";
 import { useProfile } from "../server-contexts/profile/provider";
 import { createSchedule, ScheduleInfo } from "../api/schedule";
 import AddIcon from '@mui/icons-material/Add';
-import ScheduleDropdown from "./scheduleDropdown";
 import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -30,6 +29,8 @@ import { createScheduleEntry, deleteScheduleEntry, updateScheduleEntry } from ".
 import { connect } from "http2";
 import { POSSIBLE_GRADES } from "../metadata";
 import { hexToRgba } from "../home/averageOverTime";
+import { createScheduleGrade, deleteScheduleGrade, updateScheduleGrade } from "../api/schedule-grades";
+import ScheduleDropdown from "../shared/scheduleDropdown";
 
 export interface TermTableColumn {
   key: string;
@@ -39,10 +40,10 @@ export interface TermTableColumn {
 
 export const columns: TermTableColumn[] = [
   { key: "course_id", label: "Course ID", width: 'w-[20%]' },
-  { key: "course_name", label: "Course Name", width: 'w-[40%]' },
-  { key: "GPA", label: "Average GPA", width: 'w-[15%]' },
-  { key: "num_credits", label: "Num Credits", width: 'w-[15%]' },
-  { key: "grade", label: "Grade", width: 'w-[10%]' },
+  { key: "course_name", label: "Course Name", width: 'w-[30%]' },
+  { key: "GPA", label: "Average GPA", width: 'w-[17.5%]' },
+  { key: "num_credits", label: "Num Credits", width: 'w-[17.5%]' },
+  { key: "grade", label: "Grade", width: 'w-[15%]' },
   { key: "actions", label: "", width: 'w-0' },
 ];
 
@@ -51,7 +52,7 @@ export interface TermTableRow {
   [key: string]: number | string | boolean;
 }
 
-interface MutableRef<T> {
+export interface MutableRef<T> {
   current: T | null;
 }
 
@@ -73,6 +74,7 @@ const TermTable: FC<TermTableProps> = ({
   const [previousRow, setPreviousRow] = useState<TermTableRow | null>(null);
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [deleteHover, setDeleteHover] = useState<boolean>(false);
 
   /**
    * Maps each schedule key to a corresponding grade, INCLUDING empty ones. There can
@@ -106,6 +108,7 @@ const TermTable: FC<TermTableProps> = ({
   const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
   const initLoadComplete = useRef<boolean>(false);
+  const initLoadGradesComplete = useRef<boolean>(false);
 
   const { courses, courseMap, averagesMap } = useCourses();
   const { handleUnselectTerm } = useTermSelectionContext();
@@ -117,6 +120,7 @@ const TermTable: FC<TermTableProps> = ({
     replaceScheduleAssignment,
     tempInfoObject,
     setIsEditing, 
+    setScheduleEdited,
   } = useDegreePlanContext();
 
   const { 
@@ -125,6 +129,7 @@ const TermTable: FC<TermTableProps> = ({
     scheduleEntryMap, 
     scheduleGradeMap,
     refetchScheduleEntries,
+    refetchScheduleGrades,
     loading: profileLoading
   } = useProfile();
 
@@ -138,13 +143,6 @@ const TermTable: FC<TermTableProps> = ({
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
   }, [activeKey, activeGradeKey, hoverRow, hoverGrade, showPrevious]);
-
-  useEffect(() => {
-    setIsEditing(
-      (scheduleRows ? scheduleRows!.some(schedule => schedule.key.startsWith('XX')) : false)
-        && activeKey !== null
-    );
-  }, [scheduleRows, activeKey]);
 
   /** 
    * On every rerender try to activate the
@@ -182,10 +180,24 @@ const TermTable: FC<TermTableProps> = ({
     }
     initLoadComplete.current = false; /** Make sure we can call fetch schedule entries and rerender everything 
     if the schedule ID changes */
+    initLoadGradesComplete.current = false;
     return termScheduleMap.get(term) || null;
   }, [termScheduleMap]);
 
-  const fetchScheduleEntries: () => void = useCallback(() => {
+  useEffect(() => {
+    const isEditing = 
+      (scheduleRows ? scheduleRows!.some(schedule => schedule.key.startsWith('XX')) : false)
+      && activeKey !== null;
+
+    setIsEditing(isEditing);
+    if (isEditing) {
+      setScheduleEdited(scheduleId);
+    } else {
+      setScheduleEdited(null);
+    }
+  }, [scheduleRows, activeKey, scheduleId]);
+
+  const fetchScheduleEntries: () => TermTableRow[] | null = useCallback(() => {
     if (!scheduleEntryMap || profileLoading || initLoadComplete.current) {
       /**
        * Don't run this upon a few cases.
@@ -193,14 +205,15 @@ const TermTable: FC<TermTableProps> = ({
        * (b) profile is still loading (this is essentially the same as above)
        * (c) The init load has happened, i.e. we're just modifying an existing schedule
        */
-      return;
+      return null;
     } else if (!scheduleId || !scheduleEntryMap.has(scheduleId)) {
       /** No assignment exists */
       setScheduleRows([{
         key: 'XX 0000',
         course_id: 'XX 0000',
       }]);
-      return;
+      initLoadComplete.current = true;
+      return [{ key: 'XX 0000', course_id: 'XX 0000' }];
     }
     let rows: TermTableRow[] = [];
     for (const entry of scheduleEntryMap.get(scheduleId)!) {
@@ -216,31 +229,40 @@ const TermTable: FC<TermTableProps> = ({
         course_id: 'XX 0000',
       });
     }
+    initLoadComplete.current = true;
     setScheduleRows(rows);
+    return rows;
   }, [scheduleId, scheduleEntryMap]);
 
-  const fetchScheduleGrades: () => void = useCallback(() => {
-    if (!scheduleGradeMap || !scheduleRows || initLoadComplete.current) {
+  /**
+   * Whenever we add or remove a row,
+   * we update the entries available inside of our schedule. This 
+   * thus requires that we update the grade mapping as well, and hence
+   * we rerun this function.
+   */
+  const fetchScheduleGrades: (rows: TermTableRow[]) => void = useCallback((rows) => {
+    if (!scheduleGradeMap || !rows || initLoadGradesComplete.current) {
       return;
     } else if (!scheduleId || !scheduleGradeMap.has(scheduleId)!) {
       /** There is no grade listed for the given scheduleId, or there is no schedule at all */
-      setGradeValues(new Map(scheduleRows.map(row => [row.key, ''])));
-      initLoadComplete.current = true;
+      setGradeValues(new Map(rows.map(row => [row.key, ''])));
+      initLoadGradesComplete.current = true;
       return;
     }
     let gradeMap: Map<string, string> = new Map();
     for (const entry of scheduleGradeMap.get(scheduleId)!) {
-      const courseId = scheduleRows.find(row => row.entry_id === entry.entry_id)!.key; /** Must exist, since each entry in scheduleGradeMap has a real entryId */
+      const courseId = rows.find(row => row.entry_id === entry.entry_id)!.key; /** Must exist, since each entry in scheduleGradeMap has a real entryId */
       gradeMap.set(courseId, entry.grade);
     }
     /** Add the null rows */
-    for (const row of scheduleRows) {
+    for (const row of rows) {
       if (!gradeMap.has(row.key)) {
         gradeMap.set(row.key, '');
       }
     }
-    initLoadComplete.current = true; /** Set init load complete at the end of schedule grades */
+    initLoadGradesComplete.current = true;
     setGradeValues(gradeMap);
+    setRerenderCount(prev => prev! + 1);
   }, [scheduleId, scheduleGradeMap, scheduleRows]);
 
   const fetchSchedule: () => void = useCallback(() => {
@@ -256,8 +278,10 @@ const TermTable: FC<TermTableProps> = ({
   }, [scheduleId, scheduleMap, tempInfoObject, termSelected, term]);
 
   useEffect(() => {
-    fetchScheduleEntries();
-    fetchScheduleGrades();
+    const rows: TermTableRow[] | null = fetchScheduleEntries();
+    if (rows) {
+      fetchScheduleGrades(rows);
+    }
     fetchSchedule();
   }, [fetchScheduleEntries, fetchScheduleGrades, fetchSchedule]);
 
@@ -302,14 +326,14 @@ const TermTable: FC<TermTableProps> = ({
       /** 
        * Here there's three cases. Either 
        *   (a) we're selecting an arbitrary empty row, in which case we simply have to activate it or 
-       *   (b) we're deselecting a real row. We can catch this case by checking to see if 
-       *     the previous row's key doesn't start with 'XX' or 
+       *   (b) we're deselecting a real row. We can catch this case by checking to see if key === activeKey
        *   (c) we're deselecting an active empty row (I hit the empty row twice), in which case
        *   we handle it the same as (b) and just return
        */
 
-      if (previousRow && (!previousRow.key.startsWith('XX') || previousRow.key === key)) {
-        return; /** Handled deselect case above */
+      if (previousRow && (previousRow.key === key || key === activeKey)) {
+        setHoverRow(previousRow.key); /** Prevents flickering */
+        return; /** I hit the empty row twice, OR I hit the same row I just selected */
       }
       /** Activate the empty row */
       setActiveKey(key);
@@ -466,7 +490,9 @@ const TermTable: FC<TermTableProps> = ({
         newRows = addEmptyRow(newRows, true); /** Only add if we don't have an empty row */
       }
 
+      initLoadGradesComplete.current = false; /** Rerun the grade map creator */
       setScheduleRows(newRows);
+      setDisablePointerEvents(true); /** Disable pointer events to avoid hovering again */
       removeFromDictionaries(key);
 
       /** At this point we definitely have an empty row (or multiple), so select the first one */
@@ -516,12 +542,14 @@ const TermTable: FC<TermTableProps> = ({
       let deletedIndex = scheduleRows!.findIndex(row => row.key === activeKey);
 
       if (newRows.length > 0) {
-        handleSelectRow(
-          deletedIndex === 0 
-            ? newRows[deletedIndex].key 
-            : newRows[deletedIndex - 1].key, 
-          newRows
-        );
+        const selectedKey = deletedIndex === 0 
+          ? newRows[deletedIndex].key 
+          : newRows[deletedIndex - 1].key;
+        handleSelectRow(selectedKey, newRows);
+        setHoverGrade(selectedKey);
+        setDisablePointerEvents(true);
+        setRerenderCount(prev => prev! + 1);
+
         setActiveIndex(
           deletedIndex === 0 ? deletedIndex : deletedIndex - 1
         );
@@ -541,6 +569,12 @@ const TermTable: FC<TermTableProps> = ({
       setError('Unable to remove from schedule');
     }
   }, [scheduleRows, previousRow, activeKey]);
+
+  useEffect(() => {
+    if (termSelected === term) {
+      console.log(hoverGrade);
+    }
+  }, [hoverGrade]);
 
   /**
    * Adds an empty row to scheduled rows (based on the current empty index to avoid collisions).
@@ -587,6 +621,8 @@ const TermTable: FC<TermTableProps> = ({
     if (returnList) {
       return newRows;
     }
+    initLoadGradesComplete.current = false;
+    setDisablePointerEvents(true); /** Disable pointer events to avoid hovering again */
     setScheduleRows(newRows);
     setActiveKey(key);
     setPreviousRow(newRows.find(row => row.key === key)!);
@@ -629,7 +665,8 @@ const TermTable: FC<TermTableProps> = ({
     let rows: TermTableRow[] = scheduleRows!;
     if (activeKey) {
       rows = handleDeselect();
-      key = previousRow!.key;
+      key = activeKey === key ? previousRow!.key : key; /** Weird edge case where we select a grade belonging to 
+      a different row */
     } 
 
     if (gradeValues.get(key)!.length > 0) {
@@ -667,7 +704,7 @@ const TermTable: FC<TermTableProps> = ({
    * @param value value which is queried
    * @param key the key which is used
    */
-  const onGradeChange: (value: string, key: string) => void = useCallback((value, key) => {
+  const onGradeChange: (value: string, key: string) => void = useCallback(async (value, key) => {
     value = value.toUpperCase();
     if (!POSSIBLE_GRADES.some(el => el === value) && value !== '') {
       setError('Must insert a valid grade (A, B, C, D, F, W)');
@@ -678,12 +715,27 @@ const TermTable: FC<TermTableProps> = ({
       newDict.set(key, value);
       return newDict;
     });
+    setDisablePointerEvents(true); /** Disable pointer events to avoid hovering again */
+    setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
+
+    const entryId = scheduleRows!.find(row => row.key === key)!.entry_id as number;
     if (value !== '') {
       setPreviousGrade(null);
       setActiveGradeKey(null);
+
+      if (previousGrade && scheduleId) {
+        await updateScheduleGrade(scheduleId!, term, entryId, value);
+      } else if (scheduleId) {
+        await createScheduleGrade(scheduleId!, term, entryId, value);
+      }
+      await refetchScheduleGrades();
+
+    } else if (scheduleId) {
+
+      await deleteScheduleGrade(scheduleId!, term, entryId);
+      await refetchScheduleGrades();
     }
-    setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
-  }, []);
+  }, [previousGrade, scheduleRows]);
 
   type KeyDownType = 'course' | 'grade';
   const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, key: string, type: KeyDownType) => void = useCallback((e, key, type) => {
@@ -771,18 +823,6 @@ const TermTable: FC<TermTableProps> = ({
     setDisablePointerEvents(true);
   }, [activeCol, scheduleRows, activeIndex]);
 
-  useEffect(() => {
-    if (termSelected === term) {
-      console.log('index is ', activeIndex);
-    }
-  }, [activeIndex]);
-
-  useEffect(() => {
-    if (termSelected === term) {
-      console.log('col is ', activeCol);
-    }
-  }, [activeCol]);
-
   const decrementCol: () => void = useCallback(() => {
     if (!scheduleRows || activeIndex === -1 || activeIndex === scheduleRows.length || activeCol == 0) {
       return;
@@ -809,12 +849,10 @@ const TermTable: FC<TermTableProps> = ({
       incrementCol();
     } else if (metaKey && e.key === 'Backspace' && correctTerm && activeKey && !activeGradeKey) {
       removeInsertedCourse(activeKey);
-    } else if (activeGradeKey) {
-      /** Want to show the previous grade */
-      setShowPrevious(metaKey);
-      if (e.key === 'Backspace') {
-        setPreviousGrade(null); /** Remove it */
-      }
+    } else if (metaKey && activeKey) {
+      setDisablePointerEvents(true);
+      setHoverGrade(activeKey);
+      setDeleteHover(true);
     } 
   }, [activeKey, termSelected, activeGradeKey]);
 
@@ -826,25 +864,22 @@ const TermTable: FC<TermTableProps> = ({
   }, [termSelected, tableRef, handleDeselect, handleDeselectGrade]);
 
   useEffect(() => {
-    /**
-     * For the case of deselecting command on a grade cell (release previous grade).
-     * @param e keyboard event
-     */
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' || e.key === 'Control') {
-        setShowPrevious(false);
+      if ((e.key === 'Meta' || e.key === 'Command' || e.key === 'Control') && disablePointerEvents) {
+        setHoverGrade(null);
+        setDeleteHover(false);
       }
-    };
+    }
 
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('keydown', handleShortcuts);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleShortcuts);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keyup', handleKeyUp);  
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [handleShortcuts, handleClickOutside]);
+  }, [handleShortcuts, handleClickOutside, disablePointerEvents]);
 
   useEffect(() => {
     /**
@@ -904,7 +939,7 @@ const TermTable: FC<TermTableProps> = ({
         onMouseEnter={() => setHoverRow(item.key)}
         onMouseLeave={() => setHoverRow(null)}
       >
-        <div className="relative rounded-lg max-h-xs rounded-none border-b border-gray-400 py-1 pr-1 z-10">
+        <div className="relative rounded-lg max-h-xs rounded-none border-b border-gray-400 py-1 pr-1 z-10 w-80">
           <div className="absolute text-search bg-transparent outline-none !cursor-text !z-10">
             {/** Use uppercase here on all formatting */}
             {inActiveResults ? (
@@ -975,9 +1010,9 @@ const TermTable: FC<TermTableProps> = ({
              * This means that we don't actually display the value which lives in gradeValues
              * if there is one.
              */}
-            {(!showPrevious || !previousGrade || activeGradeKey !== item.key) && (
-              <span className="text-gray-400">
-                {'+X'}
+            {(activeGradeKey !== item.key || gradeValues.get(item.key) === '') && (
+              <span className={`${item.key === activeKey ? 'italic' : ''} text-gray-400`}>
+                {item.key === activeKey ? '+X?' : '+X'}
               </span>
             )}
           </div>
@@ -992,18 +1027,18 @@ const TermTable: FC<TermTableProps> = ({
                   gradeInputRefs.current.set(key, { current: el });
                 }
               }}
-              value={showPrevious && previousGrade && activeGradeKey === item.key ? previousGrade : ''} /** Only display if cmd is pressed */
+              value={activeGradeKey === item.key ? previousGrade || '' : ''} /** Only display if cmd is pressed */
               onChange={(e) => onGradeChange(e.target.value, key)}
               onFocus={(e) => e.stopPropagation()}
               onKeyDown={(e) => handleKeyDown(e, key, 'grade')}
               placeholder=""
-              className={`text-search bg-transparent z-2 outline-none w-5`}
+              className={`text-search bg-transparent z-2 outline-none w-5 ${activeGradeKey === item.key && previousGrade ? '' : ''}`}
             />
           </div>
         </div>
       </TableCell>
     );
-  }, [gradeInputRefs, hoverGrade, showPrevious, previousGrade, activeGradeKey]);
+  }, [gradeInputRefs, hoverGrade, showPrevious, previousGrade, activeGradeKey, activeKey]);
 
   const nextToolTipDisplayContent: JSX.Element = useMemo(() => {
     if (!scheduleRows || !averagesMap) {
@@ -1025,42 +1060,6 @@ const TermTable: FC<TermTableProps> = ({
     )
   }, [scheduleRows, averageGpa, averagesMap])
 
-  const scheduleOptions: Array<{ 
-    label: string;
-    customNode?: React.ReactNode;
-    onClick: () => void;
-  }> = useMemo(() => {
-    if (!schedules) {
-      return [];
-    }
-
-    return [
-      'Create a new schedule',
-      'Select a schedule',
-      ...schedules!,
-    ]!.map((schedule: ScheduleInfo | string) => {
-      const isCreateNew = schedule === 'Create a new schedule';
-      const isSelect = schedule === 'Select a schedule';
-      return (
-        ({
-          label: isCreateNew || isSelect ? schedule : (schedule as ScheduleInfo).schedule_id!,
-          customNode: isCreateNew ? (
-            <div className="flex flex-row items-center gap-2">
-              <AddIcon style={{ width: '20px', height: '20px' }}/>
-              {schedule}
-            </div> 
-          ) : undefined,
-          helper: isCreateNew,
-          onClick: () => {
-            if (!isCreateNew) {
-              replaceScheduleAssignment(schedule);
-            }
-          }
-        })
-      );
-    });
-  }, [schedules, replaceScheduleAssignment]);
-
   const getOptions: (term: string) => Array<{ 
     label: string;
     onClick: () => void;
@@ -1075,18 +1074,50 @@ const TermTable: FC<TermTableProps> = ({
     ]; 
   }, []);
 
+  /** 
+   * Catches exceptional cases where moving the cursor really quickly causes hover
+   * state to freeze.
+   */
   useEffect(() => {
-    if (hoverRow) {
+    if (hoverRow && !disablePointerEvents) {
       setHoverGrade(null);
     }
-    if (hoverGrade) {
+    if (hoverGrade && !disablePointerEvents) {
       setHoverRow(null);
     }
   }, [hoverRow, hoverGrade]);
 
+  useEffect(() => {
+    /**
+     * A bit of an overkill function, but there's a bug with onMouseEnter and onMouseLeave which
+     * you can see here --> https://github.com/facebook/react/issues/20483.
+     * Therefore, check to see if the mouse is hovering over the trash can and set delete hover
+     * to this state any time the cursor moves over the delete icon.
+     * @param e mouse event
+     */
+    const handleMouseMove = (e: MouseEvent) => {
+      const deleteIcon = document.querySelector('.delete-icon');
+      if (deleteIcon) {
+        const rect = deleteIcon.getBoundingClientRect();
+        const isHovering = (
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom
+        );
+        if (isHovering !== deleteHover) {
+          setDeleteHover(isHovering);
+          setRerenderCount(prev => prev! + 1);
+        }
+      }
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [deleteHover]);
+
   return (
     <div 
-      className="flex flex-col gap-2"
+      className="flex flex-col gap-2 min-w-600 max-w-700"
       onClick={() => {
         setTermSelected(term!);
       }}
@@ -1098,12 +1129,9 @@ const TermTable: FC<TermTableProps> = ({
         />
       </div>
       <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
-        <ScheduleDropdown 
-          options={scheduleOptions}
-          text={schedule ? schedule.name! : 'Select a schedule'}
+        {/* <ScheduleDropdown 
           selectedOption={schedule ? schedule.schedule_id! : 'Select a schedule'}
-          term={term}
-        />
+        /> */}
         <div className="flex flex-row gap-4 items-center">
           <div className="flex flex-row gap-2 items-center">
             <NextToolTip content={nextToolTipDisplayContent} className="w-300">
@@ -1133,6 +1161,10 @@ const TermTable: FC<TermTableProps> = ({
         className="w-full" 
         key={`${rerenderCount!}`}
         ref={tableRef}
+        onMouseLeave={() => {
+          setHoverRow(null);
+          setHoverGrade(null);
+        }}
       >
         <TableHeader columns={columns}>
         {(column) => {
@@ -1162,7 +1194,7 @@ const TermTable: FC<TermTableProps> = ({
                   if (!isEmptyOrEditing) {
                     hasGradeValue = gradeValues.has(item.key) && gradeValues.get(item.key)!.length > 0;
                     grade = gradeValues.get(item.key)!;
-                  } else {
+                  } else if (activeKey === item.key) {
                     hasGradeValue = previousRow && gradeValues.has(previousRow!.key) && gradeValues.get(previousRow!.key)!.length > 0 || false;
                     if (hasGradeValue) {
                       grade = gradeValues.get(previousRow!.key)!;
@@ -1277,21 +1309,36 @@ const TermTable: FC<TermTableProps> = ({
                         className={`
                           ${(item.key === hoverGrade || activeGradeKey === item.key) && 'bg-gray-100'} 
                           ${disablePointerEvents && 'pointer-events-none'}
-                          border-b border-gray-200`
-                        }
+                          border-b border-gray-200
+                          ${item.key === activeKey ? 'italic' : ''}
+                        `}
                         onClick={() => handleSelectGrade(item.key)}
                         onMouseEnter={() => setHoverGrade(item.key)}
                         onMouseLeave={() => setHoverGrade(null)}
                       >
-                        {grade}
+                        {item.key === activeKey ? `${grade}?` : grade}
                       </TableCell>
                     ) : formatGradeInput(item); /** Otherwise, handle empty action */
                   } else if (columnKey === 'actions') {
                     return isEmptyOrEditing ? (
-                      <TableCell>
+                      <TableCell
+                        className="p-0"
+                      >
                         <DeleteIcon 
                           style={{ width: '20px' }} 
-                          className={`${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} hover:scale-110 cursor-pointer`}
+                          onMouseEnter={() => {
+                            setDeleteHover(true);
+                            setRerenderCount(prev => prev! + 1);
+                          }}
+                          onMouseLeave={() => {
+                            setDeleteHover(false);
+                            setRerenderCount(prev => prev! + 1);
+                          }}
+                          className={`
+                            delete-icon ${isActive ? 'opacity-100' : 'opacity-0'} 
+                            hover:scale-110 cursor-pointer transition-transform
+                            ${deleteHover ? 'rotate-12' : 'rotate-0'}
+                          `}
                           onClick={(e) => {
                             e.stopPropagation(); 
                             removeInsertedCourse(item.key);
@@ -1318,7 +1365,7 @@ const TermTable: FC<TermTableProps> = ({
           }}
         </TableBody>
       </Table>
-      <div className="flex flex-row justify-end gap-4 items-center">
+      <div className="flex flex-row justify-end gap-4 items-center mr-[5%]">
         <p className="text-sm text-red-fe466c w-fit text-right opacity-90">{error}</p>
         {activeKey && (
           <div className={`flex flex-row items-center`}>

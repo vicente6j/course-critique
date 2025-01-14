@@ -20,7 +20,7 @@ const Home: FC<HomePageProps> = ({}: HomePageProps) => {
         <Navbar />
         <div className="w-4/5 mx-auto my-8">
           <div className="flex flex-col gap-8">
-            {/* <Banner /> */}
+            <Banner />
             <AverageOverTime />
           </div>
         </div>

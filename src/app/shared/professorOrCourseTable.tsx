@@ -21,6 +21,7 @@ import FlexCol from "../deprecated/design-system/flexCol";
 import { formatGPA, GradeTableColumn, GradeTableRow } from "./gradeTable";
 import { useRouter } from "next/navigation";
 import { useProfs } from "../server-contexts/prof/provider";
+import CustomSearchBar from "./customSearchbar";
 
 export const professorCols: GradeTableColumn[] = [
   { key: "professor", label: "Professor", },
@@ -72,10 +73,9 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
   });
 
   const numPages = Math.ceil(rows.length / rowsPerPage);
-  const hasSearchFilter = Boolean(searchValue);
 
   const filteredItems: GradeTableRow[] = useMemo(() => {
-    if (!hasSearchFilter) {
+    if (!searchValue || searchValue === '') {
       return [...rows];
     }
     return [...rows].filter(row => {
@@ -132,13 +132,9 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
     );
   }, []);
 
-  const onSearchChange: (value: string) => void = useCallback((value: string) => {
-    if (value) {
-      setSearchValue(value);
-      setPage(1);
-    } else {
-      setSearchValue("");
-    }
+  const onSearchChange: (value: string) => void = useCallback((value) => {
+    setSearchValue(value);
+    setPage(1);
   }, []);
 
   const onClear: () => void = useCallback(() => {
@@ -155,22 +151,14 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
     return (
       <div className="flex flex-col gap-4">
         <div className="flex flex-row justify-between gap-3 items-end">
-          {rows.length > rowsPerPage ? (
-            <Input
-              isClearable
-              variant="bordered"
-              classNames={{
-                base: "w-full sm:max-w-[44%]",
-                inputWrapper: "border-1 border-gray-300 data-[hover=true]:border-default-300 group-data-[focus=true]:border-default-400 rounded-md shadow-none",
-              }}
-              placeholder={`Search by ${forProf ? 'name...' : 'course ID...'}`}
-              startContent={<SearchIcon />}
-              value={searchValue}
+          {rows.length > rowsPerPage && (
+            <CustomSearchBar
+              searchValue={searchValue}
               onClear={onClear}
-              onValueChange={onSearchChange}
+              onSearchChange={onSearchChange}
+              variation={'regular'}
+              searchString={`Search for a ${forProf ? 'professor...' : 'course ID...'}`}
             />
-          ) : (
-            <></>
           )}
         </div>
         <div className="flex justify-between items-center">
@@ -189,7 +177,7 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
         </div>
       </div>
     )
-  }, [searchValue, onSearchChange, onClear, hasSearchFilter, filteredItems, rowsPerPage]);
+  }, [searchValue, onSearchChange, onClear, filteredItems, rowsPerPage]);
 
   const bottomContent: React.ReactNode = useMemo(() => {
     if (filteredItems.length < rowsPerPage) {
@@ -208,7 +196,10 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
           total={numPages}
           onChange={(page) => setPage(page)}
           classNames={{
-            item: 'data-[active=true]:bg-default-100 border-none'
+            wrapper: '',
+            item: 'border-none data-[active=true]:bg-default-100 shadow-none data-[active=true]:shadow-none',
+            prev: 'shadow-none',
+            next: 'shadow-none'
           }}
         />
       </div>
@@ -216,43 +207,45 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
   }, [page, numPages, filteredItems]);
 
   return (
-    <Table 
-      removeWrapper 
-      aria-label="Example static collection table" 
-      bottomContent={bottomContent}
-      sortDescriptor={sortDescriptor}
-      onSortChange={setSortDescriptor}
-      className="w-800"
-      topContent={topContent}
-    >
-      <TableHeader columns={forProf ? professorCols : courseCols}>
-        {(column) => <TableColumn key={column.key} allowsSorting>{column.label}</TableColumn>}
-      </TableHeader>
-      <TableBody emptyContent="No data found" items={slicedItems}>
-        {(item) => (
-          <TableRow key={item.key} className="border-b border-gray-200">
-            {(columnKey) => {
-              const value = getKeyValue(item, columnKey);
-              if (columnKey === 'GPA' && value !== undefined && value !== null) {
-                let color = formatGPA(Number(value));
-                return <TableCell style={{ color: color }} className="font-semibold">{Number(value).toFixed(2)}</TableCell>;
-              } else if (columnKey === 'professor' && value !== undefined && value) {
-                return formatProf(value);
-              } else if (columnKey === 'course_id' && value !== undefined && value) {
-                return formatCourse(value);
-              }
-              const formattedValue =
-                typeof value === 'number'
-                  ? value.toFixed(1)
-                  : value ? value : (0.0).toFixed(1);
+    <div className="overflow-hidden">
+      <Table 
+        removeWrapper 
+        aria-label="Example static collection table" 
+        bottomContent={bottomContent}
+        sortDescriptor={sortDescriptor}
+        onSortChange={setSortDescriptor}
+        className="max-w-800"
+        topContent={topContent}
+      >
+        <TableHeader columns={forProf ? professorCols : courseCols}>
+          {(column) => <TableColumn key={column.key} allowsSorting>{column.label}</TableColumn>}
+        </TableHeader>
+        <TableBody emptyContent="No data found" items={slicedItems}>
+          {(item) => (
+            <TableRow key={item.key} className="border-b border-gray-200">
+              {(columnKey) => {
+                const value = getKeyValue(item, columnKey);
+                if (columnKey === 'GPA' && value !== undefined && value !== null) {
+                  let color = formatGPA(Number(value));
+                  return <TableCell style={{ color: color }} className="font-semibold">{Number(value).toFixed(2)}</TableCell>;
+                } else if (columnKey === 'professor' && value !== undefined && value) {
+                  return formatProf(value);
+                } else if (columnKey === 'course_id' && value !== undefined && value) {
+                  return formatCourse(value);
+                }
+                const formattedValue =
+                  typeof value === 'number'
+                    ? value.toFixed(1)
+                    : value ? value : (0.0).toFixed(1);
 
-              return <TableCell>{formattedValue}</TableCell>;
-            }}
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  )
+                return <TableCell>{formattedValue}</TableCell>;
+              }}
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
 }
 
 export default ProfessorOrCourseTable;

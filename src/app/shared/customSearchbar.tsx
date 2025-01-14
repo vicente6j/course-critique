@@ -3,19 +3,42 @@ import { FC } from "react";
 import { Input } from "@nextui-org/input";
 import { SearchIcon } from "../../../public/icons/searchIcon";
 
-export interface StickySearchBarProps {
+export type SearchVariation = 'regular' | 'sticky';
+
+export interface CustomSearchbarProps {
   searchValue: string | null;
   onClear: () => void;
   onSearchChange: (value: string) => void;
   searchString?: string | null;
+  variation?: SearchVariation;
 }
 
-const StickySearchbar: FC<StickySearchBarProps> = ({
+const CustomSearchbar: FC<CustomSearchbarProps> = ({
   searchValue,
   onClear,
   onSearchChange,
   searchString,
-}: StickySearchBarProps) => {
+  variation,
+}: CustomSearchbarProps) => {
+
+  if (variation === 'regular') {
+    return (
+      <Input
+        isClearable
+        variant="bordered"
+        classNames={{
+          base: "w-full sm:max-w-[44%]",
+          inputWrapper: "border-1 border-gray-300 data-[hover=true]:border-default-300 group-data-[focus=true]:border-default-400 rounded-md shadow-none",
+        }}
+        placeholder={searchString ?? 'Search'}
+        startContent={<SearchIcon />}
+        value={searchValue || ''}
+        onClear={onClear}
+        onValueChange={onSearchChange}
+      />
+    );
+  } 
+
   return (
     <div className="py-1 sticky top-0 bg-white z-10">
       <Input
@@ -34,4 +57,4 @@ const StickySearchbar: FC<StickySearchBarProps> = ({
   );
 }
 
-export default StickySearchbar;
+export default CustomSearchbar;

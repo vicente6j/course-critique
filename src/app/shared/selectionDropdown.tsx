@@ -4,7 +4,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckIcon from '@mui/icons-material/Check';
 import { Input } from "@nextui-org/input";
 import { SearchIcon } from "../../../public/icons/searchIcon";
-import StickySearchbar from "./stickySearchbar";
+import CustomSearchbar from "./customSearchbar";
 
 export interface SelectionDropdownProps {
   options: Array<{ 
@@ -69,11 +69,12 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
       {isOpen && (
         <div className="absolute top-[calc(100%+4px)] left-0 z-20 max-h-60 overflow-y-scroll min-w-48 max-w-96 bg-white border border-gray-200 rounded-none shadow-md">
           {containsSearch && (
-            <StickySearchbar 
+            <CustomSearchbar 
               searchValue={searchValue}
               onClear={onClear}
               onSearchChange={onSearchChange}
               searchString={searchString}
+              variation="sticky"
             />
           )}
           {options.map((option, index) => (

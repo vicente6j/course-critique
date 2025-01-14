@@ -50,7 +50,7 @@ export interface CourseInfo {
 export type DataType = 'averages' | 'byProf' | 'byTerm';
 
 export const fetchCourseData = async (type: DataType) => {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
     const URL = 
       type === 'averages' ? MOCK_COURSE_AVERAGES_JSON 
       : type === 'byProf' ? MOCK_COURSE_AVERAGES_BY_PROF_JSON 
@@ -80,7 +80,7 @@ export const fetchCourseData = async (type: DataType) => {
 }
 
 export const fetchCourseInfo = async (): Promise<CourseInfo[]> => {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
     const res = await fetch(MOCK_COURSE_INFO_JSON, { 
       cache: 'force-cache' 
     });

@@ -14,6 +14,11 @@ import { Button } from "@nextui-org/button";
 import { signOut } from "next-auth/react";
 import LogoutIcon from '@mui/icons-material/Logout';
 import { GRADE_COLORS } from "../metadata";
+import { Skeleton } from "@nextui-org/skeleton";
+import CourseSearchbar from "../shared/courseSearchbar";
+import CorrelationMatrix, { CorrelationDataset, CustomCorrelationDataset } from "./correlationMatrix";
+import HideSourceIcon from '@mui/icons-material/HideSource';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 
 export const allTerms: string[] = [
   'Spring 2010', 'Summer 2010',
@@ -41,7 +46,6 @@ export const termToSortableInteger: (term: string) => number = (term) => {
 }
 
 export const hexToRgba: (hex: string, opacity: number) => string = (hex, opacity) => {
-  console.log(hex);
   hex = hex.replace(/^#/, '');
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
@@ -56,23 +60,29 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 }: AverageOverTimeProps) => {
 
   /** Have to transform this into a dictionary for courses -> terms -> averages */
-  const { courses, courseToTermAveragesMap } = useCourses();
+  const { courseToTermAveragesMap, loading: courseInfoLoading } = useCourses();
 
   const [comparing, setComparing] = useState<string[] | null>([ 'CS 1332', 'CS 1301' ]);
+  /**
+   * Equivalent to the course which is currently being hovered on.
+   */
   const [comparedCourseSelected, setComparedCourseSelected] = useState<string | null>(null);
-  const [activeIndex, setActiveIndex] = useState<number | null>(-1);
   const [rerenderKey, setRerenderKey] = useState<number | null>(0);
 
-  /** Initial key is course, then by term */
+  /**
+   * Maps term to course and then to a vector of statistics held in a CourseAverageByTerm object
+   * (GPA, A, B, total number of students, etc.)
+   */
   const [termsDict, setTermsDict] = useState<Map<string, Map<string, CourseAveragesByTerm>> | null>(null);
+  /**
+   * Simply intended to track course -> real hex value iterating through a const called GRADE_COLORS
+   * in metadata.ts.
+   */
   const [courseColorDict, setCourseColorDict] = useState<Map<string, string> | null>(null);
   const [colorIndex, setColorIndex] = useState<number | null>(0);
-  const [query, setQuery] = useState<string | null>(null);
-  const [isFocused, setIsFocused] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [showCorrelationMatrix, setShowCorrelationMatrix] = useState<boolean>(false);
+  const [hoverShowCorrelation, setHoverShowCorrelation] = useState<boolean>(false);
 
   useEffect(() => {
     /** Initialization */
@@ -108,18 +118,6 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       return () => clearTimeout(timer);
     }
   }, [error]);
-
-  const filteredCourses: CourseInfo[] = useMemo(() => {
-    if (!courses) {
-      return [];
-    } else if (!query) {
-      return courses.slice(0, 3);
-    }
-    /** First five courses to match prefix */
-    return courses?.filter(course => {
-      return course.id.toLowerCase().startsWith(query.toLowerCase())
-    }).slice(0, 5);
-  }, [courses, query]);
 
   const removeFromTermsDict: (course: string) => void = useCallback((course) => {
     /** Terms dict has some datasets already */
@@ -159,8 +157,6 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     });
     setColorIndex((idx! + 1) % GRADE_COLORS.length);
     setRerenderKey(prev => prev! + 1);
-    setIsFocused(false);
-    inputRef!.current!.blur();
   }, [courseToTermAveragesMap, colorIndex]);
 
   const datasets: LineChartDataset[] = useMemo(() => {
@@ -204,123 +200,48 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     return coloredDatasets;
   }, [datasets, courseColorDict, comparedCourseSelected]);
 
-  const activeCourse: CourseInfo | null = useMemo(() => {
-    return activeIndex === -1 ? null : filteredCourses[activeIndex!];
-  }, [filteredCourses, activeIndex]);
-
-  const onSearchChange: (value: string) => void = useCallback((value: string) => {
-    setQuery(value || '');
-  }, []);
-
-  const onClear: () => void = useCallback(() => {
-    setQuery('');
-  }, []);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    switch (e.key) {
-      case 'Enter':
-        const course = activeIndex === -1 ? filteredCourses[0] : activeCourse;
-        if (termsDict && termsDict!.has(course!.id.toUpperCase())) {
-          setError(`Already comparing ${course!.id}`);
-          inputRef.current?.focus();
-          return;
-        } else if (termsDict && termsDict!.size === 7) {
-          setError(`Can\'t compare more than seven courses...`);
-          inputRef.current?.focus();
-          return;
-        }
-        setComparing((prev) => [...prev!, course!.id]);
-        addToTermsDict(course!.id);
-        setQuery('');
-        setActiveIndex(-1);
-        break;
-      case 'ArrowDown':
-        setActiveIndex(prev => Math.min(prev! + 1, filteredCourses.length - 1));
-        break;
-      case 'ArrowUp':
-        setActiveIndex(prev => Math.max(prev! - 1, -1));
-        break;
-      default:
-        return;
-    }
-    e.preventDefault();
-  }, [filteredCourses, activeCourse, activeIndex]);
-
-  const handleRowClick: () => void = useCallback(() => {
-    if (termsDict && termsDict!.has(activeCourse!.id.toUpperCase())) {
-      setError(`Already comparing ${activeCourse!.id}`);
-      inputRef.current?.focus();
+  const handleKeyDown: (course: CourseInfo | null) => void = useCallback((course) => {
+    if (termsDict && termsDict!.has(course!.id.toUpperCase())) {
+      setError(`Already comparing ${course!.id}`);
       return;
     } else if (termsDict && termsDict!.size === 7) {
       setError(`Can\'t compare more than seven courses...`);
-      inputRef.current?.focus();
       return;
     }
-    setComparing((prev) => [...prev!, activeCourse!.id]);
-    addToTermsDict(activeCourse!.id);
-    setQuery('');
-    setActiveIndex(-1);
-  }, [termsDict, activeCourse, addToTermsDict]);
+    setComparing((prev) => [...prev!, course!.id]);
+    addToTermsDict(course!.id);
+  }, [termsDict]);
 
-  const Row: ({ index, style }: { index: number; style: React.CSSProperties }) => JSX.Element = useCallback(({ index, style }) => (
-    <div 
-      id={`row-${index}`}
-      style={style}
-      onMouseEnter={() => setActiveIndex(index)}
-      onMouseLeave={() => setActiveIndex(-1)}
-      onClick={() => handleRowClick()}
-      className={`${activeIndex === index ? 'bg-gray-200' : ''} text-xs cursor-pointer pl-4 rounded-none py-1`}
-    >
-      {filteredCourses[index].id}
-    </div>
-  ), [activeIndex, setActiveIndex, filteredCourses]);
+  const handleRowClick: (course: CourseInfo | null) => void = useCallback((course) => {
+    if (termsDict && termsDict!.has(course!.id.toUpperCase())) {
+      setError(`Already comparing ${course!.id}`);
+      return;
+    } else if (termsDict && termsDict!.size === 7) {
+      setError(`Can\'t compare more than seven courses...`);
+      return;
+    }
+    setComparing((prev) => [...prev!, course!.id]);
+    addToTermsDict(course!.id);
+  }, [termsDict, addToTermsDict]);
 
-  const searchbar: React.ReactNode = useMemo(() => {
-    return (
-      <div className="relative max-w-lg">
-        <div className={`relative border-b p-0 pl-4 ${isFocused ? 'border-gray-300' : 'border-gray-400'}`}>
-          {activeCourse && (
-            <div className="text-xs absolute t-0 l-0 ml-3.5 px-2 py-1 z-10">
-              <span className="opacity-0">{query?.toUpperCase()}</span>
-              <span className="text-gray-600">{activeCourse.id.slice(query?.length || 0).toUpperCase()}</span>
-            </div>
-          )}
-          <div className="flex flex-row gap-0 items-center w-full">
-            <SearchIcon />
-            <input
-              id="searchbar"
-              type="text"
-              value={query ? query.toUpperCase() : ''}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              ref={inputRef}
-              autoComplete="off"
-              placeholder={`${activeCourse ? '' : 'Search for a course'}`}
-              className="text-xs w-full bg-transparent z-2 px-2 py-1 outline-none border-none"
-            />
-          </div>
-        </div>
-        <div 
-          className={`${isFocused ? 'visible' : 'invisible'} absolute top-full z-20 bg-white w-[90%] rounded-b-xl py-2 shadow-md`}
-          ref={dropdownRef}
-          onMouseDown={(e) => {
-            e.preventDefault(); /** Extremely important to not unblur before selecting */
-          }}
-        >
-          <VariableSizeList
-            height={30 * filteredCourses.length}
-            width="max-w-xs"
-            itemCount={filteredCourses.length}
-            itemSize={(index) => 30}
-          >
-            {Row}
-          </VariableSizeList>
-        </div>
-      </div>
-    )
-  }, [isFocused, activeCourse, filteredCourses, query, onSearchChange, onClear]);
+  const customCorrelationDatasets: CustomCorrelationDataset[] = useMemo(() => {
+    if (!termsDict) {
+      return [];
+    }
+    const courses = Array.from(termsDict?.keys() ?? []);
+    const vectors: CourseAveragesByTerm[][] = courses.map(course => (
+      Array.from(termsDict.get(course)?.values()!)
+    ));
+
+    const datasets: CustomCorrelationDataset[] = [];
+    vectors.forEach((vector, idx) => {
+      datasets.push({
+        name: courses[idx],
+        vector: vector,
+      });
+    });
+    return datasets;
+  }, [termsDict]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -335,44 +256,105 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         <div className="flex flex-row gap-2 items-center flex-wrap">
           {comparing && comparing!.map((course: string) => {
             return (
-              <div 
-                className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
-                onClick={() => {
-                  removeFromTermsDict(course);
-                  setComparing((prev) => {
-                    return [...prev!.filter(element => element !== course)];
-                  });
-                }}
-                onMouseEnter={() => {
-                  setComparedCourseSelected(course);
-                }}
-                onMouseLeave={() => {
-                  setComparedCourseSelected(null);
-                }}
+              <Skeleton 
+                isLoaded={!courseInfoLoading}
                 key={course}
               >
                 <div 
-                  className="rounded-full w-3 h-3" 
-                  style={{ 
-                    backgroundColor: courseColorDict?.get(course)!,
-                    border: '1px solid rgba(0,0,0,0.1)' 
-                  }} 
-                />
-                <p className="text-xs">{course}</p>
-              </div>  
+                  className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
+                  onClick={() => {
+                    removeFromTermsDict(course);
+                    setComparing((prev) => {
+                      return [...prev!.filter(element => element !== course)];
+                    });
+                  }}
+                  onMouseEnter={() => {
+                    setComparedCourseSelected(course);
+                  }}
+                  onMouseLeave={() => {
+                    setComparedCourseSelected(null);
+                  }}
+                  key={course}
+                >
+                  <div 
+                    className="rounded-full w-3 h-3" 
+                    style={{ 
+                      backgroundColor: courseColorDict?.get(course)!,
+                      border: '1px solid rgba(0,0,0,0.1)' 
+                    }} 
+                  />
+                  <p className="text-xs">{course || ''}</p>
+                </div>  
+              </Skeleton>
             )
           })}
-          {searchbar}
+          <CourseSearchbar
+            handleKeyDownAdditional={handleKeyDown}
+            handleRowClickAdditional={handleRowClick}
+          />
         </div>
         <p className="text-red-600 text-sm">{error}</p>
       </div>
-      <div className="w-900 h-400" key={rerenderKey}>
-        <LineChart
-          courseColorDict={courseColorDict!}
-          datasets={coloredDatasets}
-          datasetIndex={datasets.findIndex((dataset: LineChartDataset) => dataset.label === comparedCourseSelected)}
-        />
-      </div>
+      {showCorrelationMatrix ? (
+        <div>
+          <div 
+            className="flex gap-2 items-center cursor-pointer w-fit"
+            onMouseEnter={() => {
+              setHoverShowCorrelation(true);
+            }}
+            onMouseLeave={() => {
+              setHoverShowCorrelation(false);
+            }}
+            onClick={() => {
+              setShowCorrelationMatrix(false);
+            }} 
+          >
+            <p className={`heading-sm ${hoverShowCorrelation ? 'text-red-800' : 'text-[var(--color-red)]' } cursor-pointer`}>
+              Hide correlation matrix
+            </p>
+            <HideSourceIcon 
+              style={{ width: '24px', color: `${hoverShowCorrelation ? 'var(--color-dark-red)' : 'var(--color-red)'}` }}
+              className={`transition-transform ${hoverShowCorrelation ? 'rotate-180' : ''}`}
+            />
+          </div>
+          <CorrelationMatrix
+            customDatasets={customCorrelationDatasets}
+          />
+        </div>
+      ) : (
+        <div 
+          className="flex gap-2 items-center cursor-pointer w-fit"
+          onMouseEnter={() => {
+            setHoverShowCorrelation(true);
+          }}
+          onMouseLeave={() => {
+            setHoverShowCorrelation(false);
+          }}
+          onClick={() => {
+            setShowCorrelationMatrix(true);
+          }} 
+        >
+          <p className={`heading-xs ${hoverShowCorrelation ? 'text-gray-400' : 'text-gray-700' } cursor-pointer`}>
+            Show correlation matrix
+          </p>
+          <ViewModuleIcon 
+            style={{ width: '24px', color: `${hoverShowCorrelation ? hexToRgba('#9ca3af', 1) : '#374151'}` }}
+            className={`transition-transform ${hoverShowCorrelation ? 'rotate-180' : ''}`}
+          />
+        </div>
+      )}
+      <Skeleton 
+        isLoaded={!courseInfoLoading}
+        className="w-900"
+      >
+        <div className="w-900 h-400" key={rerenderKey}>
+          <LineChart
+            courseColorDict={courseColorDict!}
+            datasets={coloredDatasets}
+            datasetIndex={datasets.findIndex((dataset: LineChartDataset) => dataset.label === comparedCourseSelected)}
+          />
+        </div>
+      </Skeleton>
     </div>
   )
 }

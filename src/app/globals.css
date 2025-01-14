@@ -67,6 +67,8 @@
   --color-dark-blue: #2D7FF9;
   --color-cyan: #18BFFF;
   --color-next-table: #f4f4f5;
+  --color-dark-red: #991a1a;
+  --color-dark-green: #065f46;
 }
 
 .dark {
@@ -477,11 +479,42 @@ body {
   .w-600 {
     width: 600px;
     min-width: 600px;
+    max-width: 600px;
+  }
+
+  .w-625 {
+    width: 625px;
+    min-width: 625px;
+  }
+
+  .min-w-600 {
+    min-width: 600px;
+  }
+
+  .max-w-700 {
+    max-width: 700px;
+  }
+
+  .max-w-600 {
+    max-width: 600px;
+  }
+
+  .w-700 {
+    width: 700px;
+    min-width: 700px;
   }
 
   .w-800 {
     width: 800px;
     min-width: 800px;
+  }
+
+  .max-w-800 {
+    max-width: 800px;
+  }
+
+  .min-h-800 {
+    min-height: 800px;
   }
 
   .w-900 {

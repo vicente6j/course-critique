@@ -10,6 +10,7 @@ import Dropdown from "../shared/selectionDropdown";
 import ActionDropdown from "../shared/actionDropdown";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
+import ScheduleDropdown from "../shared/scheduleDropdown";
 
 export interface TermGridProps {}
 
@@ -54,8 +55,11 @@ const TermGrid: FC<TermGridProps> = ({
   }, [declareTermScheduleMap]);
   
   return (
-    <div className="grid grid-cols-2 gap-y-8 gap-x-10 text-md">
-      {(loading ? ALL_TERMS : termsSelected)?.map((term: string) => {
+    <div className="grid grid-cols-2 gap-y-8 gap-x-4 text-md min-h-800">
+      <ScheduleDropdown
+        selectedOption={'select'}
+      />
+      {/* {(loading ? ALL_TERMS : termsSelected)?.map((term: string) => {
         return (
           <div key={`${term}-${loading}`} className="flex flex-col gap-2">
             <Skeleton isLoaded={!loading}>
@@ -63,7 +67,7 @@ const TermGrid: FC<TermGridProps> = ({
             </Skeleton>
           </div>
         );
-      })}
+      })} */}
     </div>
   );
 }

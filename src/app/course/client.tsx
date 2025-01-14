@@ -163,12 +163,17 @@ const CourseClient: FC<CourseClientProps> = ({
                       <span className="font-bold"> {percentiles.get(75)?.GPA.toFixed(2)} </span>
                         on the high end (75th percentile). The highest ranked professors for {courseID} include{' '} 
                       {sortedProfs.slice(0,3).map((prof, idx) => {
-                        return <span key={prof.profID}>
+                        return (
+                        <span 
+                          key={prof.profID}
+                          className="font-semi-bold"
+                        >
                           {profMap!.get(prof.profID)?.instructor_name}
                           {idx === 0 && <>, </>}
                           {idx === 1 && <>, and </>}
                           {idx === 2 && <>. </>}
                         </span>
+                        )
                       })}
                     </p>
                     <div className="flex flex-col gap-4">

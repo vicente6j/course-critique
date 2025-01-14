@@ -26,7 +26,7 @@ export interface ProfileContextValue {
   refetchSchedules: () => Promise<ScheduleInfo[] | null>;
   refetchScheduleEntries: () => Promise<ScheduleEntry[] | null>;
   refetchScheduleAssignments: () => Promise<ScheduleAssignment[] | null>;
-  refetchScheduleGrades: () => Promise<boolean>;
+  refetchScheduleGrades: () => Promise<ScheduleGrade[] | null>;
   refetchTermSelections: () => Promise<boolean>;
 }
 
@@ -215,22 +215,33 @@ const ProfileProvider: FC<ProfileProviderProps> = ({
     return newAssignments;
   }, [profile]);
 
-  const refetchScheduleGrades: () => Promise<boolean> = useCallback(async () => {
+  const refetchScheduleGrades: () => Promise<ScheduleGrade[] | null> = useCallback(async () => {
     if (!profile?.id) {
       setError('No user ID found.');
-      return false;
+      return null;
     }
+    let newGrades: ScheduleGrade[] = [];
     try {
-      const newGrades = await fetchGrades(profile.id);
+      newGrades = await fetchGrades(profile.id);
       setData(prevData => ({
         ...prevData,
         scheduleGrades: newGrades,
       }));
+      const newGradeMap = new Map();
+      newGrades?.forEach(grade => {
+        const existing = newGradeMap.get(grade.schedule_id) || [];
+        newGradeMap.set(grade.schedule_id, [...existing, grade]);
+      });
+      setMaps(prevMaps => ({
+        ...prevMaps,
+        scheduleGrades: newGradeMap,
+      }));
+
     } catch (error) {
       setError('Failed to reload schedule grades.');
-      return false;
+      return null;
     }
-    return true;
+    return newGrades;
   }, [profile]);
 
   const refetchTermSelections: () => Promise<boolean> = useCallback(async () => {

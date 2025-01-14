@@ -39,14 +39,22 @@ export const resolvedColors: Record<string, string> = {
   'W': '#666666',
 };
 
+/**
+ * GPA comes in the form of a sliding 0.0 - 4.0 scale,
+ * and hence it doesn't make sense to use 'resolvedColors'
+ * (we could also just Math.float() here but it probably doesn't
+ * matter).
+ * @param gpa sliding 0.0 to 4.0 scale double
+ * @returns color
+ */
 export const getClientColorFromGPA: (gpa: number) => string = (gpa: number) => {
-  let color: string = '#168921'; // dark-green
+  let color: string = '#168921';
   if (gpa > 3.0 && gpa <= 3.5) {
-    color = '#11AF22'; // light-green
+    color = '#11AF22';
   } else if (gpa > 2.5 && gpa <= 3.0) {
-    color = '#FCB400'; // yellow
-  } else {
-    color = '#FE466C'; // red
+    color = '#FCB400';
+  } else if (gpa <= 2.5) {
+    color = '#FE466C';
   }
   return color;
 };
@@ -68,6 +76,8 @@ const DonutChart: FC<DonutChartProps> = ({
 }: DonutChartProps) => {
 
   useEffect(() => {
+    console.log(aggregateRow);
+
     ChartJS.unregister({ id: 'centerText' });
     if (aggregateRow.GPA !== undefined) {
       ChartJS.register({
@@ -79,6 +89,7 @@ const DonutChart: FC<DonutChartProps> = ({
           const fontSize = (height / 100).toFixed(2);
           const fontWeight = 500;
           const fontColor = getClientColorFromGPA(aggregateRow.GPA as number);
+
           ctx.font = `${fontWeight} ${fontSize}em sans-serif`;
           ctx.textBaseline = "middle";
           ctx.fillStyle = fontColor;
