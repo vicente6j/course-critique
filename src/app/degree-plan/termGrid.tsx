@@ -7,7 +7,7 @@ import { ScheduleAssignment } from "../api/schedule-assignments";
 import { ScheduleEntry } from "../api/schedule-entries";
 import { ScheduleInfo } from "../api/schedule";
 import Dropdown from "../shared/selectionDropdown";
-import ActionDropdown from "../shared/actionDropdown";
+import ActionDropdown from "../components/actionDropdown";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
 import ScheduleDropdown from "../shared/scheduleDropdown";
@@ -55,10 +55,10 @@ const TermGrid: FC<TermGridProps> = ({
   }, [declareTermScheduleMap]);
   
   return (
-    <div className="grid grid-cols-2 gap-y-8 gap-x-4 text-md min-h-800">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-y-8 gap-x-8 text-md min-h-800">
       {(loading ? ALL_TERMS : termsSelected)?.map((term: string) => {
         return (
-          <div key={`${term}-${loading}`} className="flex flex-col gap-2">
+          <div key={`${term}-${loading}`} className="flex flex-col gap-2 w-full">
             <Skeleton isLoaded={!loading}>
               <TermTable term={term}/>
             </Skeleton>

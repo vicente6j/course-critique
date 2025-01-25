@@ -1,12 +1,13 @@
 import { FC, useState } from "react";
-import CloseIcon from '@mui/icons-material/Close';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 
+export interface ActionDropdownOption {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ActionDropdownProps {
-  options: Array<{ 
-    label: string;
-    onClick: () => void;
-  }>;
+  options: ActionDropdownOption[];
   trigger?: React.ReactElement;
 }
 
@@ -14,7 +15,9 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
   options,
   trigger,
 }: ActionDropdownProps) => {
+  
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
   return (
     <div className="relative inline-block">
       <div 
