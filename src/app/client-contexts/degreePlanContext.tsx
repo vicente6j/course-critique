@@ -15,6 +15,7 @@ interface DegreePlanContextType {
   setIsEditing: Dispatch<SetStateAction<boolean | null>>;
   scheduleEdited: string | null;
   setScheduleEdited: Dispatch<SetStateAction<string | null>>;
+  deleteSchedulePing: (schedule: ScheduleInfo) => Promise<void>;
 }
 
 const DegreePlanContext = createContext<DegreePlanContextType | undefined>(undefined);

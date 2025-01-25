@@ -1,5 +1,5 @@
-import { Dispatch, SetStateAction, useCallback, useState } from "react";
-import { createSchedule, ScheduleInfo } from "../api/schedule";
+import { Dispatch, SetStateAction, useCallback, useEffect, useState } from "react";
+import { createSchedule, ScheduleInfo, deleteSchedule } from "../api/schedule";
 import { useProfile } from "../server-contexts/profile/provider";
 import { createScheduleAssignment, deleteScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
 
@@ -16,6 +16,7 @@ interface UseDegreePlanValue {
   setIsEditing: Dispatch<SetStateAction<boolean | null>>;
   scheduleEdited: string | null;
   setScheduleEdited: Dispatch<SetStateAction<string | null>>;
+  deleteSchedulePing: (schedule: ScheduleInfo) => Promise<void>;
 }
 
 export const useDegreePlan = (
@@ -51,9 +52,20 @@ export const useDegreePlan = (
 
   const { profile, schedules, refetchSchedules, scheduleAssignments, refetchScheduleAssignments } = useProfile();
 
+  /**
+   * If there's no term currently selected, then this function doesn't really have a purpose
+   * (as it's just meant to modify existing assignments from term -> schedule_id).
+   * 
+   * Therefore set the error field.
+   * 
+   * @param schedule schedule to update for the selected term
+   */
   const replaceScheduleAssignment: (schedule: ScheduleInfo | null) => void = useCallback(async (schedule) => {
-    if (!profile || !scheduleAssignments || !termSelected) {
-      setError('Profile or assignments or termSelected weren\'t found.');
+    if (!profile || !scheduleAssignments) {
+      setError('Profile or assignments weren\'t found.');
+      return;
+    } else if (!termSelected) {
+      setError('There was no term selected to begin working with.');
       return;
     }
 
@@ -93,15 +105,48 @@ export const useDegreePlan = (
 
   }, [profile, scheduleAssignments, termSelected]);
 
+  const deleteSchedulePing: (schedule: ScheduleInfo | null) => Promise<void> = useCallback(async (schedule) => {
+    if (!profile || !schedules) {
+      setError('One of profile or schedules was null.');
+      return;
+    }
+
+    try {
+
+      if (termSelected) {
+        setTermScheduleMap(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(termSelected);
+          return newMap;
+        });
+      }
+
+      await deleteSchedule(schedule?.schedule_id!);
+      await refetchSchedules();
+      /** 
+       * Even though we handle deletion of the assignment via SQL cascade,
+       * still refetch the new assignments.
+       */
+      await refetchScheduleAssignments();
+      
+    } catch (e) {
+      setError(e as string);
+      console.error(e);
+    }
+  }, [profile, schedules, termSelected]);
+
   /**
    * Return the new schedule after creation
    * (in order to update e.g. schedule dropdown).
+   * 
+   * Importantly, this function has to wait for pinging the back-end to retrieve the actual real
+   * schedule information (id) which is generated on the back-end.
    * @param scheduleName name of new schedule
    * @returns the new schedule object
    */
   const createNewSchedule: (scheduleName: string) => Promise<ScheduleInfo | null> = useCallback(async (scheduleName) => {
     if (!profile || !schedules) {
-      setError('One of profile or schedules or termSelected was null.');
+      setError('One of profile or schedules was null.');
       return null;
     }
     /** There might not be a term selected, but still create the schedule */
@@ -185,6 +230,7 @@ export const useDegreePlan = (
     isEditing,
     setIsEditing,
     scheduleEdited,
-    setScheduleEdited
+    setScheduleEdited,
+    deleteSchedulePing
   };
 };

@@ -1,11 +1,12 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useDegreePlan } from "../hooks/useDegreePlan";
 import HelperDropdown, { HelperDropdownOption } from "../components/helperDropdown";
 import { useProfile } from "../server-contexts/profile/provider";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import { ScheduleInfo } from "../api/schedule";
+import { ScheduleInfo, updateSchedule } from "../api/schedule";
 import { MutableRef } from "../degree-plan/termTable";
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
 
 export interface ScheduleDropdownProps {
   selectedOption: string;
@@ -22,8 +23,14 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
   const [activeHelper, setActiveHelper] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(initSelectedOption);
+  const [activeIndex, setActiveIndex] = useState<number | null>(0);
+
   const [inEditMode, setInEditMode] = useState<boolean>(false);
   const [editValues, setEditValues] = useState<Map<string, string> | null>(null);
+  const [currentlyEditing, setCurrentlyEditing] = useState<string | null>(null);
+  const [pendingEditChange, setPendingEditChange] = useState<boolean>(false);
+  const [tempName, setTempName] = useState<string | null>(null);
+  const [deletedScheduleId, setDeletedScheduleId] = useState<string | null>(null);
 
   const helperRef = useRef<HTMLInputElement | null>(null);
   const editRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
@@ -32,17 +39,24 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
     createNewSchedule, 
     replaceScheduleAssignment, 
     scheduleEdited,
-    tempInfoObject 
-  } = useDegreePlan();
-  const { schedules } = useProfile();
+    tempInfoObject,
+    deleteSchedulePing 
+  } = useDegreePlanContext();
+
+  const { 
+    schedules, 
+    refetchSchedules 
+  } = useProfile();
 
   useEffect(() => {
-    if (!editValues && schedules) {
+    if (schedules) {
+      /** Every time schedules updates */
       const editMap: Map<string, string> = new Map();
       schedules!.forEach(schedule => {
-        editMap.set(schedule.schedule_id, schedule.name!);
+        editMap.set(schedule.schedule_id, '');
       })
       setEditValues(editMap);
+      setPendingEditChange(false);
     }
   }, [schedules]);
 
@@ -59,6 +73,18 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
     }
   }, [helperRef, activeHelper]);
 
+  useEffect(() => {
+    if (inEditMode) {
+      /** Toggle the first editRef available */
+      editRefs.current.get(schedules![0].schedule_id)!.current!.focus();
+      setCurrentlyEditing(schedules![0].schedule_id);
+      setActiveIndex(0);
+    } else {
+      /** Reset edit values */
+      setEditValues(new Map(schedules?.map(schedule => [schedule.schedule_id, ''])));
+    }
+  }, [inEditMode, schedules]);
+
   const onValueChange: (value: string) => void = useCallback((value) => {
     setHelperValue(value);
   }, []);
@@ -71,16 +97,29 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
     });
   }, []);
 
-  const handleKeyDownEdits: (e: React.KeyboardEvent<HTMLInputElement>) => void = useCallback(async (e) => {
+  const handleKeyDownEdits: (e: React.KeyboardEvent<HTMLInputElement>, schedule: ScheduleInfo) => void = useCallback(async (e, schedule) => {
     switch (e.key) {
       case 'Enter':
+        /** Acts as a placeholder until ping finishes */
+        setTempName(editValues?.get(schedule.schedule_id)!);
+        setPendingEditChange(true);
         setInEditMode(false);
-        /** ping schedule API */
+        if (editValues && editValues?.get(schedule.schedule_id) !== schedule.name) {
+          /** 
+           * Since updating a schedule name doesn't change the degree plan in any way, we can just call
+           * it without using the hook.
+           */
+          await updateSchedule(schedule.schedule_id, editValues!.get(schedule.schedule_id)!);
+          await refetchSchedules();
+        }
+        setCurrentlyEditing(null);
+        setTempName(null);
+        setPendingEditChange(false);
         break;
       default:
         return;
     }
-  }, []);
+  }, [editValues]);
 
   const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void = useCallback(async (e) => {
     switch (e.key) {
@@ -89,7 +128,8 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
         setActiveHelper(null);
         if (helperValue) {
           /** 
-           * Calls refetchSchedules() for us 
+           * await createNewSchedule CALLS refetchSchedules() for us.
+           *  
            * In addition, it'll create a temp info object which we grab
            * and assign as our selected schedule. But we don't actually update
            * schedules with our temp object, as this defeats the purpose of doing
@@ -98,6 +138,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
            * we just put (mimicking the instance of a real object).
            */
           const newSchedule = await createNewSchedule(helperValue!)!;
+          setPendingEditChange(true);
           setSelectedOption(newSchedule!.schedule_id);
         }
         setHelperValue('');
@@ -112,45 +153,117 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
     e.preventDefault();
   }, [helperValue]);
 
-  const editScheduleNode: (id: string, idx: number) => React.ReactNode | null = useCallback((id, idx) => {
+  const swapCurrentlyEditing: (scheduleId: string) => void = useCallback((scheduleId) => {
+    if (editRefs.current.get(scheduleId)) {
+      editRefs.current.get(scheduleId)!.current!.focus();
+    }
+    setCurrentlyEditing(scheduleId);
+  }, [editRefs]);
+
+  const incrementIndex: () => void = useCallback(() => {
     if (!schedules) {
+      return;
+    }
+    const n = schedules!.length; /** Size of dropdown */
+    const newIndex = Math.min(activeIndex! + 1, n);
+    if (newIndex < n) {
+      swapCurrentlyEditing(schedules[newIndex].schedule_id);
+    } else {
+      editRefs.current.get(schedules[n - 1].schedule_id)!.current!.blur();
+      setCurrentlyEditing(null);
+    }
+    setActiveIndex(newIndex);
+  }, [activeIndex, schedules, swapCurrentlyEditing]);
+
+  const decrementIndex: () => void = useCallback(() => {
+    if (!schedules) {
+      return;
+    }
+    const newIndex = Math.max(activeIndex! - 1, -1);
+      if (newIndex >= 0) {
+        swapCurrentlyEditing(schedules[newIndex].schedule_id);
+      } else {
+        editRefs.current.get(schedules[0].schedule_id)!.current!.blur();
+        setCurrentlyEditing(null);
+      }
+      setActiveIndex(newIndex);
+  }, [activeIndex, schedules, swapCurrentlyEditing]);
+
+  const handleShortcuts: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      incrementIndex();
+    } else if (e.key === 'ArrowUp') {
+      decrementIndex();
+    }
+  }, [incrementIndex, decrementIndex]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleShortcuts);
+    return () => {
+      window.removeEventListener('keydown', handleShortcuts); 
+    };
+  }, [handleShortcuts]);
+
+  const editScheduleNode: (schedule: ScheduleInfo, idx: number) => React.ReactNode | null = useCallback((schedule, idx) => {
+    if (!schedules || pendingEditChange) {
       return null;
     }
     return (
       <div
         className={`
-          ${selectedOption === id ? 'bg-gray-100' : ''} 
-          min-w-56 px-4 py-2 text-left hover:bg-gray-100 text-sm bg-white rounded-none
-          ${idx === 0 ? 'border-t' : idx === schedules.length - 1 ? 'border-b shadow-lg' : ''} 
-          border-l border-r border-gray-200`
-        }
+          min-w-56 px-4 py-2 text-left text-sm bg-white rounded-none
+          ${idx === 0 ? 'border-t' : ''} 
+          border-l border-r border-gray-200 relative flex flex-col gap-0
+        `}
       >
-        <input
-          id="schedule-name"
-          type="text"
-          value={editValues?.get(id)}
-          onChange={(e) => onEditChange(id, e.target.value)}
-          onKeyDown={handleKeyDownEdits}
-          ref={(el) => {
-            if (el) {
-              editRefs.current.set(id, { 
-                current: el 
-              });
-            }
-          }}
-          onFocus={() => {
-            setSelectedOption(id);
-          }}
-          onBlur={() => {
-            setSelectedOption(null);
-          }}
-          autoComplete="off"
-          placeholder={``}
-          className={`min-w-32 text-sm outline-none border-b ${selectedOption === id ? 'bg-gray-100' : ''} `}
-        />
+        <div className="flex flex-row gap-2 items-center justify-between">
+          <input
+            id="schedule-name"
+            type="text"
+            value={editValues?.get(schedule.schedule_id)!}
+            onClick={() => {
+              swapCurrentlyEditing(schedule.schedule_id);
+              setActiveIndex(idx);
+            }}
+            onChange={(e) => {
+              e.stopPropagation();
+              onEditChange(schedule.schedule_id, e.target.value);
+            }}
+            onKeyDown={(e) => handleKeyDownEdits(e, schedule)}
+            ref={(el) => {
+              if (el) {
+                editRefs.current.set(schedule.schedule_id, { 
+                  current: el 
+                });
+              }
+            }}
+            autoComplete="off"
+            placeholder={editValues?.get(schedule.schedule_id)!.length === 0 ? schedule.name! : ''}
+            className={`
+              min-w-32 text-sm outline-none border-b 
+            `}
+          />
+          <DeleteIcon 
+            style={{ width: '16px' }} 
+            className={`
+              opacity-50 hover:opacity-100
+              hover:scale-110 cursor-pointer transition-transform
+            `}
+            onClick={(e) => {
+              e.stopPropagation(); 
+              deleteSchedulePing(schedule);
+              setDeletedScheduleId(schedule.schedule_id);
+            }}
+          />
+        </div>
+        {currentlyEditing === schedule.schedule_id && editValues!.get(schedule.schedule_id)!.length > 0 && (
+          <div className="flex flex-row justify-start">
+            <p className="w-fit text-xs p-0">previously: {schedule.name}</p>
+          </div>
+        )}
       </div>
     );
-  }, [selectedOption, schedules, editValues]);
+  }, [tempName, schedules, editValues, onEditChange, currentlyEditing, pendingEditChange, handleKeyDownEdits, swapCurrentlyEditing]);
 
   const createScheduleNode: React.ReactNode = useMemo(() => {
     return (
@@ -208,7 +321,14 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       label: 'Select a schedule',
       id: 'select',
       onClick: () => {
-        replaceScheduleAssignment(null);
+        setActiveIndex(0);
+        setSelectedOption('select');
+        if (inEditMode) {
+          setInEditMode(false);
+          setCurrentlyEditing(null);
+        } else {
+          replaceScheduleAssignment(null);
+        }
       },
       isHelper: false,
     };
@@ -216,17 +336,27 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       createNewScheduleOption,
       editScheduleOption,
       selectAScheduleOption,
-      ...schedules!.map((schedule, idx) => ({
-        label: schedule.name!,
+      ...schedules.filter(schedule => schedule.schedule_id !== deletedScheduleId)!.map((schedule, idx) => ({
+        /** 
+         * Currently ediitng below helps track if we're still in the modifiying state (schedules hasn't been refetched),
+         * indicating that even if we aren't in editMode anymore we should still show the most recently updated value.
+         */
+        label: currentlyEditing === schedule.schedule_id && pendingEditChange ? tempName! : schedule.name!,
         id: schedule.schedule_id,
         onClick: () => {
+          setActiveIndex(schedules.findIndex(el => el.schedule_id === schedule.schedule_id));
           replaceScheduleAssignment(schedule);
+          setSelectedOption(schedule.schedule_id);
         },
         isHelper: false,
-        editNode: editScheduleNode(schedule.schedule_id, idx)
+        editNode: editScheduleNode(schedule, idx)
+        /** 
+         * It might also be possible to create a regularNode field instead of pasting
+         * the information inside helperdropdown, but likely unnecessary
+         */
       }))
     ];
-  }, [schedules, replaceScheduleAssignment, createScheduleNode]);
+  }, [tempName, currentlyEditing, editValues, schedules, replaceScheduleAssignment, createScheduleNode, editScheduleNode, deletedScheduleId]);
 
   return (
     <HelperDropdown
@@ -237,12 +367,15 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       setIsOpen={setIsOpen}
       inEditMode={inEditMode}
       setInEditMode={setInEditMode}
+      setCurrentlyEditing={setCurrentlyEditing}
       optionEdited={scheduleEdited}
       tempObject={tempInfoObject}
       helperValue={helperValue}
       setHelperValue={setHelperValue}
       activeHelper={activeHelper}
       setActiveHelper={setActiveHelper}
+      incrementIndex={incrementIndex}
+      decrementIndex={decrementIndex}
     />
   );
 }

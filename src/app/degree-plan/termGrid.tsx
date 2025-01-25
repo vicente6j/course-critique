@@ -56,10 +56,7 @@ const TermGrid: FC<TermGridProps> = ({
   
   return (
     <div className="grid grid-cols-2 gap-y-8 gap-x-4 text-md min-h-800">
-      <ScheduleDropdown
-        selectedOption={'select'}
-      />
-      {/* {(loading ? ALL_TERMS : termsSelected)?.map((term: string) => {
+      {(loading ? ALL_TERMS : termsSelected)?.map((term: string) => {
         return (
           <div key={`${term}-${loading}`} className="flex flex-col gap-2">
             <Skeleton isLoaded={!loading}>
@@ -67,7 +64,7 @@ const TermGrid: FC<TermGridProps> = ({
             </Skeleton>
           </div>
         );
-      })} */}
+      })}
     </div>
   );
 }

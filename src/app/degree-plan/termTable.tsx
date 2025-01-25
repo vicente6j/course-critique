@@ -43,7 +43,7 @@ export const columns: TermTableColumn[] = [
   { key: "course_name", label: "Course Name", width: 'w-[30%]' },
   { key: "GPA", label: "Average GPA", width: 'w-[17.5%]' },
   { key: "num_credits", label: "Num Credits", width: 'w-[17.5%]' },
-  { key: "grade", label: "Grade", width: 'w-[15%]' },
+  { key: "grade", label: "Grade", width: 'w-[5%]' },
   { key: "actions", label: "", width: 'w-0' },
 ];
 
@@ -74,7 +74,6 @@ const TermTable: FC<TermTableProps> = ({
   const [previousRow, setPreviousRow] = useState<TermTableRow | null>(null);
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [deleteHover, setDeleteHover] = useState<boolean>(false);
 
   /**
    * Maps each schedule key to a corresponding grade, INCLUDING empty ones. There can
@@ -107,6 +106,7 @@ const TermTable: FC<TermTableProps> = ({
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
+  const gradeTableRef = useRef<HTMLDivElement | null>(null);
   const initLoadComplete = useRef<boolean>(false);
   const initLoadGradesComplete = useRef<boolean>(false);
 
@@ -570,12 +570,6 @@ const TermTable: FC<TermTableProps> = ({
     }
   }, [scheduleRows, previousRow, activeKey]);
 
-  useEffect(() => {
-    if (termSelected === term) {
-      console.log(hoverGrade);
-    }
-  }, [hoverGrade]);
-
   /**
    * Adds an empty row to scheduled rows (based on the current empty index to avoid collisions).
    * Optional param to pass in a collection of rows to filter. Optional param to return the 
@@ -595,38 +589,26 @@ const TermTable: FC<TermTableProps> = ({
     const key = `XX ${paddedNumber}`;
 
     let newRows: TermTableRow[] = [];
-    let index = scheduleRows!.findIndex(row => row.key === activeKey);
     /** 
      * 1. If myRows is empty, just add the empty row and continue.
      * 2. If the current row selected is a real course (and potentially has real courses underneath it), 
      *    just add the empty row underneath all the non empty ones. 
      *    Otherwise, add the empty row directly underneath our current row.
+     * 
+     *    UPDATE Jan 25 --> Always add the new row directly underneath all rows.
      */
     const emptyRow: TermTableRow = { key: key, course_id: key };
-    if (myRows.length === 0) {
-      newRows = [emptyRow];
-    } else if (index < 0 || index >= myRows.length || !myRows[index].key.startsWith('XX')) {
-      newRows = [ 
-        ...myRows.filter(row => !row.key.startsWith('XX')), 
-        emptyRow, /** add it right underneath the real rows, even if there are other empty rows */
-        ...myRows.filter(row => row.key.startsWith('XX')) /** rest of the empty rows */
-      ];
-    } else {
-      newRows = [
-        ...myRows.slice(0, index + 1), /** use this filter to capture empty rows potentially above our current row */
-        emptyRow, /** finally, add the empty row */
-        ...myRows.slice(index + 1)
-      ];
-    }
+    newRows = [...myRows, emptyRow];
+
     if (returnList) {
       return newRows;
     }
     initLoadGradesComplete.current = false;
     setDisablePointerEvents(true); /** Disable pointer events to avoid hovering again */
+    setHoverRow(null);
     setScheduleRows(newRows);
     setActiveKey(key);
     setPreviousRow(newRows.find(row => row.key === key)!);
-    
     /** Purpose of this is depending on where we put the empty row, that's where our new index is */
     setActiveIndex(newRows.findIndex(row => row.key === key)!);
     return newRows;
@@ -665,8 +647,8 @@ const TermTable: FC<TermTableProps> = ({
     let rows: TermTableRow[] = scheduleRows!;
     if (activeKey) {
       rows = handleDeselect();
-      key = activeKey === key ? previousRow!.key : key; /** Weird edge case where we select a grade belonging to 
-      a different row */
+      key = activeKey === key ? previousRow!.key : key; 
+      /** Weird edge case where we select a grade belonging to a different row */
     } 
 
     if (gradeValues.get(key)!.length > 0) {
@@ -849,11 +831,7 @@ const TermTable: FC<TermTableProps> = ({
       incrementCol();
     } else if (metaKey && e.key === 'Backspace' && correctTerm && activeKey && !activeGradeKey) {
       removeInsertedCourse(activeKey);
-    } else if (metaKey && activeKey) {
-      setDisablePointerEvents(true);
-      setHoverGrade(activeKey);
-      setDeleteHover(true);
-    } 
+    }
   }, [activeKey, termSelected, activeGradeKey]);
 
   const handleClickOutside: (event: MouseEvent) => void = useCallback((event) => {
@@ -864,31 +842,19 @@ const TermTable: FC<TermTableProps> = ({
   }, [termSelected, tableRef, handleDeselect, handleDeselectGrade]);
 
   useEffect(() => {
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if ((e.key === 'Meta' || e.key === 'Command' || e.key === 'Control') && disablePointerEvents) {
-        setHoverGrade(null);
-        setDeleteHover(false);
-      }
-    }
-
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('keydown', handleShortcuts);
-    window.addEventListener('keyup', handleKeyUp);
     return () => {
-      window.removeEventListener('keydown', handleShortcuts);
-      window.removeEventListener('keyup', handleKeyUp);  
+      window.removeEventListener('keydown', handleShortcuts); 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [handleShortcuts, handleClickOutside, disablePointerEvents]);
 
   useEffect(() => {
-    /**
-     * Allows users to reenable pointer events after moving the cursor (helps eliminate flickering).
-     */
+    /** Allows users to reenable pointer events after moving the cursor (helps eliminate flickering).*/
     const handleMouseMove = () => {
       if (disablePointerEvents) {
         setDisablePointerEvents(false);
-        setRerenderCount(prev => prev! + 1);
       }
     };
   
@@ -1011,8 +977,8 @@ const TermTable: FC<TermTableProps> = ({
              * if there is one.
              */}
             {(activeGradeKey !== item.key || gradeValues.get(item.key) === '') && (
-              <span className={`${item.key === activeKey ? 'italic' : ''} text-gray-400`}>
-                {item.key === activeKey ? '+X?' : '+X'}
+              <span className={`text-gray-400`}>
+                {'+X'}
               </span>
             )}
           </div>
@@ -1074,46 +1040,17 @@ const TermTable: FC<TermTableProps> = ({
     ]; 
   }, []);
 
-  /** 
-   * Catches exceptional cases where moving the cursor really quickly causes hover
-   * state to freeze.
-   */
   useEffect(() => {
-    if (hoverRow && !disablePointerEvents) {
-      setHoverGrade(null);
+    if (termSelected === term) {
+      console.log(disablePointerEvents);
     }
-    if (hoverGrade && !disablePointerEvents) {
-      setHoverRow(null);
-    }
-  }, [hoverRow, hoverGrade]);
+  }, [disablePointerEvents]);
 
   useEffect(() => {
-    /**
-     * A bit of an overkill function, but there's a bug with onMouseEnter and onMouseLeave which
-     * you can see here --> https://github.com/facebook/react/issues/20483.
-     * Therefore, check to see if the mouse is hovering over the trash can and set delete hover
-     * to this state any time the cursor moves over the delete icon.
-     * @param e mouse event
-     */
-    const handleMouseMove = (e: MouseEvent) => {
-      const deleteIcon = document.querySelector('.delete-icon');
-      if (deleteIcon) {
-        const rect = deleteIcon.getBoundingClientRect();
-        const isHovering = (
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom
-        );
-        if (isHovering !== deleteHover) {
-          setDeleteHover(isHovering);
-          setRerenderCount(prev => prev! + 1);
-        }
-      }
+    if (termSelected === term) {
+      console.log(hoverRow);
     }
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [deleteHover]);
+  }, [hoverRow]);
 
   return (
     <div 
@@ -1155,16 +1092,22 @@ const TermTable: FC<TermTableProps> = ({
         </div>
       </div>
       {/** Key is triggered upon input into search */}
+      <Table
+        removeWrapper 
+        aria-label="term-table" 
+        className="w-full" 
+        key={`${rerenderCount!}`}
+        ref={gradeTableRef}
+      >
+
+      </Table>
+
       <Table 
         removeWrapper 
         aria-label="term-table" 
         className="w-full" 
         key={`${rerenderCount!}`}
         ref={tableRef}
-        onMouseLeave={() => {
-          setHoverRow(null);
-          setHoverGrade(null);
-        }}
       >
         <TableHeader columns={columns}>
         {(column) => {
@@ -1225,8 +1168,7 @@ const TermTable: FC<TermTableProps> = ({
 
                   if (columnKey === 'course_id') {
                     return isEmptyOrEditing 
-                      ? formatEmptyCourseID(item)
-                      : (
+                      ? formatEmptyCourseID(item) : (
                         <TableCell
                           className={`
                             ${shouldBeHighlighted && 'bg-gray-100'} 
@@ -1326,18 +1268,9 @@ const TermTable: FC<TermTableProps> = ({
                       >
                         <DeleteIcon 
                           style={{ width: '20px' }} 
-                          onMouseEnter={() => {
-                            setDeleteHover(true);
-                            setRerenderCount(prev => prev! + 1);
-                          }}
-                          onMouseLeave={() => {
-                            setDeleteHover(false);
-                            setRerenderCount(prev => prev! + 1);
-                          }}
                           className={`
-                            delete-icon ${isActive ? 'opacity-100' : 'opacity-0'} 
+                            delete-icon ${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0'} 
                             hover:scale-110 cursor-pointer transition-transform
-                            ${deleteHover ? 'rotate-12' : 'rotate-0'}
                           `}
                           onClick={(e) => {
                             e.stopPropagation(); 
