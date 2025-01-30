@@ -31,3 +31,5 @@ export const MOCK_COURSE_INFO_JSON = `${process.env.BASE_URL}/json/mock-data/cs_
 export const MOCK_DEGREE_PROGRAMS_JSON = `${process.env.BASE_URL}/json/mock-data/cs_degree_programs.json`;
 export const MOCK_PROF_AVERAGES_JSON = `${process.env.BASE_URL}/json/mock-data/cs_prof_averages.json`;
 export const MOCK_PROF_INFO_JSON = `${process.env.BASE_URL}/json/mock-data/cs_prof_info.json`;
+export const MOCK_PROF_AVERAGES_BY_TERM = `${process.env.BASE_URL}/json/mock-data/cs_term_prof_averages.json`;
+export const MOCK_PROF_TERM_COURSES = `${process.env.BASE_URL}/json/mock-data/cs_prof_term_courses.json`;

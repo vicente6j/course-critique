@@ -208,54 +208,54 @@ const CorrelationMatrix: FC<CorrelationMatrixProps> = ({
 
     return (
       <div className="text-gray-400 text-sm">
-        The general trend between {includeCommas ? (
-          <>
-            {labels.slice(0, labels.length - 1).map((label, idx) => 
-              <span 
-                key={idx} 
-                className="font-semi-bold"
-              >
-                {label},{' '} 
-              </span>
-            )} and <span className="font-semi-bold">{labels[labels.length - 1]}</span>
-          </>
+        {!anyPositiveCorrelation ? (
+          <p className="text-sm">
+            {'- There doesn\'t seem to be any notable positive correlations (r > 0.7).'}
+          </p>
         ) : (
           <>
-            <span className="font-semi-bold">{labels[0]}</span> and <span className="font-semi-bold">{labels[1]}</span>
+            The general trend between {includeCommas ? (
+              <>
+                {labels.slice(0, labels.length - 1).map((label, idx) => 
+                  <span 
+                    key={idx} 
+                    className="font-semi-bold"
+                  >
+                    {label},{' '} 
+                  </span>
+                )} and <span className="font-semi-bold">{labels[labels.length - 1]}</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semi-bold">{labels[0]}</span> and <span className="font-semi-bold">{labels[1]} {' '}</span>
+              </>
+            )} 
+            seems to be that
+            <>
+              {positiveCorrelations.map((pair: CorrelationPair, idx) => (
+              <p className="text-sm block" key={idx}>
+                - {pair.course1} and {pair.course2} are highly positively correlated, with a correlation
+                coefficient of <span className="font-semi-bold">{pair.correlation.toFixed(2)}</span>
+              </p>
+              ))}
+            </>
           </>
         )}
-        {' '}seems to be that
-        {anyPositiveCorrelation ? (
-          <>
-            {positiveCorrelations.map((pair: CorrelationPair, idx) => (
-            <p className="text-sm block" key={idx}>
-              - {pair.course1} and {pair.course2} are highly positively correlated, with a correlation
-              coefficient of <span className="font-semi-bold">{pair.correlation.toFixed(2)}</span>
-            </p>
-        ))}
-          </> 
+        {!anyNegativeCorrelation ? (
+          <p className="text-sm">
+            {'- There doesn\'t seem to be any notable negative correlations (r < -0.7).'}
+          </p>
         ) : (
           <>
-            <p className="text-sm block">
-              - there aren't really positive correlations (above the threshold of {threshold})
-            </p>
-          </>
-        )}
-        Meanwhile, 
-        {anyNegativeCorrelation ? (
-          <>
-            {negativeCorrelations.map((pair: CorrelationPair, idx) => (
-            <p className="text-sm block" key={idx}>
-              - {pair.course1} and {pair.course2} are highly negatively correlated, with a correlation
-              coefficient of <span className="font-semi-bold">{pair.correlation.toFixed(2)}</span>
-            </p>
-        ))}
-          </> 
-        ) : (
-          <>
-            <p className="text-sm block">
-              - there aren't really negative correlations (below the threshold of -{threshold})
-            </p>
+            Meanwhile,
+            <>
+              {negativeCorrelations.map((pair: CorrelationPair, idx) => (
+              <p className="text-sm block" key={idx}>
+                - {pair.course1} and {pair.course2} are highly negatively correlated, with a correlation
+                coefficient of <span className="font-semi-bold">{pair.correlation.toFixed(2)}</span>
+              </p>
+              ))}
+            </> 
           </>
         )}
       </div>
@@ -263,23 +263,10 @@ const CorrelationMatrix: FC<CorrelationMatrixProps> = ({
   }, [correlationPqs]);
 
   return (
-    <div className="p-4 overflow-x-auto flex flex-col gap-4">
-      <div>
-        {GeneralTrend}
-      </div>
+    <div className="p-4 flex flex-col gap-4">
+      {GeneralTrend}
       <div className="flex flex-col gap-2">
-        <h1 className="heading-sm font-loose">Correlation Matrix</h1>
-        <p className="text-sm">
-          see more on strength of correlation{' '}
-          <a 
-            href="https://www.ncl.ac.uk/webtemplate/ask-assets/external/maths-resources/statistics/regression-and-correlation/strength-of-correlation.html"
-            className="text-sm text-blue-400 hover:underline cursor-pointer"
-            target="_blank"  // Opens in new tab
-            rel="noopener noreferrer"  // Security best practice
-          >
-            [1]
-          </a>
-        </p>
+        <h1 className="heading-xs font-regular">Correlation Matrix</h1>
         <table className="border-collapse w-fit">
           <thead>
             <tr>

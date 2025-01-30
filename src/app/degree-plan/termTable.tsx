@@ -1093,9 +1093,9 @@ const TermTable: FC<TermTableProps> = ({
         />
       </div>
       <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
-        {/* <ScheduleDropdown 
-          selectedOption={schedule ? schedule.schedule_id! : 'Select a schedule'}
-        /> */}
+        <ScheduleDropdown 
+          selectedOption={schedule ? schedule.schedule_id! : 'select'}
+        />
         <div className="flex flex-row gap-4 items-center">
           <div className="flex flex-row gap-2 items-center">
             <NextToolTip content={nextToolTipDisplayContent} className="w-300">

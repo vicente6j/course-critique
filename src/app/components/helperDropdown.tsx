@@ -94,7 +94,7 @@ const HelperDropdown: FC<HelperDropdownProps> = ({
       <div className="min-h-8 flex flex-row gap-2 items-center bg-gray-200 cursor-pointer px-4 py-1 rounded-md hover:bg-gray-300">
         <p className={`text-sm ${inEditMode && 'text-gray-400'}`}>
           {/** If we have a temp object defined, show the helperValue (temporarily) */}
-          {tempObject ? helperValue : options.find(op => op.id === selectedOption)!.label}
+          {tempObject ? helperValue : options.find(op => op.id === selectedOption)?.label}
         </p>
         {optionEdited === selectedOption ? (
           /** 

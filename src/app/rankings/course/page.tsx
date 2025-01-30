@@ -1,12 +1,11 @@
 'use client'
+import Navbar from '@/app/shared/navbar';
 import { FC, useCallback, useEffect, useState } from 'react';
-import RankingsPageClient from './client';
-import { Footer } from '../shared/footer';
-import Navbar from '../shared/navbar';
-
+import { Footer } from '@/app/shared/footer';
+import RankingsPageCourseClient from './client';
 export interface RankingsPageProps {}
 
-const RankingsPage: FC<RankingsPageProps> = ({ 
+const CourseRankingsPage: FC<RankingsPageProps> = ({ 
    
 }: RankingsPageProps) => {
   return (
@@ -14,7 +13,7 @@ const RankingsPage: FC<RankingsPageProps> = ({
       <div className="flex-grow">
         <Navbar />
         <div className="w-full">
-          <RankingsPageClient />
+          <RankingsPageCourseClient />
         </div>
       </div>
       <Footer />
@@ -22,4 +21,4 @@ const RankingsPage: FC<RankingsPageProps> = ({
   );
 };
 
-export default RankingsPage;
+export default CourseRankingsPage;

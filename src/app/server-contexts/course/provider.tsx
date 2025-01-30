@@ -12,6 +12,7 @@ export interface CourseProviderContextValue {
   termToCourseAveragesMap: Map<string, CourseAveragesByTerm[]> | null;
   courses: CourseInfo[] | null;
   courseMap: Map<string, CourseInfo> | null;
+  getSortedAveragesByTermMap: () => Map<string, CourseAveragesByTerm[]>;
   loading: boolean;
 }
 
@@ -71,6 +72,7 @@ const CourseProvider: FC<CourseProviderProps> = ({
     termToCourseAveragesMap: new Map(),
     courses: new Map()
   });
+
   const [loading, setLoading] = useState<boolean>(true);
 
   const constructMaps: () => void = useCallback(() => {
@@ -113,6 +115,18 @@ const CourseProvider: FC<CourseProviderProps> = ({
     setLoading(false);
   }, [data]);
 
+  /**
+   * Throw this into a callback function because I prefer not to store
+   * a bunch of hash tables for essentially the same data unless it's absolutely needed.
+  */
+  const getSortedAveragesByTermMap: () => Map<string, CourseAveragesByTerm[]>  = useCallback(() => {
+    const sortedMap = new Map(maps.termToCourseAveragesMap);
+    sortedMap.keys().forEach((term: string) => {
+      sortedMap.set(term, sortedMap.get(term)!.sort((a: CourseAveragesByTerm, b: CourseAveragesByTerm) => a.GPA! - b.GPA!));
+    });
+    return sortedMap;
+  }, [maps.termToCourseAveragesMap]);
+
   useEffect(() => {
     constructMaps();
   }, [constructMaps]);
@@ -131,6 +145,7 @@ const CourseProvider: FC<CourseProviderProps> = ({
     termToCourseAveragesMap: maps.termToCourseAveragesMap,
     courses: data.courses,
     courseMap: maps.courses,
+    getSortedAveragesByTermMap: getSortedAveragesByTermMap,
     loading: loading,
   }), [data, maps, loading]);
 

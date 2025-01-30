@@ -313,8 +313,12 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
               Hide correlation matrix
             </p>
             <HideSourceIcon 
-              style={{ width: '24px', color: `${hoverShowCorrelation ? 'var(--color-dark-red)' : 'var(--color-red)'}` }}
-              className={`transition-transform ${hoverShowCorrelation ? 'rotate-180' : ''}`}
+              style={{ 
+                width: '24px', 
+                color: `${hoverShowCorrelation ? 'var(--color-dark-red)' : 'var(--color-red)'}`,
+                transition: 'transform 0.2s' 
+              }}
+              className={`${hoverShowCorrelation ? 'rotate-180' : ''}`}
             />
           </div>
           <CorrelationMatrix
@@ -338,8 +342,12 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
             Show correlation matrix
           </p>
           <ViewModuleIcon 
-            style={{ width: '24px', color: `${hoverShowCorrelation ? hexToRgba('#9ca3af', 1) : '#374151'}` }}
-            className={`transition-transform ${hoverShowCorrelation ? 'rotate-180' : ''}`}
+            style={{ 
+              width: '20px', 
+              color: `${hoverShowCorrelation ? hexToRgba('#9ca3af', 1) : '#374151'}`,
+              transition: 'transform 0.2s' 
+            }}
+            className={`${hoverShowCorrelation ? 'rotate-180' : ''}`}
           />
         </div>
       )}

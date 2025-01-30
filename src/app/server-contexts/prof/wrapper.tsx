@@ -2,7 +2,7 @@
 
 import { FC } from "react"
 import ProfProvider from "./provider";
-import { AllProfResponse, fetchProfData, fetchProfHotCourses, fetchProfInfo, HotResponse, ProfAverages, ProfAveragesByCourse, ProfAveragesByTerm, ProfInfo } from "@/app/api/prof";
+import { AllProfResponse, CoursesTaughtByTerm, fetchProfCoursesTaughtByTerm, fetchProfData, fetchProfHotCourses, fetchProfInfo, HotResponse, ProfAverages, ProfAveragesByCourse, ProfAveragesByTerm, ProfInfo } from "@/app/api/prof";
 
 export interface ProfProviderWrapperProps {
   children: React.ReactNode;
@@ -17,6 +17,7 @@ const ProfProviderWrapper: FC<ProfProviderWrapperProps> = async ({
   const profAveragesByTerm: ProfAveragesByTerm[] = await fetchProfData('byTerm');
   const profInfo: ProfInfo[] = await fetchProfInfo();
   const hotCourses: HotResponse[] = await fetchProfHotCourses();
+  const coursesTaughtByTerm: CoursesTaughtByTerm[] = await fetchProfCoursesTaughtByTerm();
 
   return (
     <ProfProvider
@@ -25,6 +26,7 @@ const ProfProviderWrapper: FC<ProfProviderWrapperProps> = async ({
       profAveragesByTerm={profAveragesByTerm}
       profInfo={profInfo}
       hotCourses={hotCourses}
+      coursesTaughtByTerm={coursesTaughtByTerm}
     >
       {children}
     </ProfProvider>

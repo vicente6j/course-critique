@@ -1,14 +1,14 @@
 'use client'
 import { FC, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link";
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { Button, DropdownItem, DropdownMenu, DropdownTrigger, Spinner } from "@nextui-org/react";
 import PersonIcon from '@mui/icons-material/Person';
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import SearchBar from "./searchbar";
-import Dropdown from "./autoDropdown";
+import ActionDropdown, { ActionDropdownOption } from "../components/actionDropdown";
+import BarChartIcon from '@mui/icons-material/BarChart';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import RankingsDropdown from "./rankingsDropdown";
 
 export interface NavbarProps {}
 const Navbar: FC<NavbarProps> = ({
@@ -26,33 +26,6 @@ const Navbar: FC<NavbarProps> = ({
   const session = useSession();
   const router = useRouter();
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (session && session.status === 'authenticated') {
-      setIsAuthenticated(true);
-    }
-  }, [session]);
-
-  const rankingsOptions: Array<{ 
-    label: string;
-    onClick: () => void;
-  }> = useMemo(() => {
-    return [
-      {
-        label: 'Hardest Courses',
-        onClick: () => {
-          router.push('/rankings');
-        }
-      }, {
-        label: 'Hardest Professors',
-        onClick: () => {
-          router.push('/rankings');
-        }
-      }
-    ]
-  }, []);
-
   return (
     <div className="w-full border border-bottom border-gray bg-white">
       <div className="w-4/5 mx-auto py-4">
@@ -63,12 +36,7 @@ const Navbar: FC<NavbarProps> = ({
               <p className="text-xs">A Georgia Tech project</p>
             </div>
             <SearchBar />
-            <div className="flex flex-row items-center gap-0.5">
-              <Dropdown 
-                text={'Rankings'}
-                options={rankingsOptions}
-              />
-            </div>
+            <RankingsDropdown />
           </div>
           <div className="flex flex-row gap-8 items-center">
             {session ? (
