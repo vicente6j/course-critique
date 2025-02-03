@@ -1,6 +1,6 @@
-Notice we're using force-cache in nearly all of our JSON pings in this directory. The benefits are
-- Telling Next.js NOT to ping our server again if it already sees the data cached. Since none of the averages
-or previously computed contents inside of our JSON files are changing, it makes sense to keep it as long as
-possible (and avoid potentially making unnecessary network requests).
-- Faster page loads since the data is served immediately.
-- Reduce server load.
+Notice we're using force-cache in nearly all of our JSON pings in this directory. See https://nextjs.org/docs/app/building-your-application/caching (and go to Data Cache) for more details on caching mechanisms. The details behind this are force-cache utilizes a caching mechanism called the Data Cache, which is separate from the caching mechanism fetch utilizes to memoize the results of requests (request memoization). On the server, if we say cache: 'force-cache' rather than cache: 'no-store', both options will check request memoization, but if nothing is found there, force-cache will ADDITIONALLY check the Data Cache, where no-store will simply jump to the data source. The Data Cache persists across server requests and deployments, meaning you can exit out of your local host and then start it up again, and the Data Cache remains. Similarly, you can delete the production website from your history, and then go back to it, and it again remains.
+
+IMPORTANT: if you want to reload one of the static JSON files, if you just manually paste a new JSON because
+we're using force-cache Next.js will still use the old (and stale) version. Thefore every time you change
+a JSON update the appropriate method to just remove the force-cache so that it resets to whatever your browser
+wants (if this doesn't work change it to no-store).

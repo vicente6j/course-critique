@@ -150,6 +150,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
           <div className="flex flex-col gap-8">
             <RankingsTable 
               rows={finalItems} 
+              type={'course'}
             />
             <div className="flex flex-col gap-4 mb-24">
               <label className="flex items-center text-sm">

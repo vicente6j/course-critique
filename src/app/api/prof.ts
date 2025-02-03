@@ -1,6 +1,6 @@
 'use server'
 
-import { ALL_PROF_AVERAGES_BY_COURSE_JSON, ALL_PROF_AVERAGES_BY_TERM_JSON, ALL_PROF_AVERAGES_JSON, COURSE_INFO_JSON, HOT_COURSES_JSON, MOCK_PROF_AVERAGES_BY_TERM, MOCK_PROF_AVERAGES_JSON, MOCK_PROF_INFO_JSON, MOCK_PROF_TERM_COURSES, PROF_INFO_JSON } from "@/app/endpoints";
+import { COURSE_AVERAGES_BY_PROF_JSON, COURSES_TAUGHT_BY_TERM_JSON, MOCK_COURSE_AVERAGES_BY_PROF_JSON, MOCK_COURSES_TAUGHT_BY_TERM_JSON, MOCK_PROF_AVERAGES_BY_TERM_JSON, MOCK_PROF_AVERAGES_JSON, PROF_AVERAGES_BY_TERM_JSON, PROF_AVERAGES_JSON, PROF_INFO_JSON } from "../endpoints";
 
 export interface ProfAverages {
   prof_id: string;
@@ -13,7 +13,7 @@ export interface ProfAverages {
   GPA: number | null;
 }
 
-export interface ProfAveragesByCourse {
+export interface CourseAveragesByProf {
   prof_id: string;
   course_id: string;
   A: number | null;
@@ -47,105 +47,62 @@ export interface ProfInfo {
   instructor_mname: string | null;
 }
 
-export interface AllProfResponse {
-  profs: ProfInfo[];
-}
-
-export interface HotResponse {
-  prof: string;
-  hot_course: string;
-}
-
 export interface CoursesTaughtByTerm {
   prof_id: string;
   term: string;
   courses_taught: string[];
 }
 
-export type DataType = 'averages' | 'byCourse' | 'byTerm';
-
-export const fetchProfData = async (type: DataType) => {
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
-    const URL = type === 'averages' ? MOCK_PROF_AVERAGES_JSON : type === 'byTerm' ? MOCK_PROF_AVERAGES_BY_TERM : '';
-    if (URL === '') {
-      return [];
-    }
-
-    const res = await fetch(URL, { 
-      cache: 'force-cache' 
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch professor ${type}: ${res.status}`);
-    }
-    return res.json();
-  }
-
-  const URL = 
-    type === 'averages' ? ALL_PROF_AVERAGES_JSON 
-    : type === 'byCourse' ? ALL_PROF_AVERAGES_BY_COURSE_JSON 
-    : ALL_PROF_AVERAGES_BY_TERM_JSON;
-
-  const res = await fetch(URL, { 
-    cache: 'force-cache' 
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch professor ${type}: ${res.status}`);
-  }
-  return res.json();
-}
-
 export const fetchProfInfo = async (): Promise<ProfInfo[]> => {
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
-    const res = await fetch(MOCK_PROF_INFO_JSON, { 
-      cache: 'force-cache' 
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch professor information: ${res.status}`);
-    }
-    return res.json();
-  }
-
   const res = await fetch(PROF_INFO_JSON, {
     cache: 'force-cache'
   });
   if (!res.ok) {
-    throw new Error(`Could not fetch professor information: ${res.status}`);
+    throw new Error(`Could not fetch prof info: ${res.status}`);
   }
   return res.json();
 }
 
-export const fetchProfHotCourses = async (): Promise<HotResponse[]> => {
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
-    return [];
-  }
-  const res = await fetch(HOT_COURSES_JSON, {
-    cache: 'force-cache'
+export const fetchProfAverages = async (): Promise<ProfAverages[]> => {
+  const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_PROF_AVERAGES_JSON : PROF_AVERAGES_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'force-cache',
   });
   if (!res.ok) {
-    throw new Error(`Could not fetch hot courses: ${res.status}`);
+    throw new Error(`Failed to fetch prof averages: ${res.status}`);
   }
   return res.json();
 }
 
-export const fetchProfCoursesTaughtByTerm = async (): Promise<CoursesTaughtByTerm[]> => {
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA) {
-    const res = await fetch(MOCK_PROF_TERM_COURSES, { 
-      cache: 'force-cache' 
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch courses taught by term: ${res.status}`);
-    }
-    return res.json();
-  }
-
-  /**
-   * To-do: fix this
-   */
-  const res = await fetch(HOT_COURSES_JSON, {
-    cache: 'force-cache'
+export const fetchProfAveragesByTerm = async (): Promise<ProfAveragesByTerm[]> => {
+  const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_PROF_AVERAGES_BY_TERM_JSON : PROF_AVERAGES_BY_TERM_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'force-cache',
   });
   if (!res.ok) {
-    throw new Error(`Could not fetch courses taught by term: ${res.status}`);
+    throw new Error(`Failed to fetch prof averages (by term): ${res.status}`);
+  }
+  return res.json();
+}
+
+export const fetchCourseAveragesByProf = async (): Promise<CourseAveragesByProf[]> => {
+  const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_COURSE_AVERAGES_BY_PROF_JSON : COURSE_AVERAGES_BY_PROF_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'force-cache',
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch course averages by prof: ${res.status}`);
+  }
+  return res.json();
+}
+
+export const fetchCoursesTaughtByTerm = async (): Promise<CoursesTaughtByTerm[]> => {
+  const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_COURSES_TAUGHT_BY_TERM_JSON : COURSES_TAUGHT_BY_TERM_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'force-cache',
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch course averages by prof: ${res.status}`);
   }
   return res.json();
 }

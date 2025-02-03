@@ -2,7 +2,7 @@
 import Navbar from '@/app/shared/navbar';
 import { FC, useCallback, useEffect, useState } from 'react';
 import { Footer } from '@/app/shared/footer';
-import RankingsPageCourseClient from './client';
+import RankingsPageProfClient from './client';
 export interface RankingsPageProps {}
 
 const CourseRankingsPage: FC<RankingsPageProps> = ({ 
@@ -13,7 +13,7 @@ const CourseRankingsPage: FC<RankingsPageProps> = ({
       <div className="flex-grow">
         <Navbar />
         <div className="w-full">
-          <RankingsPageCourseClient />
+          <RankingsPageProfClient />
         </div>
       </div>
       <Footer />

@@ -2,7 +2,7 @@
 
 import { FC } from "react"
 import ProfProvider from "./provider";
-import { AllProfResponse, CoursesTaughtByTerm, fetchProfCoursesTaughtByTerm, fetchProfData, fetchProfHotCourses, fetchProfInfo, HotResponse, ProfAverages, ProfAveragesByCourse, ProfAveragesByTerm, ProfInfo } from "@/app/api/prof";
+import { CourseAveragesByProf, CoursesTaughtByTerm, fetchCourseAveragesByProf, fetchCoursesTaughtByTerm, fetchProfAverages, fetchProfAveragesByTerm, fetchProfInfo, ProfAverages, ProfAveragesByTerm, ProfInfo } from "@/app/api/prof";
 
 export interface ProfProviderWrapperProps {
   children: React.ReactNode;
@@ -12,20 +12,18 @@ const ProfProviderWrapper: FC<ProfProviderWrapperProps> = async ({
   children
 }: ProfProviderWrapperProps) => {
 
-  const profAverages: ProfAverages[] = await fetchProfData('averages');
-  const profAveragesByCourse: ProfAveragesByCourse[] = await fetchProfData('byCourse');
-  const profAveragesByTerm: ProfAveragesByTerm[] = await fetchProfData('byTerm');
+  const profAverages: ProfAverages[] = await fetchProfAverages();
+  const courseAveragesByProf: CourseAveragesByProf[] = await fetchCourseAveragesByProf();
+  const profAveragesByTerm: ProfAveragesByTerm[] = await fetchProfAveragesByTerm();
   const profInfo: ProfInfo[] = await fetchProfInfo();
-  const hotCourses: HotResponse[] = await fetchProfHotCourses();
-  const coursesTaughtByTerm: CoursesTaughtByTerm[] = await fetchProfCoursesTaughtByTerm();
+  const coursesTaughtByTerm: CoursesTaughtByTerm[] = await fetchCoursesTaughtByTerm();
 
   return (
     <ProfProvider
       profAverages={profAverages}
-      profAveragesByCourse={profAveragesByCourse}
+      courseAveragesByProf={courseAveragesByProf}
       profAveragesByTerm={profAveragesByTerm}
       profInfo={profInfo}
-      hotCourses={hotCourses}
       coursesTaughtByTerm={coursesTaughtByTerm}
     >
       {children}

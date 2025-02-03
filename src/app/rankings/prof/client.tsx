@@ -5,6 +5,7 @@ import RankingsTable, { RankingsTableRow } from "../rankingsTable";
 import CustomSearchbar from "@/app/shared/customSearchbar";
 import { useProfs } from "@/app/server-contexts/prof/provider";
 import { useRankings } from "@/app/hooks/useRankings";
+import { useCourses } from "@/app/server-contexts/course/provider";
 
 export interface RankingsPageProfClientProps {}
 
@@ -13,14 +14,15 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
 }: RankingsPageProfClientProps) => {
 
   const [rankingsMap, setRankingsMap] = useState<Map<string, RankingsTableRow[]>>(new Map());
-  const [termSelected, setTermSelected] = useState<string>('Summer 2025');
+  const [termSelected, setTermSelected] = useState<string>('Summer 2024');
   const [searchValue, setSearchValue] = useState<string>('');
   const [showAll, setShowAll] = useState<boolean>(false);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
 
-  const { getSortedAveragesByTermMap, coursesTaughtByTermMap } = useProfs();
+  const { getSortedAveragesByTermMap, coursesTaughtByTermMap, profMap } = useProfs();
   const { tabs } = useRankings();
+  const { averagesMap: courseAveragesMap } = useCourses();
 
   const generateRankingsMap: () => void = useCallback(() => {
     if (!coursesTaughtByTermMap) {
@@ -33,17 +35,20 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
     const sortedTermsMap = getSortedAveragesByTermMap();
     const rankingsMap = new Map();
 
-    console.log(coursesTaughtByTermMap);
     for (const term of sortedTermsMap!.keys()) {
       rankingsMap.set(term, []);
       let rank = 1;
-      console.log(term);
       for (const termAverage of sortedTermsMap!.get(term)!) {
+        let courses_taught_this_sem = coursesTaughtByTermMap!.get(term)!.get(termAverage.prof_id)?.courses_taught;
+        courses_taught_this_sem = courses_taught_this_sem!.filter((course) => (
+          courseAveragesMap?.has(course)
+        ));
+
         rankingsMap.get(term)!.push({
           key: termAverage.prof_id,
           rank: rank,
           prof_id: termAverage.prof_id,
-          courses_taught_this_sem: coursesTaughtByTermMap!.get(term)!.get(termAverage.prof_id),
+          courses_taught_this_sem: courses_taught_this_sem,
           GPA: termAverage.GPA!,
         });
         rank++;
@@ -79,13 +84,14 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
   }, []);
 
   const filteredItems: RankingsTableRow[] = useMemo(() => {
-    if (!rankingsMap || !rankingsMap.has(termSelected)) {
+    if (!rankingsMap || !rankingsMap.has(termSelected) || !profMap) {
       return [];
     }
-    return rankingsMap.get(termSelected)!.filter((row) => 
-      (row.course_id as string).toLowerCase().includes(searchValue.toLowerCase())
-    );
-  }, [searchValue, rankingsMap, termSelected]);
+    return rankingsMap.get(termSelected)!.filter((row) => {
+      const name = profMap!.get(row.prof_id as string)!.instructor_name;
+      return name.toLowerCase().includes(searchValue.toLowerCase())
+    });
+  }, [searchValue, rankingsMap, termSelected, profMap]);
 
   const finalItems: RankingsTableRow[] = useMemo(() => {
     if (!filteredItems) {
@@ -159,6 +165,7 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
           <div className="flex flex-col gap-8">
             <RankingsTable 
               rows={finalItems} 
+              type={'prof'}
             />
             <div className="flex flex-col gap-4 mb-24">
               <label className="flex items-center text-sm">
