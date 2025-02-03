@@ -20,7 +20,7 @@ const CourseSearchbar: FC<CourseSearchbarProps> = ({
   handleKeyDownAdditional,
 }: CourseSearchbarProps) => {
 
-  const { courses } = useCourses();
+  const { data } = useCourses();
 
   const [query, setQuery] = useState<string | null>(null);
   /**
@@ -36,16 +36,16 @@ const CourseSearchbar: FC<CourseSearchbarProps> = ({
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const filteredCourses: CourseInfo[] = useMemo(() => {
-    if (!courses) {
+    if (!data.courses) {
       return [];
     } else if (!query) {
-      return courses.slice(0, 3);
+      return data.courses.slice(0, 3);
     }
     /** First five courses to match prefix */
-    return courses?.filter(course => {
+    return data.courses?.filter(course => {
       return course.id.toLowerCase().startsWith(query.toLowerCase())
     }).slice(0, 5);
-  }, [courses, query]);
+  }, [data.courses, query]);
 
   const activeCourse: CourseInfo | null = useMemo(() => {
     return activeIndex === -1 ? null : filteredCourses[activeIndex!];

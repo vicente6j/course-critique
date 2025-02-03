@@ -52,6 +52,7 @@ export interface CourseInfo {
  * @returns CourseInfo array.
  */
 export const fetchCourseInfo = async (): Promise<CourseInfo[]> => {
+  console.log('fetching course info');
   const res = await fetch(COURSE_INFO_JSON, {
     cache: 'force-cache',
   });
@@ -62,7 +63,9 @@ export const fetchCourseInfo = async (): Promise<CourseInfo[]> => {
 }
 
 export const fetchCourseAverages = async (): Promise<CourseAverages[]> => {
+  console.log('fetching course averages');
   const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_COURSE_AVERAGES_JSON : COURSE_AVERAGES_JSON;
+  console.log(dataSource);
   const res = await fetch(dataSource, {
     cache: 'force-cache',
   });
@@ -73,6 +76,7 @@ export const fetchCourseAverages = async (): Promise<CourseAverages[]> => {
 }
 
 export const fetchCourseAveragesByTerm = async (): Promise<CourseAveragesByTerm[]> => {
+  console.log('fetching course averages by term');
   const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_COURSE_AVERAGES_BY_TERM_JSON : COURSE_AVERAGES_BY_TERM_JSON;
   const res = await fetch(dataSource, {
     cache: 'force-cache',
@@ -84,6 +88,7 @@ export const fetchCourseAveragesByTerm = async (): Promise<CourseAveragesByTerm[
 }
 
 export const fetchProfAveragesByCourse = async (): Promise<ProfAveragesByCourse[]> => {
+  console.log('fetching prof averages by course');
   const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_PROF_AVERAGES_BY_COURSE_JSON : PROF_AVERAGES_BY_COURSE;
   const res = await fetch(dataSource, {
     cache: 'force-cache',

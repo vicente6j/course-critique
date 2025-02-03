@@ -1,57 +1,18 @@
 'use client'
 
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useCourses } from "../server-contexts/course/provider";
 import LineChart, { LineChartDataset, LineDataPoint } from "./lineChart";
-import CloseIcon from '@mui/icons-material/Close';
-import { Input } from "@nextui-org/input";
-import { SearchIcon } from "../../../public/icons/searchIcon";
 import { CourseAveragesByTerm, CourseInfo } from "../api/course";
-import { VariableSizeList } from "react-window";
 import InfoIcon from '@mui/icons-material/Info';
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
-import { Button } from "@nextui-org/button";
-import { signOut } from "next-auth/react";
-import LogoutIcon from '@mui/icons-material/Logout';
-import { GRADE_COLORS } from "../metadata";
+import { GRADE_COLORS, TERMS_WITH_DATA } from "../metadata";
 import { Skeleton } from "@nextui-org/skeleton";
 import CourseSearchbar from "../shared/courseSearchbar";
-import CorrelationMatrix, { CorrelationDataset, CustomCorrelationDataset } from "./correlationMatrix";
+import CorrelationMatrix, { CustomCorrelationDataset } from "./correlationMatrix";
 import HideSourceIcon from '@mui/icons-material/HideSource';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
-
-export const allTerms: string[] = [
-  'Spring 2010', 'Summer 2010',
-  'Fall 2010', 'Spring 2011', 'Summer 2011',
-  'Fall 2011', 'Spring 2012', 'Summer 2012',
-  'Fall 2012', 'Spring 2013', 'Summer 2013',
-  'Fall 2013', 'Spring 2014', 'Summer 2014',
-  'Fall 2014', 'Spring 2015', 'Summer 2015',
-  'Fall 2015', 'Spring 2016', 'Summer 2016',
-  'Fall 2016', 'Spring 2017', 'Summer 2017',
-  'Fall 2017', 'Spring 2018', 'Summer 2018',
-  'Fall 2018', 'Spring 2019', 'Summer 2019',
-  'Fall 2019', 'Spring 2020', 'Summer 2020',
-  'Fall 2020', 'Spring 2021', 'Summer 2021',
-  'Fall 2021', 'Spring 2022', 'Summer 2022',
-  'Fall 2022', 'Spring 2023', 'Summer 2023',
-  'Fall 2023', 'Spring 2024', 'Summer 2024',
-];
-
-export const termToSortableInteger: (term: string) => number = (term) => {
-  const [semester, year] = term.split(' ');
-  const yearNum = parseInt(year);
-  const semesterNum = semester === 'Spring' ? 1 : semester === 'Summer' ? 2 : 3;
-  return yearNum * 10 + semesterNum;
-}
-
-export const hexToRgba: (hex: string, opacity: number) => string = (hex, opacity) => {
-  hex = hex.replace(/^#/, '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
+import { hexToRgba } from "../utils";
 
 export interface AverageOverTimeProps {}
 
@@ -59,10 +20,10 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 
 }: AverageOverTimeProps) => {
 
-  /** Have to transform this into a dictionary for courses -> terms -> averages */
-  const { courseToTermAveragesMap, loading: courseInfoLoading } = useCourses();
+  const { maps, loading: courseInfoLoading } = useCourses();
 
   const [comparing, setComparing] = useState<string[] | null>([ 'CS 1332', 'CS 1301' ]);
+
   /**
    * Equivalent to the course which is currently being hovered on.
    */
@@ -70,33 +31,40 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   const [rerenderKey, setRerenderKey] = useState<number | null>(0);
 
   /**
-   * Maps term to course and then to a vector of statistics held in a CourseAverageByTerm object
-   * (GPA, A, B, total number of students, etc.)
+   * Maps course to term and then to a vector of statistics held in a CourseAverageByTerm object
+   * (GPA, A, B, total number of students, etc.). This is how the graph is represented as a moving
+   * average.
    */
   const [termsDict, setTermsDict] = useState<Map<string, Map<string, CourseAveragesByTerm>> | null>(null);
+
   /**
    * Simply intended to track course -> real hex value iterating through a const called GRADE_COLORS
    * in metadata.ts.
    */
   const [courseColorDict, setCourseColorDict] = useState<Map<string, string> | null>(null);
   const [colorIndex, setColorIndex] = useState<number | null>(0);
+
   const [error, setError] = useState<string | null>(null);
   const [showCorrelationMatrix, setShowCorrelationMatrix] = useState<boolean>(false);
   const [hoverShowCorrelation, setHoverShowCorrelation] = useState<boolean>(false);
 
+  const courseToTermAveragesMap: Map<string, CourseAveragesByTerm[]> | null = useMemo(() => {
+    return maps.courseToTermAveragesMap;
+  }, [maps.courseToTermAveragesMap]);
+
   useEffect(() => {
     /** Initialization */
     if (!termsDict && courseToTermAveragesMap && courseToTermAveragesMap.size > 0) {
-      const newDict = new Map();
-      for (const course of comparing!) {
-        newDict.set(course, new Map());
+      const termDict = new Map();
+      comparing?.forEach(course => {
+        termDict.set(course, new Map());
         for (const average of courseToTermAveragesMap!.get(course)!) {
-          if (!newDict.get(course).has(average.term)) {
-            newDict.get(course).set(average.term, average);
+          if (!termDict.get(course).has(average.term)) {
+            termDict.get(course).set(average.term, average);
           }
         }
-      }
-      setTermsDict(newDict);
+      });
+      setTermsDict(termDict);
 
       /** Colors */
       const newColorDict = new Map();
@@ -131,8 +99,8 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   }, [termsDict]);
 
   /**
-   * Both adds to the dictionary and updates the color
-   * parameters.
+   * Both adds to the dictionary and updates the color parameters.
+   * @param course course to add
    */
   const addToTermsDict: (course: string) => void = useCallback((course) => {
     setTermsDict(prev => {
@@ -166,8 +134,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     let datasets: LineChartDataset[] = [];
     termsDict.keys().forEach((course: string) => {
       let data: LineDataPoint[] = [];
-      // All terms is already sorted.
-      for (const term of allTerms) {
+      for (const term of TERMS_WITH_DATA) {
         if (!termsDict.get(course)!.has(term)) {
           continue;
         }
@@ -182,21 +149,20 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         data: data,
       });
     });
-
     return datasets;
   }, [courseColorDict, termsDict]);
 
   const coloredDatasets: LineChartDataset[] = useMemo(() => {
-    let coloredDatasets: LineChartDataset[] = [...datasets];
+    const coloredDatasets: LineChartDataset[] = [...datasets];
 
-    for (const dataset of coloredDatasets) {
-      let cssVar = courseColorDict?.get(dataset.label)!;
+    coloredDatasets.forEach(dataset => {
+      const cssVar = courseColorDict?.get(dataset.label)!;
       if (comparedCourseSelected) {
         dataset.borderColor = dataset.label === comparedCourseSelected ? hexToRgba(cssVar, 1) : hexToRgba(cssVar, 0.1);
       } else {
         dataset.borderColor = cssVar;
       }
-    }
+    });
     return coloredDatasets;
   }, [datasets, courseColorDict, comparedCourseSelected]);
 
@@ -224,6 +190,11 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     addToTermsDict(course!.id);
   }, [termsDict, addToTermsDict]);
 
+  /**
+   * For all of the courses you're currently comparing, (and by extension, those
+   * courses which live in termsDict.keys(), generate an array from all of your
+   * term dictionaries, e.g. CS 1332 -> [{Fa24: {averages}}, {Su24: {averages}}]).
+   */
   const customCorrelationDatasets: CustomCorrelationDataset[] = useMemo(() => {
     if (!termsDict) {
       return [];

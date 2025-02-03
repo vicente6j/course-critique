@@ -15,16 +15,10 @@ const Navbar: FC<NavbarProps> = ({
 
 }: NavbarProps) => {
 
-  /** 
-   * If we use our custom useSession hook, there's a small performance improvement
-   * where upon an initial render, the session is immediately evaluated as null 
-   * rather than being undefined (server level caching involved here, very moderate
-   * change).
-   * 
-   * Also just justifies having made it. But it doesn't matter.
-  */
-  const session = useSession();
-  const router = useRouter();
+  /**
+   * Pre-release v1.0 -- no router or session hooks, as there is no 
+   * sign on functionality enabled.
+   */
 
   return (
     <div className="w-full border border-bottom border-gray bg-white">
@@ -37,41 +31,6 @@ const Navbar: FC<NavbarProps> = ({
             </div>
             <SearchBar />
             <RankingsDropdown />
-          </div>
-          <div className="flex flex-row gap-8 items-center">
-            {session ? (
-              <>
-                <Link 
-                  href="/degree-plan" 
-                  className="text-sm hover:text-gray-600 cursor-pointer"
-                >
-                  Degree Plan
-                </Link>
-                <div
-                  onClick={() => {
-                    router.push(`/profile`);
-                  }}
-                  className="cursor-pointer hover:bg-dark-light p-1"
-                >
-                  <PersonIcon />
-                </div>
-              </>
-            ) : (
-              <>
-                <Link 
-                  href="/auth/sign-in" 
-                  className="heading-xs hover:text-gray-600 cursor-pointer text-sm bg-light p-2 px-4 rounded hover:bg-dark-light"
-                >
-                  Sign in
-                </Link>
-                <Link 
-                  href="/auth/sign-up" 
-                  className="heading-xs text-sm cursor-pointer p-2 bg-levels white rounded px-4 hover:bg-levels-light"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
           </div>
         </div>
       </div>

@@ -51,7 +51,7 @@ const RankingsTable: FC<RankingsTableProps> = ({
 }: RankingsTableProps) => {
   
   const router = useRouter();
-  const { profMap } = useProfs();
+  const { maps } = useProfs();
 
   if (type === 'prof') {
     return (
@@ -99,7 +99,7 @@ const RankingsTable: FC<RankingsTableProps> = ({
                           }}
                           className="text-sm text-gray-600 hover:underline cursor-pointer"
                         >
-                          {profMap?.get(value)?.instructor_name}
+                          {maps.profs?.get(value)?.instructor_name}
                         </Link>
                       </TableCell>
                     );

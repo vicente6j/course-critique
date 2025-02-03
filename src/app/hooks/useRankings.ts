@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { termToSortableInteger } from "../home/averageOverTime";
 import { TERMS_WITH_DATA } from "../metadata";
+import { termToSortableInteger } from "../utils";
 
 interface UseRankingsValue {
   tabs: RankingsPageTab[];

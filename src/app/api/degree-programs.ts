@@ -1,4 +1,4 @@
-import { ALL_DEGREE_PROGRAMS_JSON, ALL_DEGREE_REQUIREMENTS_JSON, MOCK_DEGREE_PROGRAMS_JSON } from "../endpoints";
+import { ALL_DEGREE_PROGRAMS_JSON, ALL_DEGREE_REQUIREMENTS_JSON } from "../endpoints";
 
 export interface DegreeProgram {
   id: string;
@@ -26,23 +26,24 @@ export interface DegreeProgramRequirement {
  * @returns Degree Programs list.
  */
 export const fetchDegreePrograms = async (): Promise<DegreeProgram[]> => {
-  if (process.env.NODE_ENV === 'development') {
-    const res = await fetch(MOCK_DEGREE_PROGRAMS_JSON, { 
-      cache: 'force-cache' 
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch degree programs: ${res.status}`);
-    }
-    return res.json();
-  }
+  return [];
+  // if (process.env.NODE_ENV === 'development') {
+  //   const res = await fetch(MOCK_DEGREE_PROGRAMS_JSON, { 
+  //     cache: 'force-cache' 
+  //   });
+  //   if (!res.ok) {
+  //     throw new Error(`Failed to fetch degree programs: ${res.status}`);
+  //   }
+  //   return res.json();
+  // }
 
-  const res = await fetch(ALL_DEGREE_PROGRAMS_JSON, {
-    cache: 'force-cache'
-  });
-  if (!res.ok) {
-    throw new Error(`Could not fetch degree programs. Error: ${res.status}`);
-  }
-  return res.json();
+  // const res = await fetch(ALL_DEGREE_PROGRAMS_JSON, {
+  //   cache: 'force-cache'
+  // });
+  // if (!res.ok) {
+  //   throw new Error(`Could not fetch degree programs. Error: ${res.status}`);
+  // }
+  // return res.json();
 }
 
 export const fetchDegreeProgramRequirements = async (): Promise<DegreeProgramRequirement[]> => {

@@ -20,7 +20,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
 
-  const { getSortedAveragesByTermMap, courseMap } = useCourses();
+  const { getSortedAveragesByTermMap, maps } = useCourses();
   const { tabs } = useRankings();
 
   const generateRankingsMap: () => void = useCallback(() => {
@@ -34,7 +34,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
           key: termAverage.course_id,
           rank: rank,
           course_id: termAverage.course_id,
-          course_name: courseMap!.get(termAverage.course_id)?.course_name || 'Unknown course',
+          course_name: maps.courseMap!.get(termAverage.course_id)?.course_name || 'Unknown course',
           GPA: termAverage.GPA!,
         });
         rank++;

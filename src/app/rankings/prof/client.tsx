@@ -20,12 +20,12 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
 
-  const { getSortedAveragesByTermMap, coursesTaughtByTermMap, profMap } = useProfs();
+  const { getSortedAveragesByTermMap, maps: profMaps } = useProfs();
   const { tabs } = useRankings();
-  const { averagesMap: courseAveragesMap } = useCourses();
+  const { maps: courseMaps } = useCourses();
 
   const generateRankingsMap: () => void = useCallback(() => {
-    if (!coursesTaughtByTermMap) {
+    if (!profMaps.coursesTaughtByTerm) {
       return;
     }
     /** 
@@ -39,9 +39,9 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
       rankingsMap.set(term, []);
       let rank = 1;
       for (const termAverage of sortedTermsMap!.get(term)!) {
-        let courses_taught_this_sem = coursesTaughtByTermMap!.get(term)!.get(termAverage.prof_id)?.courses_taught;
+        let courses_taught_this_sem = profMaps.coursesTaughtByTerm!.get(term)!.get(termAverage.prof_id)?.courses_taught;
         courses_taught_this_sem = courses_taught_this_sem!.filter((course) => (
-          courseAveragesMap?.has(course)
+          profMaps.coursesTaughtByTerm?.has(course)
         ));
 
         rankingsMap.get(term)!.push({
@@ -55,7 +55,7 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
       }
     }
     setRankingsMap(rankingsMap);
-  }, [getSortedAveragesByTermMap, coursesTaughtByTermMap]);
+  }, [getSortedAveragesByTermMap, profMaps.coursesTaughtByTerm]);
 
   useEffect(() => {
     generateRankingsMap();
@@ -84,14 +84,14 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
   }, []);
 
   const filteredItems: RankingsTableRow[] = useMemo(() => {
-    if (!rankingsMap || !rankingsMap.has(termSelected) || !profMap) {
+    if (!rankingsMap || !rankingsMap.has(termSelected) || !profMaps.profs) {
       return [];
     }
     return rankingsMap.get(termSelected)!.filter((row) => {
-      const name = profMap!.get(row.prof_id as string)!.instructor_name;
+      const name = profMaps.profs!.get(row.prof_id as string)!.instructor_name;
       return name.toLowerCase().includes(searchValue.toLowerCase())
     });
-  }, [searchValue, rankingsMap, termSelected, profMap]);
+  }, [searchValue, rankingsMap, termSelected, profMaps.profs]);
 
   const finalItems: RankingsTableRow[] = useMemo(() => {
     if (!filteredItems) {

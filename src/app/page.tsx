@@ -12,7 +12,9 @@ import LogoutIcon from '@mui/icons-material/Logout';
 
 export interface HomePageProps {}
 
-const Home: FC<HomePageProps> = ({}: HomePageProps) => {
+const Home: FC<HomePageProps> = ({
+  
+}: HomePageProps) => {
   
   return (
     <div className="min-h-screen flex flex-col">

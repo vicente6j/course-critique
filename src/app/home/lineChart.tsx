@@ -5,9 +5,10 @@ import { Line } from "react-chartjs-2";
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
 import { hexToRgb } from "@mui/material";
-import { allTerms, hexToRgba, termToSortableInteger } from "./averageOverTime";
 import { useCourses } from "../server-contexts/course/provider";
 import zoomPlugin from 'chartjs-plugin-zoom';
+import { TERMS_WITH_DATA } from "../metadata";
+import { hexToRgba, termToSortableInteger } from "../utils";
 
 export interface LineDataPoint {
   x: string;
@@ -42,7 +43,7 @@ const LineChart: FC<LineChartProps> = ({
 
   const [hoveredDatasetIndex, setHoveredDatasetIndex] = useState<number | null>(datasetIndex);
 
-  const { averagesMap } = useCourses();
+  const { maps } = useCourses();
 
   useEffect(() => {
     /** Use a use effect so that it triggers on every new invocation, rather than just sometimes */
@@ -79,7 +80,7 @@ const LineChart: FC<LineChartProps> = ({
 
     if (hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1) {
       positions.push({
-        value: averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA!,
+        value: maps.averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA!,
         isLabel: false,
         datasetIndex: hoveredDatasetIndex
       });
@@ -171,11 +172,11 @@ const LineChart: FC<LineChartProps> = ({
           ...(hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets && adjustedLabelYCoordinates
             ? [{
                 type: 'label',
-                xValue: allTerms[allTerms.length - 1],
+                xValue: TERMS_WITH_DATA[TERMS_WITH_DATA.length - 1],
                 yValue: adjustedLabelYCoordinates.find(el => el.datasetIndex === hoveredDatasetIndex && !el.isLabel)?.value,
                 backgroundColor: 'transparent',
                 color: '#666',
-                content: `avg: ${averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
+                content: `avg: ${maps.averagesMap?.get(datasets[hoveredDatasetIndex]?.label)?.GPA?.toFixed(2)}`,
                 position: 'right',
                 xAdjust: 45,
                 font: {
@@ -191,7 +192,7 @@ const LineChart: FC<LineChartProps> = ({
 
             return {
               type: 'label',
-              xValue: allTerms[allTerms.length - 1],
+              xValue: TERMS_WITH_DATA[TERMS_WITH_DATA.length - 1],
               yValue: adjustedPosition,
               backgroundColor: 'transparent',
               color: !isHovering ? hexToRgba(cssVar, 1) : hoveredDatasetIndex === idx ? hexToRgba(cssVar, 1) : hexToRgba(cssVar, 0.1),
@@ -264,7 +265,7 @@ const LineChart: FC<LineChartProps> = ({
       });
     });
 
-    const termsToRender: string[] = allTerms.slice(allTerms.findIndex(term => term === processedDatasets[0]?.data[0].x));
+    const termsToRender: string[] = TERMS_WITH_DATA.slice(TERMS_WITH_DATA.findIndex(term => term === processedDatasets[0]?.data[0].x));
     return {
       /** Respect ordering of terms by using allTerms.slice() here (really important) */
       labels: termsToRender, 
@@ -284,7 +285,7 @@ const LineChart: FC<LineChartProps> = ({
             label: `${dataset.label} Avg`,
             data: termsToRender.map((term): LineDataPoint => ({
               x: term,
-              y: averagesMap?.get(datasets[index].label)?.GPA ?? null
+              y: maps.averagesMap?.get(datasets[index].label)?.GPA ?? null
             })),
             borderColor: '#8d8d8d',
             borderDash: [15, 15], // First number is dash length, second is gap length
