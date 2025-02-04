@@ -5,8 +5,9 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
 import { hexToRgb } from "@mui/material";
 import { useCourses } from "../server-contexts/course/provider";
-import { allTerms, hexToRgba, termToSortableInteger } from "../home/averageOverTime";
 import { LineChartDataset, LineDataPoint } from "../home/lineChart";
+import { TERMS_WITH_DATA } from "../metadata";
+import { termToSortableInteger } from "../utils";
 
 export interface LineChartProps {
   dataset: LineChartDataset;
@@ -18,7 +19,7 @@ const LineChart: FC<LineChartProps> = ({
   dataset,
 }: LineChartProps) => {
 
-  const { averagesMap } = useCourses();
+  const { maps } = useCourses();
   const [isHovered, setIsHovered] = useState<boolean | null>(false);
 
   const options: any = useMemo(() => ({
@@ -62,11 +63,11 @@ const LineChart: FC<LineChartProps> = ({
           ...(isHovered && dataset 
             ? [{
                 type: 'label',
-                xValue: allTerms[allTerms.length - 1],
-                yValue: averagesMap?.get(dataset?.label)?.GPA,
+                xValue: TERMS_WITH_DATA[TERMS_WITH_DATA.length - 1],
+                yValue: maps.averagesMap?.get(dataset?.label)?.GPA,
                 backgroundColor: 'transparent',
                 color: '#666',
-                content: `Avg: ${averagesMap?.get(dataset?.label)?.GPA?.toFixed(2)}`,
+                content: `Avg: ${maps.averagesMap?.get(dataset?.label)?.GPA?.toFixed(2)}`,
                 position: 'right',
                 xAdjust: 45,
                 font: {
@@ -77,7 +78,7 @@ const LineChart: FC<LineChartProps> = ({
           ...(dataset
             ? [{
                 type: 'label',
-                xValue: allTerms[allTerms.length - 1],
+                xValue: TERMS_WITH_DATA[TERMS_WITH_DATA.length - 1],
                 yValue: dataset.data[dataset.data.length - 1].y,
                 backgroundColor: 'transparent',
                 color: dataset.borderColor,
@@ -140,7 +141,7 @@ const LineChart: FC<LineChartProps> = ({
       return termToSortableInteger(a.x) - termToSortableInteger(b.x);
     });
 
-    const termsToRender: string[] = allTerms.slice(allTerms.findIndex(term => term === dataset?.data[0].x));
+    const termsToRender: string[] = TERMS_WITH_DATA.slice(TERMS_WITH_DATA.findIndex(term => term === dataset?.data[0].x));
     return {
       /** Respect ordering of terms by using allTerms.slice() here (really important) */
       labels: termsToRender, 
@@ -158,7 +159,7 @@ const LineChart: FC<LineChartProps> = ({
           label: `${dataset.label} Avg`,
           data: termsToRender.map((term): LineDataPoint => ({
             x: term,
-            y: averagesMap?.get(dataset.label)?.GPA ?? null
+            y: maps.averagesMap?.get(dataset.label)?.GPA ?? null
           })),
           borderColor: '#8d8d8d',
           borderDash: [15, 15], // First number is dash length, second is gap length

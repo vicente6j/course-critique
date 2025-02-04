@@ -28,19 +28,17 @@ Courses:
 course_averages_by_term.json -- 964 KB
 course_averages.json -- 63 KB
 prof_averages_by_course.json -- 552 KB
-= 1.579 MB
+course_info.json -- 142 KB
+= 1.721 MB
 
 Profs:
 course_averages_by_prof.json -- 552 KB
 courses_taught_by_term.json -- 678 KB
 prof_averages_by_term.json -- 1.2 MB
 prof_averages.json -- 110 KB
-= 2.540 MB
+prof_info -- 105 KB
+= 2.645 MB
 
-for a combined 4.19 MB of average data.
-
-2. Regardless of mock-purposes or not, we have 2.2 MB utilized for course_info.json and 996 KB for prof_info,
-yielding 3.1 MB for the combined information sets.
-
+for a combined 4.366 MB of average data.
 
 

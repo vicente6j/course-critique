@@ -8,13 +8,15 @@ import { SearchIcon } from "../../../public/icons/searchIcon";
 import ExpandableTable from "../shared/expandableTable";
 import ProfessorOrCourseTable from "../shared/professorOrCourseTable";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
-import DonutChart, { getClientColorFromGPA } from "../shared/donutChart";
+import DonutChart from "../shared/donutChart";
 import { CourseAveragesByTerm } from "../api/course";
 import { useCourses } from "../server-contexts/course/provider";
 import { LineChartDataset, LineDataPoint } from "../home/lineChart";
 import LineChart from "./line-chart";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import InfoIcon from '@mui/icons-material/Info';
+import { termToSortableInteger } from "../utils";
+import AverageOverTime from "./averageOverTime";
 
 export interface TermDisplayData {
   term: string;
@@ -49,53 +51,12 @@ const History: FC<HistoryProps> = ({
   const [arrowRightArray, setArrowRightArray] = useState<boolean[]>([]);
   const [termMap, setTermMap] = useState<Map<string, TermDisplayData>>(new Map());
   const [indexMap, setIndexMap] = useState<Map<string, number>>(new Map()); /** just for constant time lookups */
-  const [termDict, setTermDict] = useState<Map<string, CourseAveragesByTerm> | null>(null);
+  const [showAverageOverTime, setShowAverageOverTime] = useState<boolean>(true);
 
-  const { averagesMap, courseToTermAveragesMap } = useCourses();
+  const { maps } = useCourses();
 
   const numPages = Math.ceil(courseHistory.terms.length / rowsPerPage);
   const hasSearchFilter = Boolean(searchValue);
-
-   /**
-   * Simply aggregates the term information for the course
-   * (contained in averagesByTermMap) into a termDict which we can manipulate
-   * to produce a dataset.
-   */
-  useEffect(() => {
-    if (!termDict) {
-      const newDict: Map<string, CourseAveragesByTerm> = new Map();
-      courseToTermAveragesMap?.get(courseID)?.forEach((termAverage: CourseAveragesByTerm) => {
-        newDict.set(termAverage.term, termAverage);
-      });
-      setTermDict(newDict);
-    }
-  }, [courseToTermAveragesMap]);
-
-  /**
-   * Here we simply iterate over the terms contained in our term 
-   * dictionary (fetched from averagesByTermMap), and produce a dataset
-   * with the corresponding GPA information, plus other related
-   * fields.
-   */
-  const dataset: LineChartDataset | null = useMemo(() => {
-    if (!termDict || !averagesMap) {
-      return null;
-    }
-    const data: LineDataPoint[] = [];
-    termDict.keys().forEach((term: string) => {
-      let gpa: number | null = Number(termDict.get(term)?.GPA?.toFixed(2));
-      data.push({
-        x: term,
-        y: gpa!,
-      });
-    });
-    const dataset: LineChartDataset = {
-      data: data,
-      borderColor: getClientColorFromGPA(averagesMap!.get(courseID)?.GPA!),
-      label: courseID,
-    };
-    return dataset;
-  }, [termDict, averagesMap]);
 
   const filteredTerms: TermData[] = useMemo(() => {
     if (!hasSearchFilter) {
@@ -160,15 +121,7 @@ const History: FC<HistoryProps> = ({
       total_enrollment: termData.total_enrollment,
     }));
 
-    newTerms.sort((a, b) => {
-      const [termA, yearA] = a.term.split(" ");
-      const [termB, yearB] = b.term.split(" ");
-
-      if (yearA !== yearB) {
-        return parseInt(yearB) - parseInt(yearA);
-      }
-      return termOrder[termB] - termOrder[termA];
-    });
+    newTerms.sort((a, b) => termToSortableInteger(b.term) - termToSortableInteger(a.term));
 
     let map: Map<string, TermDisplayData> = new Map();
     let arr: boolean[] = [];
@@ -249,10 +202,6 @@ const History: FC<HistoryProps> = ({
     setPage(1);
   }, []);
 
-  if (fetchLoading) {
-    return <></>;
-  }
-
   return (
     <div className="flex flex-col">
       {term ? (
@@ -277,11 +226,22 @@ const History: FC<HistoryProps> = ({
           <h1 className="heading-sm font-semi-bold">{term}</h1>
           <p className="text-sm text-gray-400">
             During the {term} term {courseID} obtained an overall GPA of {' '}
-            <span className="font-bold">{Number(termMap.get(term)!.aggregateRow.GPA).toFixed(2)}</span>.{' '}
+            <span 
+              className="font-bold"
+            >
+              {Number(termMap.get(term)!.aggregateRow.GPA).toFixed(2)}
+            </span>.{' '}
             {prevTerm ? (
-               <>This is{' '} 
-               <span className="font-bold">{Math.abs(getDiff(termMap.get(term)!, prevTerm)).toFixed(2)}</span> points {getDiff(termMap.get(term)!, prevTerm) < 0 ? 'smaller' : 'larger'} 
-               {' '}than in {prevTerm.term} ({Number(prevTerm.aggregateRow.GPA).toFixed(2)}).</>
+               <>
+                This is{' '} 
+                <span 
+                  className="font-bold">
+                    {Math.abs(getDiff(termMap.get(term)!, prevTerm)).toFixed(2)}
+                  </span> 
+                  points 
+                    {getDiff(termMap.get(term)!, prevTerm) < 0 ? 'smaller' : 'larger'} {' '}
+                  than in {prevTerm.term} ({Number(prevTerm.aggregateRow.GPA).toFixed(2)}).
+                </>
             ) : (
               <></>
             )}
@@ -308,17 +268,9 @@ const History: FC<HistoryProps> = ({
               <>spanning <span className="font-bold">{terms[0].term}</span> to <span className="font-bold">{terms[terms.length - 1].term}</span>.</>
             )}
           </p>
-          <div className="flex items-center gap-2">
-            <h1 className="heading-sm">Average Over Time</h1>
-            <div className="relative">
-              <NextToolTip content={''}>
-                <InfoIcon style={{ width: '20px' }} />
-              </NextToolTip>
-            </div>
-          </div>
-          <LineChart 
-            dataset={dataset!}
-          />
+          {/* <AverageOverTime 
+            courseID={courseID}
+          /> */}
           <div className="flex flex-col gap-8">
             <Input
               isClearable

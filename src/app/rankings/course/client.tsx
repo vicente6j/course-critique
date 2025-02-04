@@ -14,7 +14,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
 }: RankingsPageClientProps) => {
 
   const [termMap, setTermMap] = useState<Map<string, RankingsTableRow[]>>(new Map());
-  const [termSelected, setTermSelected] = useState<string>('Summer 2024');
+  const [termSelected, setTermSelected] = useState<string>('Fall 2024');
   const [searchValue, setSearchValue] = useState<string>('');
   const [showAll, setShowAll] = useState<boolean>(false);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -102,7 +102,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
             </div>
             <p className="text-sm w-full text-gray-600">
               In order to be on the list, the class must have enrolled more than three students
-              and (naturally) have had a non-null GPA and non-null enrollment number.
+              and (naturally) have had a non-null GPA.
             </p>
           </div>
           <div className="flex flex-col gap-2">

@@ -19,16 +19,21 @@ export const SidePanel: FC<SidePanelProps> = ({
 }: SidePanelProps) => {
   
   const router = useRouter();
-  const { courseMap, averagesMap } = useCourses();
+  const { maps } = useCourses();
 
   const FormattedGPA: FC<{ rel: RelatedCourse }> = ({ rel }) => {
-    if (!averagesMap?.has(rel.course_two)) {
+    if (!maps.averagesMap?.has(rel.course_two)) {
       return <span className="flex-shrink-0 inline text-gray-400">N/A</span>;
     }
-    const gpa = Number(averagesMap?.get(rel.course_two)?.GPA);
+    const gpa = Number(maps.averagesMap?.get(rel.course_two)?.GPA);
     const color = formatGPA(gpa);
     return (
-      <span className="flex-shrink-0 inline" style={{ color: color }}>{gpa.toFixed(2)}</span>
+      <span 
+        className="flex-shrink-0 inline" 
+        style={{ color: color }}
+      >
+        {gpa.toFixed(2)}
+      </span>
     );
   };
 
@@ -61,7 +66,9 @@ export const SidePanel: FC<SidePanelProps> = ({
                       {rel.course_two}
                     </Link>
                     <span className="w-fit text-xs text-gray-500">
-                      {courseMap?.get(rel.course_two)?.course_name} • {courseMap?.get(rel.course_two)?.credits} • <FormattedGPA rel={rel} />
+                      {maps.courseMap?.get(rel.course_two)?.course_name} 
+                      • 
+                      {maps.courseMap?.get(rel.course_two)?.credits} • <FormattedGPA rel={rel} />
                     </span>
                   </div>
                 );

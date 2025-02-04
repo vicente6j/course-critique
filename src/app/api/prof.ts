@@ -1,6 +1,6 @@
 'use server'
 
-import { COURSE_AVERAGES_BY_PROF_JSON, COURSES_TAUGHT_BY_TERM_JSON, MOCK_COURSE_AVERAGES_BY_PROF_JSON, MOCK_COURSES_TAUGHT_BY_TERM_JSON, MOCK_PROF_AVERAGES_BY_TERM_JSON, MOCK_PROF_AVERAGES_JSON, PROF_AVERAGES_BY_TERM_JSON, PROF_AVERAGES_JSON, PROF_INFO_JSON } from "../endpoints";
+import { COURSE_AVERAGES_BY_PROF_JSON, COURSES_TAUGHT_BY_TERM_JSON, MOCK_COURSE_AVERAGES_BY_PROF_JSON, MOCK_COURSES_TAUGHT_BY_TERM_JSON, MOCK_PROF_AVERAGES_BY_TERM_JSON, MOCK_PROF_AVERAGES_JSON, MOCK_PROF_INFO_JSON, PROF_AVERAGES_BY_TERM_JSON, PROF_AVERAGES_JSON, PROF_INFO_JSON } from "../endpoints";
 
 export interface ProfAverages {
   prof_id: string;
@@ -54,7 +54,8 @@ export interface CoursesTaughtByTerm {
 }
 
 export const fetchProfInfo = async (): Promise<ProfInfo[]> => {
-  const res = await fetch(PROF_INFO_JSON, {
+  const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_PROF_INFO_JSON : PROF_INFO_JSON;
+  const res = await fetch(dataSource, {
     cache: 'force-cache'
   });
   if (!res.ok) {

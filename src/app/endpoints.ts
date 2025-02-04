@@ -27,8 +27,10 @@ export const ALL_DEGREE_REQUIREMENTS_JSON = `${process.env.BASE_URL}/data/majors
 export const MOCK_COURSE_AVERAGES_JSON = `${process.env.BASE_URL}/data/mock/course/course_averages.json`;
 export const MOCK_COURSE_AVERAGES_BY_TERM_JSON = `${process.env.BASE_URL}/data/mock/course/course_averages_by_term.json`;
 export const MOCK_PROF_AVERAGES_BY_COURSE_JSON = `${process.env.BASE_URL}/data/mock/course/prof_averages_by_course.json`;
+export const MOCK_COURSE_INFO_JSON = `${process.env.BASE_URL}/data/mock/course/course_info.json`;
 
 export const MOCK_PROF_AVERAGES_JSON = `${process.env.BASE_URL}/data/mock/prof/prof_averages.json`;
 export const MOCK_PROF_AVERAGES_BY_TERM_JSON = `${process.env.BASE_URL}/data/mock/prof/prof_averages_by_term.json`;
 export const MOCK_COURSE_AVERAGES_BY_PROF_JSON = `${process.env.BASE_URL}/data/mock/prof/course_averages_by_prof.json`;
 export const MOCK_COURSES_TAUGHT_BY_TERM_JSON = `${process.env.BASE_URL}/data/mock/prof/courses_taught_by_term.json`;
+export const MOCK_PROF_INFO_JSON = `${process.env.BASE_URL}/data/mock/prof/prof_info.json`;

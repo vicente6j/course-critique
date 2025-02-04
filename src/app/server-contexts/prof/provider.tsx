@@ -37,10 +37,6 @@ export interface ProfProviderMaps {
 
 const GlobalProfContext = createContext<ProfProviderContextValue | undefined>(undefined);
 
-/**
- * ProfProvider manages professor-related data including averages, course histories,
- * and each professor's most frequently taught course (hot courses).
- */
 const ProfProvider: FC<ProfProviderProps> = ({
   profAverages,
   courseAveragesByProf,

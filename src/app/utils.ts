@@ -12,3 +12,23 @@ export const hexToRgba: (hex: string, opacity: number) => string = (hex, opacity
   const b = parseInt(hex.substring(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
+
+/**
+ * GPA comes in the form of a sliding 0.0 - 4.0 scale,
+ * and hence it doesn't make sense to use 'resolvedColors'
+ * (we could also just Math.float() here but it probably doesn't
+ * matter).
+ * @param gpa sliding 0.0 to 4.0 scale double
+ * @returns color
+ */
+export const getClientColorFromGPA: (gpa: number) => string = (gpa: number) => {
+  let color: string = '#168921';
+  if (gpa > 3.0 && gpa <= 3.5) {
+    color = '#11AF22';
+  } else if (gpa > 2.5 && gpa <= 3.0) {
+    color = '#FCB400';
+  } else if (gpa <= 2.5) {
+    color = '#FE466C';
+  }
+  return color;
+};
