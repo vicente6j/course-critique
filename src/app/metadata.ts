@@ -1,14 +1,22 @@
 export interface MetadataType {
-  year: number;
-  is_spring: boolean;
+  global: GlobalType;
 }
 
-export const Metadata: MetadataType = {
-  year: 2024,
-  is_spring: false,
+export interface GlobalType {
+  year: string | number;
+  is_spring: boolean;
+  most_recent_term: string;
+}
+
+export const metadata: MetadataType = {
+  global: {
+    year: 2025,
+    is_spring: true,
+    most_recent_term: 'Fall 2024',
+  },
 };
 
-export const TERMS_WITH_DATA: string[] = [
+export const dataTerms: string[] = [
   'Summer 2010', 'Fall 2010', 'Spring 2011', 
   'Summer 2011', 'Fall 2011', 'Spring 2012', 
   'Summer 2012', 'Fall 2012', 'Spring 2013', 
@@ -26,7 +34,7 @@ export const TERMS_WITH_DATA: string[] = [
   'Summer 2024', 'Fall 2024',
 ];
 
-export const ALL_TERMS: string[] = [
+export const scheduleTerms: string[] = [
   'Fall 2020', 'Spring 2021', 'Summer 2021',
   'Fall 2021', 'Spring 2022', 'Summer 2022',
   'Fall 2022', 'Spring 2023', 'Summer 2023',

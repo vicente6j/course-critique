@@ -59,10 +59,10 @@ const CourseProvider: FC<CourseProviderProps> = ({
     termToCourseAveragesMap: new Map(),
     courseMap: new Map()
   });
-
   const [loading, setLoading] = useState<boolean>(true);
 
   const constructMaps: () => void = useCallback(() => {
+
     const averagesMap = new Map(data.averages.map(courseAverage => [courseAverage.course_id, courseAverage]));
 
     /**
@@ -80,7 +80,12 @@ const CourseProvider: FC<CourseProviderProps> = ({
     /**
      * Meanwhile, averages by term should match on term and give a list
      * of courses, such that each term maps to the course averages which
-     * were obtained during that period. e.g. fall 24 -> {averages}
+     * were obtained during that period. e.g. fall 24 -> {averages}.
+     * 
+     * A note here is that for every term, a select course_id labeled 'ALL'
+     * accounts for ALL the courses offered in that term. e.g.
+     *   Fa24 -> {all: {GPA: 3.02, ...}}
+     * means ALL course averages for that term. 
      */
     const courseToTermAveragesMap = new Map();
     const termToCourseAveragesMap = new Map();
@@ -106,7 +111,7 @@ const CourseProvider: FC<CourseProviderProps> = ({
       courseMap: courseMap
     });
     setLoading(false);
-  }, [data]);
+  }, [data.averages]);
 
   /**
    * Throw this into a callback function because I prefer not to store
@@ -133,7 +138,7 @@ const CourseProvider: FC<CourseProviderProps> = ({
     maps: maps,
     getSortedAveragesByTermMap: getSortedAveragesByTermMap,
     loading: loading,
-  }), [data, maps, loading]);
+  }), [data, maps, loading, getSortedAveragesByTermMap]);
 
   return (
     <GlobalCourseContext.Provider value={contextValue}>

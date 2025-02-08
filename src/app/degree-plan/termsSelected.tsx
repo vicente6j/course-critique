@@ -1,11 +1,11 @@
 import { FC, useCallback, useEffect, useState } from "react";
 import { useProfile } from "../server-contexts/profile/provider";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
-import { termToSortableInteger } from "../home/averageOverTime";
 import { ALL_TERMS } from "../metadata";
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { Skeleton } from "@nextui-org/skeleton";
+import { termToSortableInteger } from "../utils";
 
 export interface TermsSelectedProps {}
 

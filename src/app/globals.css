@@ -19,6 +19,7 @@
   --font-size-sm: 14px;
   --font-size-md: 16px;
   --font-size-lg: 18px;
+  --font-size-2lg: 22px;
   --font-size-xl: 24px;
   --font-size-2xl: 32px;
   --font-size-4xl: 40px;
@@ -246,7 +247,7 @@ body {
   }
 
   .heading-sm {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-2lg);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-snug);
   }

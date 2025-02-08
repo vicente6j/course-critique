@@ -4,11 +4,10 @@ import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Line } from "react-chartjs-2";
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
-import { hexToRgb } from "@mui/material";
 import { useCourses } from "../server-contexts/course/provider";
 import zoomPlugin from 'chartjs-plugin-zoom';
-import { TERMS_WITH_DATA } from "../metadata";
 import { hexToRgba, termToSortableInteger } from "../utils";
+import { dataTerms } from "../metadata";
 
 export interface LineDataPoint {
   x: string;
@@ -43,10 +42,11 @@ const LineChart: FC<LineChartProps> = ({
 
   const [hoveredDatasetIndex, setHoveredDatasetIndex] = useState<number | null>(datasetIndex);
 
-  const { maps } = useCourses();
+  const { 
+    maps 
+  } = useCourses();
 
   useEffect(() => {
-    /** Use a use effect so that it triggers on every new invocation, rather than just sometimes */
     setHoveredDatasetIndex(datasetIndex);
   }, [datasetIndex]);
 
@@ -55,7 +55,7 @@ const LineChart: FC<LineChartProps> = ({
    * dataset nearly invisible). If index is -1, this suggests no dataset is hovered on.
    */
   const adjustOpacities: (index: number) => LineChartDataset[] = useCallback((index: number) => {
-    return datasets.map((dataset: LineChartDataset, i: number) => {
+    return datasets.map((dataset, i) => {
       const cssVar = courseColorDict?.get(dataset.label)!;
       return {
         ...dataset,
@@ -105,7 +105,7 @@ const LineChart: FC<LineChartProps> = ({
     },
     layout: {
       padding: {
-        right: 80
+        right: 100
       }
     },
     onHover: (event: ChartEvent, chartElement: ActiveElement[]) => {
@@ -172,7 +172,7 @@ const LineChart: FC<LineChartProps> = ({
           ...(hoveredDatasetIndex !== null && hoveredDatasetIndex !== -1 && datasets && adjustedLabelYCoordinates
             ? [{
                 type: 'label',
-                xValue: TERMS_WITH_DATA[TERMS_WITH_DATA.length - 1],
+                xValue: dataTerms[dataTerms.length - 1],
                 yValue: adjustedLabelYCoordinates.find(el => el.datasetIndex === hoveredDatasetIndex && !el.isLabel)?.value,
                 backgroundColor: 'transparent',
                 color: '#666',
@@ -192,13 +192,13 @@ const LineChart: FC<LineChartProps> = ({
 
             return {
               type: 'label',
-              xValue: TERMS_WITH_DATA[TERMS_WITH_DATA.length - 1],
+              xValue: dataTerms[dataTerms.length - 1],
               yValue: adjustedPosition,
               backgroundColor: 'transparent',
               color: !isHovering ? hexToRgba(cssVar, 1) : hoveredDatasetIndex === idx ? hexToRgba(cssVar, 1) : hexToRgba(cssVar, 0.1),
-              content: `${dataset.label}`,
+              content: `${dataset.label === 'ALL' ? 'GT Average' : dataset.label}`,
               position: 'right',
-              xAdjust: 45,
+              xAdjust: dataset.label === 'ALL' ? 55 : 45,
               font: {
                 size: 14
               }
@@ -265,7 +265,7 @@ const LineChart: FC<LineChartProps> = ({
       });
     });
 
-    const termsToRender: string[] = TERMS_WITH_DATA.slice(TERMS_WITH_DATA.findIndex(term => term === processedDatasets[0]?.data[0].x));
+    const termsToRender: string[] = dataTerms.slice(dataTerms.findIndex(term => term === processedDatasets[0]?.data[0].x));
     return {
       /** Respect ordering of terms by using allTerms.slice() here (really important) */
       labels: termsToRender, 

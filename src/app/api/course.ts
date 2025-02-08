@@ -61,7 +61,7 @@ export const fetchCourseInfo = async (): Promise<CourseInfo[]> => {
 export const fetchCourseAverages = async (): Promise<CourseAverages[]> => {
   const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_COURSE_AVERAGES_JSON : COURSE_AVERAGES_JSON;
   const res = await fetch(dataSource, {
-    cache: 'force-cache',
+    cache: 'no-store',
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch course averages: ${res.status}`);
@@ -72,7 +72,7 @@ export const fetchCourseAverages = async (): Promise<CourseAverages[]> => {
 export const fetchCourseAveragesByTerm = async (): Promise<CourseAveragesByTerm[]> => {
   const dataSource = process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_COURSE_AVERAGES_BY_TERM_JSON : COURSE_AVERAGES_BY_TERM_JSON;
   const res = await fetch(dataSource, {
-    cache: 'force-cache',
+    cache: 'no-store',
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch course data by term: ${res.status}`);

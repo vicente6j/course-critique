@@ -1,16 +1,11 @@
-import { Dispatch, FC, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import TermTable, { TermTableRow } from "./termTable";
+import { FC, useCallback, useEffect, useRef } from "react";
+import TermTable from "./termTable";
 import { Skeleton } from "@nextui-org/skeleton";
 import { useProfile } from "../server-contexts/profile/provider";
-import { ALL_TERMS, Metadata } from "../metadata";
+import { ALL_TERMS } from "../metadata";
 import { ScheduleAssignment } from "../api/schedule-assignments";
-import { ScheduleEntry } from "../api/schedule-entries";
-import { ScheduleInfo } from "../api/schedule";
-import Dropdown from "../shared/selectionDropdown";
-import ActionDropdown from "../components/actionDropdown";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
-import ScheduleDropdown from "../shared/scheduleDropdown";
 
 export interface TermGridProps {}
 
@@ -60,7 +55,7 @@ const TermGrid: FC<TermGridProps> = ({
         return (
           <div key={`${term}-${loading}`} className="flex flex-col gap-2 w-full">
             <Skeleton isLoaded={!loading}>
-              <TermTable term={term}/>
+              {/* <TermTable term={term}/> */}
             </Skeleton>
           </div>
         );

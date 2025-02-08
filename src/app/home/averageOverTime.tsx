@@ -6,13 +6,14 @@ import LineChart, { LineChartDataset, LineDataPoint } from "./lineChart";
 import { CourseAveragesByTerm, CourseInfo } from "../api/course";
 import InfoIcon from '@mui/icons-material/Info';
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
-import { GRADE_COLORS, TERMS_WITH_DATA } from "../metadata";
+import { dataTerms, GRADE_COLORS } from "../metadata";
 import { Skeleton } from "@nextui-org/skeleton";
 import CourseSearchbar from "../shared/courseSearchbar";
 import CorrelationMatrix, { CustomCorrelationDataset } from "./correlationMatrix";
 import HideSourceIcon from '@mui/icons-material/HideSource';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { hexToRgba } from "../utils";
+import ShowDontShow from "../components/showDontShow";
 
 export interface AverageOverTimeProps {}
 
@@ -20,9 +21,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
 
 }: AverageOverTimeProps) => {
 
-  const { maps, loading: courseInfoLoading } = useCourses();
-
-  const [comparing, setComparing] = useState<string[] | null>([ 'CS 1332', 'CS 1301' ]);
+  const [comparing, setComparing] = useState<string[] | null>([ 'ALL' ]);
 
   /**
    * Equivalent to the course which is currently being hovered on.
@@ -47,6 +46,11 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showCorrelationMatrix, setShowCorrelationMatrix] = useState<boolean>(false);
   const [hoverShowCorrelation, setHoverShowCorrelation] = useState<boolean>(false);
+
+  const { 
+    maps, 
+    loading: courseInfoLoading 
+  } = useCourses();
 
   const courseToTermAveragesMap: Map<string, CourseAveragesByTerm[]> | null = useMemo(() => {
     return maps.courseToTermAveragesMap;
@@ -134,7 +138,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     let datasets: LineChartDataset[] = [];
     termsDict.keys().forEach((course: string) => {
       let data: LineDataPoint[] = [];
-      for (const term of TERMS_WITH_DATA) {
+      for (const term of dataTerms) {
         if (!termsDict.get(course)!.has(term)) {
           continue;
         }
@@ -214,15 +218,74 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     return datasets;
   }, [termsDict]);
 
+  const courseBubble: (course: string) => React.ReactNode | null = useCallback((course) => {
+    if (!termsDict) {
+      return null;
+    }
+
+    if (course === 'ALL') {
+      return (
+        <div 
+          className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
+          onClick={() => {
+            if (termsDict.has('ALL')) {
+              removeFromTermsDict('ALL');
+            } else {
+              addToTermsDict('ALL');
+            }
+          }}
+          onMouseEnter={() => {
+            setComparedCourseSelected('ALL');
+          }}
+          onMouseLeave={() => {
+            setComparedCourseSelected(null);
+          }}
+          key={course}
+        >
+          <div 
+            className="rounded-full w-3 h-3" 
+            style={{ 
+              backgroundColor: courseColorDict?.get(course) || '#666',
+              border: '1px solid rgba(0,0,0,0.1)' 
+            }} 
+          />
+          <p className="text-xs">{'GT Average'}</p>
+        </div>  
+      );
+    }
+
+    return (
+      <div 
+        className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
+        onClick={() => {
+          removeFromTermsDict(course);
+          setComparing((prev) => {
+            return [...prev!.filter(element => element !== course)];
+          });
+        }}
+        onMouseEnter={() => {
+          setComparedCourseSelected(course);
+        }}
+        onMouseLeave={() => {
+          setComparedCourseSelected(null);
+        }}
+        key={course}
+      >
+        <div 
+          className="rounded-full w-3 h-3" 
+          style={{ 
+            backgroundColor: courseColorDict?.get(course)!,
+            border: '1px solid rgba(0,0,0,0.1)' 
+          }} 
+        />
+        <p className="text-xs">{course || ''}</p>
+      </div>  
+    );
+  }, [removeFromTermsDict, courseColorDict, termsDict]);
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="heading-md">Compare Courses</h1>
-      <div className="flex flex-row gap-2 items-center">
-        <p className="text-sm text-gray-600">Course GPAs Over Time</p>
-        <NextToolTip content={'Aggregated across all term data. Select or hover to interact.'}>
-          <InfoIcon style={{ width: '16px' }}/>
-        </NextToolTip>
-      </div>
       <div className="flex flex-col gap-2">
         <div className="flex flex-row gap-2 items-center flex-wrap">
           {comparing && comparing!.map((course: string) => {
@@ -231,31 +294,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
                 isLoaded={!courseInfoLoading}
                 key={course}
               >
-                <div 
-                  className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
-                  onClick={() => {
-                    removeFromTermsDict(course);
-                    setComparing((prev) => {
-                      return [...prev!.filter(element => element !== course)];
-                    });
-                  }}
-                  onMouseEnter={() => {
-                    setComparedCourseSelected(course);
-                  }}
-                  onMouseLeave={() => {
-                    setComparedCourseSelected(null);
-                  }}
-                  key={course}
-                >
-                  <div 
-                    className="rounded-full w-3 h-3" 
-                    style={{ 
-                      backgroundColor: courseColorDict?.get(course)!,
-                      border: '1px solid rgba(0,0,0,0.1)' 
-                    }} 
-                  />
-                  <p className="text-xs">{course || ''}</p>
-                </div>  
+                {courseBubble(course)}
               </Skeleton>
             )
           })}
@@ -266,67 +305,23 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         </div>
         <p className="text-red-600 text-sm">{error}</p>
       </div>
-      {showCorrelationMatrix ? (
-        <div>
-          <div 
-            className="flex gap-2 items-center cursor-pointer w-fit"
-            onMouseEnter={() => {
-              setHoverShowCorrelation(true);
-            }}
-            onMouseLeave={() => {
-              setHoverShowCorrelation(false);
-            }}
-            onClick={() => {
-              setShowCorrelationMatrix(false);
-            }} 
-          >
-            <p className={`heading-sm ${hoverShowCorrelation ? 'text-red-800' : 'text-[var(--color-red)]' } cursor-pointer`}>
-              Hide correlation matrix
-            </p>
-            <HideSourceIcon 
-              style={{ 
-                width: '24px', 
-                color: `${hoverShowCorrelation ? 'var(--color-dark-red)' : 'var(--color-red)'}`,
-                transition: 'transform 0.2s' 
-              }}
-              className={`${hoverShowCorrelation ? 'rotate-180' : ''}`}
-            />
-          </div>
+      <ShowDontShow 
+        showText="Show misc statistics"
+        hideText="Hide misc statistics"
+        whatToShow={
           <CorrelationMatrix
             customDatasets={customCorrelationDatasets}
           />
-        </div>
-      ) : (
-        <div 
-          className="flex gap-2 items-center cursor-pointer w-fit"
-          onMouseEnter={() => {
-            setHoverShowCorrelation(true);
-          }}
-          onMouseLeave={() => {
-            setHoverShowCorrelation(false);
-          }}
-          onClick={() => {
-            setShowCorrelationMatrix(true);
-          }} 
-        >
-          <p className={`heading-xs ${hoverShowCorrelation ? 'text-gray-400' : 'text-gray-700' } cursor-pointer`}>
-            Show correlation matrix
-          </p>
-          <ViewModuleIcon 
-            style={{ 
-              width: '20px', 
-              color: `${hoverShowCorrelation ? hexToRgba('#9ca3af', 1) : '#374151'}`,
-              transition: 'transform 0.2s' 
-            }}
-            className={`${hoverShowCorrelation ? 'rotate-180' : ''}`}
-          />
-        </div>
-      )}
+        }
+      />
       <Skeleton 
         isLoaded={!courseInfoLoading}
         className="w-900"
       >
-        <div className="w-900 h-400" key={rerenderKey}>
+        <div 
+          className="w-900 h-400" 
+          key={rerenderKey}
+        >
           <LineChart
             courseColorDict={courseColorDict!}
             datasets={coloredDatasets}

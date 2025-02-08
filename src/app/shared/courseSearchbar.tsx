@@ -42,9 +42,9 @@ const CourseSearchbar: FC<CourseSearchbarProps> = ({
       return data.courses.slice(0, 3);
     }
     /** First five courses to match prefix */
-    return data.courses?.filter(course => {
-      return course.id.toLowerCase().startsWith(query.toLowerCase())
-    }).slice(0, 5);
+    return data.courses?.filter(course => (
+      course.id.toLowerCase().startsWith(query.toLowerCase())
+    )).slice(0, 5);
   }, [data.courses, query]);
 
   const activeCourse: CourseInfo | null = useMemo(() => {

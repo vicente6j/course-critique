@@ -3,6 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import CourseProviderWrapper from "./server-contexts/course/wrapper";
 import ProfProviderWrapper from "./server-contexts/prof/wrapper";
+import { SessionProviderWrapper } from "./sessionWrapper";
+import ProfileProviderWrapper from "./server-contexts/profile/wrapper";
+import DegreeProgramProviderWrapper from "./server-contexts/degree-programs/wrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,7 +39,13 @@ export default function RootLayout({
       <body className={`${inter.className}`}>
         <CourseProviderWrapper>
           <ProfProviderWrapper>
-            {children}
+            <SessionProviderWrapper>
+              <ProfileProviderWrapper>
+                <DegreeProgramProviderWrapper>
+                  {children}
+                </DegreeProgramProviderWrapper>
+              </ProfileProviderWrapper>
+            </SessionProviderWrapper>
           </ProfProviderWrapper>
         </CourseProviderWrapper>
       </body>
