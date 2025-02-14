@@ -35,6 +35,8 @@ const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
     );
   }
 
+  console.log(session);
+
   const profile: ProfileResponse = await fetchProfile(session.user.email);
   const schedules: ScheduleInfo[] = await fetchSchedules(profile.id);
   const scheduleEntries: ScheduleEntry[] = await fetchScheduleEntries(profile.id);

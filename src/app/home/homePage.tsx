@@ -2,7 +2,7 @@
 
 import { FC, useMemo, useState } from "react";
 import Banner from "./banner";
-import AverageOverTime from "./averageOverTime";
+import AverageOverTime from "./compareCourses";
 import { useRankingsContext } from "../client-contexts/rankingsContext";
 import RankingsTable, { RankingsTableRow } from "../rankings/rankingsTable";
 import { metadata } from "../metadata";
@@ -13,6 +13,7 @@ import ArrowRight from "../components/arrowRight";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import MiniRankingsTable from "../shared/miniRankingsTable";
 import InfoIcon from '@mui/icons-material/Info';
+import CompareCourses from "./compareCourses";
 
 export interface PrevTermInfo {
   term: string;
@@ -113,7 +114,7 @@ const HomePage: FC<HomePageProps> = ({
     <div className="w-4/5 mx-auto my-8">
       <div className="flex flex-col gap-8">
         <Banner />
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-y-8 gap-x-24">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-y-8 gap-x-16">
           <MiniRankingsTable 
             header={'Hardest Courses Last Semester'}
             subheading={prevTermInfo?.term}
@@ -129,7 +130,7 @@ const HomePage: FC<HomePageProps> = ({
             type={'prof'}
           />
         </div>
-        <AverageOverTime />
+        <CompareCourses />
       </div>
     </div>
   );

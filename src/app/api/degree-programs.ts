@@ -26,31 +26,20 @@ export interface DegreeProgramRequirement {
  * @returns Degree Programs list.
  */
 export const fetchDegreePrograms = async (): Promise<DegreeProgram[]> => {
-  return [];
-  // if (process.env.NODE_ENV === 'development') {
-  //   const res = await fetch(MOCK_DEGREE_PROGRAMS_JSON, { 
-  //     cache: 'force-cache' 
-  //   });
-  //   if (!res.ok) {
-  //     throw new Error(`Failed to fetch degree programs: ${res.status}`);
-  //   }
-  //   return res.json();
-  // }
-
-  // const res = await fetch(ALL_DEGREE_PROGRAMS_JSON, {
-  //   cache: 'force-cache'
-  // });
-  // if (!res.ok) {
-  //   throw new Error(`Could not fetch degree programs. Error: ${res.status}`);
-  // }
-  // return res.json();
+  const dataSource = ALL_DEGREE_PROGRAMS_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'no-store'
+  });
+  if (!res.ok) {
+    throw new Error(`Could not fetch degree programs. Error: ${res.status}`);
+  }
+  return res.json();
 }
 
 export const fetchDegreeProgramRequirements = async (): Promise<DegreeProgramRequirement[]> => {
-  if (process.env.NODE_ENV === 'development') {
-    return [];
-  }
-  const res = await fetch(ALL_DEGREE_REQUIREMENTS_JSON, {
+  /** To-do: update source for dev */
+  const dataSource = ALL_DEGREE_REQUIREMENTS_JSON;
+  const res = await fetch(dataSource, {
     cache: 'force-cache'
   });
   if (!res.ok) {

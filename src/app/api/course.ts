@@ -42,8 +42,8 @@ export interface CourseAveragesByTerm {
 export interface CourseInfo {
   id: string;
   course_name: string;
-  credits: number;
-  description: string;
+  credits: number | null;
+  description: string | null;
   last_updated: string | null;
 }
 

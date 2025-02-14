@@ -26,7 +26,7 @@ const MiniRankingsTable: FC<MiniRankingsTableProps> = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <h1 className="heading-sm font-medium w-fit">{header}</h1>
+      <h1 className="heading-md font-regular w-fit">{header}</h1>
       <div className="flex flex-row gap-8 items-center">
         <p className="text-sm font-semi-bold">{subheading}</p>
         <div className="flex flex-row gap-6 items-center">

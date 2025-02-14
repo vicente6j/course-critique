@@ -17,6 +17,16 @@ export interface DegreeProgramProviderProps {
   children: React.ReactNode;
 }
 
+export interface DegreeProgramProviderData {
+  degreePrograms: DegreeProgram[];
+  degreeRequirements: DegreeProgramRequirement[];
+}
+
+export interface DegreeProgramProviderMaps {
+  degreePrograms: Map<string, DegreeProgram> | null;
+  degreeRequirements:  Map<string, DegreeProgramRequirement[]> | null;
+}
+
 const DegreeProgramContext = createContext<DegreeProgramContextValue | undefined>(undefined);
 
 /**
@@ -31,17 +41,11 @@ const DegreeProgramsProvider: FC<DegreeProgramProviderProps> = ({
   children,
 }: DegreeProgramProviderProps) => {
 
-  const [data, setData] = useState<{
-    degreePrograms: DegreeProgram[];
-    degreeRequirements: DegreeProgramRequirement[];
-  }>({
+  const [data] = useState<DegreeProgramProviderData>({
     degreePrograms: degreePrograms!,
     degreeRequirements: degreeRequirements!,
   });
-  const [maps, setMaps] = useState<{
-    degreePrograms: Map<string, DegreeProgram>;
-    degreeRequirements: Map<string, DegreeProgramRequirement[]>;
-  }>({
+  const [maps, setMaps] = useState<DegreeProgramProviderMaps>({
     degreePrograms: new Map(),
     degreeRequirements: new Map(),
   });
@@ -52,8 +56,10 @@ const DegreeProgramsProvider: FC<DegreeProgramProviderProps> = ({
 
     const degreeRequirementsMap = new Map();
     data.degreeRequirements?.forEach(requirement => {
-      const existing = degreeRequirementsMap.get(requirement.program_id) || [];
-      degreeRequirementsMap.set(requirement.program_id, [...existing, requirement]);
+      if (!degreeRequirementsMap.has(requirement.program_id)) {
+        degreeRequirementsMap.set(requirement.program_id, []);
+      }
+      degreeRequirementsMap.get(requirement.program_id).push(requirement);
     });
 
     setMaps({

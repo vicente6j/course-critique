@@ -15,11 +15,11 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { hexToRgba } from "../utils";
 import ShowDontShow from "../components/showDontShow";
 
-export interface AverageOverTimeProps {}
+export interface CompareCoursesProps {}
 
-const AverageOverTime: FC<AverageOverTimeProps> = ({
+const CompareCourses: FC<CompareCoursesProps> = ({
 
-}: AverageOverTimeProps) => {
+}: CompareCoursesProps) => {
 
   const [comparing, setComparing] = useState<string[] | null>([ 'ALL' ]);
 
@@ -44,25 +44,19 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   const [colorIndex, setColorIndex] = useState<number | null>(0);
 
   const [error, setError] = useState<string | null>(null);
-  const [showCorrelationMatrix, setShowCorrelationMatrix] = useState<boolean>(false);
-  const [hoverShowCorrelation, setHoverShowCorrelation] = useState<boolean>(false);
 
   const { 
     maps, 
     loading: courseInfoLoading 
   } = useCourses();
 
-  const courseToTermAveragesMap: Map<string, CourseAveragesByTerm[]> | null = useMemo(() => {
-    return maps.courseToTermAveragesMap;
-  }, [maps.courseToTermAveragesMap]);
-
   useEffect(() => {
     /** Initialization */
-    if (!termsDict && courseToTermAveragesMap && courseToTermAveragesMap.size > 0) {
+    if (!termsDict && maps.courseToTermAveragesMap && maps.courseToTermAveragesMap.size > 0) {
       const termDict = new Map();
       comparing?.forEach(course => {
         termDict.set(course, new Map());
-        for (const average of courseToTermAveragesMap!.get(course)!) {
+        for (const average of maps.courseToTermAveragesMap!.get(course)!) {
           if (!termDict.get(course).has(average.term)) {
             termDict.get(course).set(average.term, average);
           }
@@ -80,7 +74,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       setColorIndex(idx);
       setCourseColorDict(newColorDict);
     }
-  }, [courseToTermAveragesMap]);
+  }, [maps.courseToTermAveragesMap]);
 
   useEffect(() => {
     if (error) {
@@ -107,10 +101,11 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
    * @param course course to add
    */
   const addToTermsDict: (course: string) => void = useCallback((course) => {
+
     setTermsDict(prev => {
       const newDict = new Map(prev);
       newDict.set(course, new Map());
-      for (const average of courseToTermAveragesMap!.get(course)!) {
+      for (const average of maps.courseToTermAveragesMap!.get(course)!) {
         if (!newDict.get(course)!.has(average.term)) {
           newDict.get(course)!.set(average.term, average);
         }
@@ -129,7 +124,7 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     });
     setColorIndex((idx! + 1) % GRADE_COLORS.length);
     setRerenderKey(prev => prev! + 1);
-  }, [courseToTermAveragesMap, colorIndex]);
+  }, [maps.courseToTermAveragesMap, colorIndex]);
 
   const datasets: LineChartDataset[] = useMemo(() => {
     if (!termsDict || !courseColorDict) {
@@ -177,6 +172,9 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
     } else if (termsDict && termsDict!.size === 7) {
       setError(`Can\'t compare more than seven courses...`);
       return;
+    } else if (course && !maps.courseToTermAveragesMap?.has(course?.id)) {
+      setError(`Couldn't find course data for the course ${course.id}...`);
+      return;
     }
     setComparing((prev) => [...prev!, course!.id]);
     addToTermsDict(course!.id);
@@ -188,6 +186,9 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       return;
     } else if (termsDict && termsDict!.size === 7) {
       setError(`Can\'t compare more than seven courses...`);
+      return;
+    } else if (course && !maps.courseToTermAveragesMap?.has(course?.id)) {
+      setError(`Couldn't find course data for the course ${course.id}...`);
       return;
     }
     setComparing((prev) => [...prev!, course!.id]);
@@ -223,37 +224,6 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
       return null;
     }
 
-    if (course === 'ALL') {
-      return (
-        <div 
-          className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
-          onClick={() => {
-            if (termsDict.has('ALL')) {
-              removeFromTermsDict('ALL');
-            } else {
-              addToTermsDict('ALL');
-            }
-          }}
-          onMouseEnter={() => {
-            setComparedCourseSelected('ALL');
-          }}
-          onMouseLeave={() => {
-            setComparedCourseSelected(null);
-          }}
-          key={course}
-        >
-          <div 
-            className="rounded-full w-3 h-3" 
-            style={{ 
-              backgroundColor: courseColorDict?.get(course) || '#666',
-              border: '1px solid rgba(0,0,0,0.1)' 
-            }} 
-          />
-          <p className="text-xs">{'GT Average'}</p>
-        </div>  
-      );
-    }
-
     return (
       <div 
         className="flex flex-row h-fit gap-2 border border-gray-300 rounded-lg px-2 py-1 items-center hover:bg-gray-200 cursor-pointer"
@@ -278,14 +248,14 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
             border: '1px solid rgba(0,0,0,0.1)' 
           }} 
         />
-        <p className="text-xs">{course || ''}</p>
+        <p className="text-xs">{course === 'ALL' ? 'GT Average' : course || ''}</p>
       </div>  
     );
   }, [removeFromTermsDict, courseColorDict, termsDict]);
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="heading-md">Compare Courses</h1>
+      <h1 className="heading-md font-regular">Compare Courses</h1>
       <div className="flex flex-col gap-2">
         <div className="flex flex-row gap-2 items-center flex-wrap">
           {comparing && comparing!.map((course: string) => {
@@ -306,8 +276,8 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
         <p className="text-red-600 text-sm">{error}</p>
       </div>
       <ShowDontShow 
-        showText="Show misc statistics"
-        hideText="Hide misc statistics"
+        showText="Show more statistics"
+        hideText="Hide statistics"
         whatToShow={
           <CorrelationMatrix
             customDatasets={customCorrelationDatasets}
@@ -333,4 +303,4 @@ const AverageOverTime: FC<AverageOverTimeProps> = ({
   )
 }
 
-export default AverageOverTime;
+export default CompareCourses;
