@@ -1,30 +1,32 @@
 'use client'
 
-import { DegreeProgram, DegreeProgramRequirement } from "@/app/api/degree-programs";
-import { createContext, FC, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { DegreeProgram, DegreeProgramRequirement, DegreeProgramAveragesByTerm } from "@/app/api/degree-programs";
+import { createContext, FC, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 export interface DegreeProgramContextValue {
-  degreePrograms: DegreeProgram[] | null;
-  degreeProgramMap: Map<string, DegreeProgram> | null;
-  degreeRequirements: DegreeProgramRequirement[] | null;
-  degreeRequirementsMap: Map<string, DegreeProgramRequirement[]> | null;
+  data: DegreeProgramProviderData;
+  maps: DegreeProgramProviderMaps;
   loading: boolean | null;
 }
 
 export interface DegreeProgramProviderProps {
   degreePrograms: DegreeProgram[] | null;
   degreeRequirements: DegreeProgramRequirement[] | null;
+  programAveragesByTerm: DegreeProgramAveragesByTerm[];
   children: React.ReactNode;
 }
 
 export interface DegreeProgramProviderData {
   degreePrograms: DegreeProgram[];
   degreeRequirements: DegreeProgramRequirement[];
+  programAveragesByTerm: DegreeProgramAveragesByTerm[];
 }
 
 export interface DegreeProgramProviderMaps {
   degreePrograms: Map<string, DegreeProgram> | null;
   degreeRequirements:  Map<string, DegreeProgramRequirement[]> | null;
+  programToTermAveragesMap: Map<string, DegreeProgramAveragesByTerm[]> | null;
+  termToProgramAveragesMap: Map<string, DegreeProgramAveragesByTerm[]> | null;
 }
 
 const DegreeProgramContext = createContext<DegreeProgramContextValue | undefined>(undefined);
@@ -38,16 +40,20 @@ const DegreeProgramContext = createContext<DegreeProgramContextValue | undefined
 const DegreeProgramsProvider: FC<DegreeProgramProviderProps> = ({
   degreePrograms,
   degreeRequirements,
+  programAveragesByTerm,
   children,
 }: DegreeProgramProviderProps) => {
 
   const [data] = useState<DegreeProgramProviderData>({
     degreePrograms: degreePrograms!,
     degreeRequirements: degreeRequirements!,
+    programAveragesByTerm: programAveragesByTerm,
   });
   const [maps, setMaps] = useState<DegreeProgramProviderMaps>({
     degreePrograms: new Map(),
     degreeRequirements: new Map(),
+    programToTermAveragesMap: new Map(),
+    termToProgramAveragesMap: new Map(),
   });
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -62,28 +68,47 @@ const DegreeProgramsProvider: FC<DegreeProgramProviderProps> = ({
       degreeRequirementsMap.get(requirement.program_id).push(requirement);
     });
 
+    /**
+     * Also contains things like enrollment characteristics.
+     */
+    const programToTermAveragesMap = new Map();
+    data.programAveragesByTerm.forEach(average => {
+      if (!programToTermAveragesMap.has(average.program)) {
+        programToTermAveragesMap.set(average.program, []);
+      }
+      programToTermAveragesMap.get(average.program).push(average);
+    });
+
+    const termToProgramAveragesMap = new Map();
+    data.programAveragesByTerm.forEach(average => {
+      if (!termToProgramAveragesMap.has(average.term)) {
+        termToProgramAveragesMap.set(average.term, []);
+      }
+      termToProgramAveragesMap.get(average.term).push(average);
+    });
+
     setMaps({
       degreePrograms: degreeProgramsMap,
       degreeRequirements: degreeRequirementsMap,
+      programToTermAveragesMap: programToTermAveragesMap,
+      termToProgramAveragesMap: termToProgramAveragesMap,
     });
     setLoading(false);
-  }, [data]);
+  }, [data.degreePrograms, data.degreeRequirements, data.programAveragesByTerm]);
 
   useEffect(() => {
     constructMaps();
-  }, [constructMaps]);
-
-    /**
+  }, [constructMaps])
+  
+  /**
    * Memoize the context value such that there are no unncessary rerenders
    * upon a child component calling an instance of the context.
    */
-    const contextValue: DegreeProgramContextValue = useMemo(() => ({
-      degreePrograms: data.degreePrograms,
-      degreeProgramMap: maps.degreePrograms,
-      degreeRequirements: data.degreeRequirements,
-      degreeRequirementsMap: maps.degreeRequirements,
-      loading: loading,
-    }), [data, maps, loading]);
+  const contextValue: DegreeProgramContextValue = useMemo(() => ({
+    data: data,
+    maps: maps,
+    loading: loading,
+  }), [data, maps, loading]);
 
   return (
     <DegreeProgramContext.Provider value={contextValue}>

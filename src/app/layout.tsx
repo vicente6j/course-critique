@@ -39,13 +39,13 @@ export default function RootLayout({
       <body className={`${inter.className}`}>
         <CourseProviderWrapper>
           <ProfProviderWrapper>
-            <SessionProviderWrapper>
-              <ProfileProviderWrapper>
-                <DegreeProgramProviderWrapper>
-                  {children}
-                </DegreeProgramProviderWrapper>
-              </ProfileProviderWrapper>
-            </SessionProviderWrapper>
+            <DegreeProgramProviderWrapper>
+              <SessionProviderWrapper>
+                <ProfileProviderWrapper>
+                    {children}
+                </ProfileProviderWrapper>
+              </SessionProviderWrapper>
+            </DegreeProgramProviderWrapper>
           </ProfProviderWrapper>
         </CourseProviderWrapper>
       </body>

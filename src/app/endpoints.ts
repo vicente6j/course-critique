@@ -15,8 +15,9 @@ export const COURSE_AVERAGES_BY_PROF_JSON = `${process.env.BASE_URL}/data/prof/c
 export const COURSES_TAUGHT_BY_TERM_JSON = `${process.env.BASE_URL}/data/prof/courses_taught_by_term.json`;
 
 /** Degree requirements */
-export const ALL_DEGREE_PROGRAMS_JSON = `${process.env.BASE_URL}/data/majors/degree_programs.json`;
-export const ALL_DEGREE_REQUIREMENTS_JSON = `${process.env.BASE_URL}/data/majors/degree_requirements.json`;
+export const DEGREE_PROGRAMS_JSON = `${process.env.BASE_URL}/data/degree-programs/degree_programs.json`;
+export const DEGREE_REQUIREMENTS_JSON = `${process.env.BASE_URL}/data/degree-programs/degree_requirements.json`;
+export const PROGRAM_AVERAGES_BY_TERM_JSON = `${process.env.BASE_URL}/data/degree-programs/program_averages_by_term.json`;
 
 /**
  * Mock data accumulates to around 4.1 MB of data (see ../../data/README.md), 
@@ -34,3 +35,7 @@ export const MOCK_PROF_AVERAGES_BY_TERM_JSON = `${process.env.BASE_URL}/data/moc
 export const MOCK_COURSE_AVERAGES_BY_PROF_JSON = `${process.env.BASE_URL}/data/mock/prof/course_averages_by_prof.json`;
 export const MOCK_COURSES_TAUGHT_BY_TERM_JSON = `${process.env.BASE_URL}/data/mock/prof/courses_taught_by_term.json`;
 export const MOCK_PROF_INFO_JSON = `${process.env.BASE_URL}/data/mock/prof/prof_info.json`;
+
+export const MOCK_DEGREE_PROGRAMS_JSON = `${process.env.BASE_URL}/data/mock/degree-programs/degree_programs.json`;
+export const MOCK_DEGREE_REQUIREMENTS_JSON = `${process.env.BASE_URL}/data/mock/degree-programs/degree_requirements.json`;
+export const MOCK_PROGRAM_AVERAGES_BY_TERM_JSON = `${process.env.BASE_URL}/data/mock/degree-programs/program_averages_by_term.json`;

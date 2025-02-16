@@ -3,7 +3,7 @@ export interface MetadataType {
 }
 
 export interface GlobalType {
-  year: string | number;
+  year: number;
   is_spring: boolean;
   most_recent_term: string;
 }

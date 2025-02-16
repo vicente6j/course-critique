@@ -1,6 +1,6 @@
 'use client'
 
-import { FC, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
 import Banner from "./banner";
 import AverageOverTime from "./compareCourses";
 import { useRankingsContext } from "../client-contexts/rankingsContext";
@@ -14,6 +14,8 @@ import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import MiniRankingsTable from "../shared/miniRankingsTable";
 import InfoIcon from '@mui/icons-material/Info';
 import CompareCourses from "./compareCourses";
+import { useDegreePrograms } from "../server-contexts/degree-programs/provider";
+import PopularDegreePrograms from "./popularDegreePrograms";
 
 export interface PrevTermInfo {
   term: string;
@@ -33,7 +35,9 @@ const HomePage: FC<HomePageProps> = ({
     profRankingsMap 
   } = useRankingsContext();
 
-  const { maps } = useCourses();
+  const { 
+    maps 
+  } = useCourses();
 
   const prevTermInfo: PrevTermInfo | null = useMemo(() => {
     if (!maps.termToCourseAveragesMap || maps.termToCourseAveragesMap.size === 0 || !profRankingsMap) {
@@ -130,6 +134,7 @@ const HomePage: FC<HomePageProps> = ({
             type={'prof'}
           />
         </div>
+        <PopularDegreePrograms />
         <CompareCourses />
       </div>
     </div>

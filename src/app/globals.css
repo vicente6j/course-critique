@@ -522,6 +522,11 @@ body {
     min-width: 900px;
   }
 
+  .h-150 {
+    min-height: 150px;
+    max-height: 150px;
+  }
+
   .h-200 {
     height: 200px;
     min-height: 200px;
