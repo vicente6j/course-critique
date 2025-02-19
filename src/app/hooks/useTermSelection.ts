@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { termToSortableInteger } from "../home/averageOverTime";
+import { termToSortableInteger } from "../utils";
 
 interface UseTermSelectionValue {
   termsSelected: string[] | null;

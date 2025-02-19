@@ -1,7 +1,7 @@
 'use server'
 
 import { FC } from "react";
-import { DegreeProgram, DegreeProgramRequirement, fetchDegreeProgramRequirements, fetchDegreePrograms } from "@/app/api/degree-programs";
+import { DegreeProgram, DegreeProgramAveragesByTerm, DegreeProgramRequirement, fetchDegreeProgramAveragesByTerm, fetchDegreeProgramRequirements, fetchDegreePrograms } from "@/app/api/degree-programs";
 import DegreeProgramsProvider from "./provider";
 
 export interface DegreeProgramsProviderWrapperProps {
@@ -19,11 +19,13 @@ const DegreeProgramProviderWrapper: FC<DegreeProgramsProviderWrapperProps> = asy
 
   const degreePrograms: DegreeProgram[] = await fetchDegreePrograms();
   const degreeRequirements: DegreeProgramRequirement[] = await fetchDegreeProgramRequirements();
+  const programAveragesByTerm: DegreeProgramAveragesByTerm[] = await fetchDegreeProgramAveragesByTerm();
 
   return (
     <DegreeProgramsProvider
       degreePrograms={degreePrograms}
       degreeRequirements={degreeRequirements}
+      programAveragesByTerm={programAveragesByTerm}
     >
       {children}
     </DegreeProgramsProvider>

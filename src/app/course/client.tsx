@@ -40,37 +40,37 @@ const CourseClient: FC<CourseClientProps> = ({
   const [arrowRight, setArrowRight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { courseMap, averagesMap, averagesByProfMap } = useCourses();
-  const { profMap } = useProfs();
+  const { maps } = useCourses();
+  const { maps: profMaps } = useProfs();
 
   /**
    * Here we simply compute the row from the averages map. Computing this
    * from our context is order 20-50ms.
    */
   const computeRow: () => void = useCallback(() => {
-    if (!averagesMap || !averagesMap.has(courseID)) {
+    if (!maps.averagesMap || !maps.averagesMap.has(courseID)) {
       setError('Averages map was null or didn\'t contain course ID.');
       return;
     }
     setAggregateRow({
       ...aggregateRow,
-      A: averagesMap.get(courseID)!.A as number,
-      B: averagesMap.get(courseID)!.B as number,
-      C: averagesMap.get(courseID)!.C as number,
-      D: averagesMap.get(courseID)!.D as number,
-      F: averagesMap.get(courseID)!.F as number,
-      W: averagesMap.get(courseID)!.W as number,
-      GPA: averagesMap.get(courseID)!.GPA as number,
+      A: maps.averagesMap.get(courseID)!.A as number,
+      B: maps.averagesMap.get(courseID)!.B as number,
+      C: maps.averagesMap.get(courseID)!.C as number,
+      D: maps.averagesMap.get(courseID)!.D as number,
+      F: maps.averagesMap.get(courseID)!.F as number,
+      W: maps.averagesMap.get(courseID)!.W as number,
+      GPA: maps.averagesMap.get(courseID)!.GPA as number,
     });
-  }, [averagesMap, courseID]);
+  }, [maps.averagesMap, courseID]);
 
   const computeInstructors: () => void = useCallback(() => {
-    if (!averagesByProfMap || !averagesByProfMap.has(courseID)) {
+    if (!maps.profAveragesByCourseMap || !maps.profAveragesByCourseMap.has(courseID)) {
       setError('Averages map was null or didn\'t contain course ID.');
       return;
     }
     let newRows: GradeTableRow[] = [];
-    for (const prof of averagesByProfMap?.get(courseID)!) {
+    for (const prof of maps.profAveragesByCourseMap?.get(courseID)!) {
       newRows.push({
         key: prof.prof_id,
         professor: prof.prof_id,
@@ -84,19 +84,20 @@ const CourseClient: FC<CourseClientProps> = ({
       });
     }
     setInstructorRows(newRows);
-  }, [averagesByProfMap, courseID]);
+  }, [maps.profAveragesByCourseMap, courseID]);
 
   const percentiles: Map<number, ProfAndAvg> = useMemo(() => {
-    if (!averagesByProfMap || !averagesByProfMap.has(courseID)) {
+    if (!maps.profAveragesByCourseMap || !maps.profAveragesByCourseMap.has(courseID)) {
       return new Map();
     }
     let sorted: ProfAndAvg[] = [];
-    for (const prof of averagesByProfMap?.get(courseID)!) {
-      sorted.push({ profID: prof.prof_id, GPA: prof.GPA! });
+    for (const prof of maps.profAveragesByCourseMap?.get(courseID)!) {
+      sorted.push({ 
+        profID: prof.prof_id, 
+        GPA: prof.GPA! 
+      });
     }
-    sorted.sort((a: ProfAndAvg, b: ProfAndAvg) => {
-      return a.GPA - b.GPA;
-    });
+    sorted.sort((a: ProfAndAvg, b: ProfAndAvg) => a.GPA - b.GPA);
     let percentiles: Map<number, ProfAndAvg> = new Map();
     let p1 = Math.floor(sorted.length * (1 / 4));
     let p2 = Math.floor(sorted.length * (1 / 2));
@@ -105,28 +106,29 @@ const CourseClient: FC<CourseClientProps> = ({
     percentiles.set(50, sorted[p2]);
     percentiles.set(75, sorted[p3]);
     return percentiles;
-  }, [averagesByProfMap, courseID]);
+  }, [maps.profAveragesByCourseMap, courseID]);
 
   const sortedProfs: ProfAndAvg[] = useMemo(() => {
-    if (!averagesByProfMap || !averagesByProfMap.has(courseID)) {
+    if (!maps.profAveragesByCourseMap || !maps.profAveragesByCourseMap.has(courseID)) {
       return [];
     }
     let sorted: ProfAndAvg[] = [];
-    for (const prof of averagesByProfMap?.get(courseID)!) {
-      sorted.push({ profID: prof.prof_id, GPA: prof.GPA! });
+    for (const prof of maps.profAveragesByCourseMap?.get(courseID)!) {
+      sorted.push({ 
+        profID: prof.prof_id, 
+        GPA: prof.GPA! 
+      });
     }
-    sorted.sort((a: ProfAndAvg, b: ProfAndAvg) => {
-      return a.GPA - b.GPA;
-    });
+    sorted.sort((a: ProfAndAvg, b: ProfAndAvg) => a.GPA - b.GPA);
     return sorted;
-  }, [averagesByProfMap, courseID]);
+  }, [maps.profAveragesByCourseMap, courseID]);
 
   const taughtByIds: string[] = useMemo(() => {
-    if (!averagesByProfMap || !averagesByProfMap.has(courseID)) {
+    if (!maps.profAveragesByCourseMap || !maps.profAveragesByCourseMap.has(courseID)) {
       return [];
     }
-    return [...averagesByProfMap.get(courseID)!.map(prof => prof.prof_id)]
-  }, [courseID, averagesByProfMap]);
+    return [...maps.profAveragesByCourseMap.get(courseID)!.map(prof => prof.prof_id)]
+  }, [courseID, maps.profAveragesByCourseMap]);
 
   useEffect(() => {
     computeRow();
@@ -145,7 +147,7 @@ const CourseClient: FC<CourseClientProps> = ({
       <div className="w-4/5 mx-auto mt-8">
         <div className="flex flex-col gap-8" key={courseID}>
           <CourseHeader 
-            info={courseMap!.get(courseID)!}
+            info={maps.courseMap!.get(courseID)!}
             taughtByIds={taughtByIds}
             selectedTab={selectedTab}
             setSelectedTab={setSelectedTab}
@@ -168,7 +170,7 @@ const CourseClient: FC<CourseClientProps> = ({
                           key={prof.profID}
                           className="font-semi-bold"
                         >
-                          {profMap!.get(prof.profID)?.instructor_name}
+                          {profMaps.profs!.get(prof.profID)?.instructor_name}
                           {idx === 0 && <>, </>}
                           {idx === 1 && <>, and </>}
                           {idx === 2 && <>. </>}

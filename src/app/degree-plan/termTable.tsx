@@ -1,5 +1,5 @@
 'use client'
-import { Dispatch, FC, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -9,7 +9,7 @@ import {
   TableCell,
   getKeyValue,
 } from "@nextui-org/table";
-import { formatGPA, gradeColorDictHex } from "../shared/gradeTable";
+import { formatGPA } from "../shared/gradeTable";
 import { Link } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -19,19 +19,13 @@ import InfoIcon from '@mui/icons-material/Info';
 import { CourseInfo } from "../api/course";
 import { useCourses } from "../server-contexts/course/provider";
 import { useProfile } from "../server-contexts/profile/provider";
-import { createSchedule, ScheduleInfo } from "../api/schedule";
-import AddIcon from '@mui/icons-material/Add';
 import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
-import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import ActionDropdown from "../components/actionDropdown";
 import { createScheduleEntry, deleteScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
-import { connect } from "http2";
 import { POSSIBLE_GRADES } from "../metadata";
-import { hexToRgba } from "../home/averageOverTime";
 import { createScheduleGrade, deleteScheduleGrade, updateScheduleGrade } from "../api/schedule-grades";
 import ScheduleDropdown from "../shared/scheduleDropdown";
 import TermTableDropdown from "./termTableDropdown";
+import { ScheduleInfo } from "../api/schedule";
 
 export interface TermTableColumn {
   key: string;

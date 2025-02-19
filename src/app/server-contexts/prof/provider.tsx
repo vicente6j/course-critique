@@ -1,82 +1,64 @@
 'use client'
-import { CoursesTaughtByTerm, HotResponse, ProfAverages, ProfAveragesByCourse, ProfAveragesByTerm, ProfInfo } from "@/app/api/prof";
+import { CourseAveragesByProf, CoursesTaughtByTerm, ProfAverages, ProfAveragesByTerm, ProfInfo } from "@/app/api/prof";
 import { createContext, FC, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface ProfProviderContextValue {
-  profAverages: ProfAverages[] | null;
-  profAveragesMap: Map<string, ProfAverages> | null;
-  profAveragesByCourse: ProfAveragesByCourse[] | null;
-  profAveragesByCourseMap: Map<string, ProfAveragesByCourse[]> | null;
-  profAveragesByTerm: ProfAveragesByTerm[] | null;
-  profAveragesByTermMap: Map<string, ProfAveragesByTerm[]> | null;
-  profs: ProfInfo[] | null;
-  profMap: Map<string, ProfInfo> | null;
-  hotCourses: HotResponse[] | null;
-  hotCoursesMap: Map<string, HotResponse> | null;
-  coursesTaughtByTerm: CoursesTaughtByTerm[];
-  coursesTaughtByTermMap: Map<string, Map<string, CoursesTaughtByTerm>> | null;
+  data: ProfProviderData;
+  maps: ProfProviderMaps;
   getSortedAveragesByTermMap: () => Map<string, ProfAveragesByTerm[]>;
   loading: boolean;
 }
 
 export interface ProfProviderProps {
   profAverages: ProfAverages[];
-  profAveragesByCourse: ProfAveragesByCourse[];
+  courseAveragesByProf: CourseAveragesByProf[];
   profAveragesByTerm: ProfAveragesByTerm[];
   profInfo: ProfInfo[];
-  hotCourses: HotResponse[];
   coursesTaughtByTerm: CoursesTaughtByTerm[];
   children: React.ReactNode;
 }
 
 export interface ProfProviderData {
   averages: ProfAverages[];
-  averagesByCourse: ProfAveragesByCourse[];
+  courseAveragesByProf: CourseAveragesByProf[];
   averagesByTerm: ProfAveragesByTerm[];
   profs: ProfInfo[];
-  hotCourses: HotResponse[];
   coursesTaughtByTerm: CoursesTaughtByTerm[];
 }
 
 export interface ProfProviderMaps {
   averages: Map<string, ProfAverages>;
-  averagesByCourse: Map<string, ProfAveragesByCourse[]>;
-  averagesByTerm: Map<string, ProfAveragesByTerm[]>;
+  courseAveragesByProf: Map<string, CourseAveragesByProf[]>;
+  profToTermAverages: Map<string, ProfAveragesByTerm[]>;
+  termToProfAverages: Map<string, ProfAveragesByTerm[]>;
   profs: Map<string, ProfInfo>;
-  hotCourses: Map<string, HotResponse>;
   coursesTaughtByTerm: Map<string, Map<string, CoursesTaughtByTerm>>;
 }
 
 const GlobalProfContext = createContext<ProfProviderContextValue | undefined>(undefined);
 
-/**
- * ProfProvider manages professor-related data including averages, course histories,
- * and each professor's most frequently taught course (hot courses).
- */
 const ProfProvider: FC<ProfProviderProps> = ({
   profAverages,
-  profAveragesByCourse,
+  courseAveragesByProf,
   profAveragesByTerm,
   profInfo,
-  hotCourses,
   coursesTaughtByTerm,
   children,
 }: ProfProviderProps) => {
 
   const [data] = useState<ProfProviderData>({
     averages: profAverages,
-    averagesByCourse: profAveragesByCourse,
+    courseAveragesByProf: courseAveragesByProf,
     averagesByTerm: profAveragesByTerm,
     profs: profInfo,
-    hotCourses: hotCourses,
     coursesTaughtByTerm: coursesTaughtByTerm
   });
   const [maps, setMaps] = useState<ProfProviderMaps>({
     averages: new Map(),
-    averagesByCourse: new Map(),
-    averagesByTerm: new Map(),
+    courseAveragesByProf: new Map(),
+    profToTermAverages: new Map(),
+    termToProfAverages: new Map(),
     profs: new Map(),
-    hotCourses: new Map(),
     coursesTaughtByTerm: new Map(),
   });
   const [loading, setLoading] = useState<boolean>(true);
@@ -84,21 +66,26 @@ const ProfProvider: FC<ProfProviderProps> = ({
   const constructMaps: () => void = useCallback(() => {
     const averagesMap = new Map(data.averages.map(profAverage => [profAverage.prof_id, profAverage]));
 
-    const averagesByCourseMap = new Map();
-    data.averagesByCourse.forEach(average => {
-      if (!averagesByCourseMap.has(average.prof_id)) {
-        averagesByCourseMap.set(average.prof_id, []);
+    const courseAveragesByProfMap = new Map();
+    data.courseAveragesByProf.forEach(average => {
+      if (!courseAveragesByProfMap.has(average.prof_id)) {
+        courseAveragesByProfMap.set(average.prof_id, []);
       }
-      averagesByCourseMap.get(average.prof_id).push(average);
+      courseAveragesByProfMap.get(average.prof_id).push(average);
     });
 
-    const averagesByTermMap = new Map();
+    const profToTermAveragesMap = new Map();
+    const termToProfAveragesMap = new Map();
     data.averagesByTerm.forEach(termAverage => {
-      if (!averagesByTermMap.has(termAverage.prof_id)) {
-        averagesByTermMap.set(termAverage.prof_id, []);
+      if (!profToTermAveragesMap.has(termAverage.prof_id)) {
+        profToTermAveragesMap.set(termAverage.prof_id, []);
       }
-      averagesByTermMap.get(termAverage.prof_id).push(termAverage);
-    })
+      if (!termToProfAveragesMap.has(termAverage.term)) {
+        termToProfAveragesMap.set(termAverage.term, []);
+      }
+      profToTermAveragesMap.get(termAverage.prof_id).push(termAverage);
+      termToProfAveragesMap.get(termAverage.term).push(termAverage);
+    });
 
     /**
      * Dual map serves the purpose of indexing by term first
@@ -115,14 +102,13 @@ const ProfProvider: FC<ProfProviderProps> = ({
     });
 
     const profMap = new Map(data.profs?.map(prof => [prof.instructor_id, prof]));
-    const hotCoursesMap = new Map(data.hotCourses.map(hotCourse => [hotCourse.prof, hotCourse]));
 
     setMaps({
       averages: averagesMap,
-      averagesByCourse: averagesByCourseMap,
-      averagesByTerm: averagesByTermMap,
+      courseAveragesByProf: courseAveragesByProfMap,
+      profToTermAverages: profToTermAveragesMap,
+      termToProfAverages: termToProfAveragesMap,
       profs: profMap,
-      hotCourses: hotCoursesMap,
       coursesTaughtByTerm: coursesTaughtByTermDualMap,
     });
     setLoading(false);
@@ -133,30 +119,19 @@ const ProfProvider: FC<ProfProviderProps> = ({
   }, [constructMaps]);
 
   const getSortedAveragesByTermMap: () => Map<string, ProfAveragesByTerm[]>  = useCallback(() => {
-    const sortedMap = new Map(maps.averagesByTerm);
+    const sortedMap = new Map(maps.termToProfAverages);
     sortedMap.keys().forEach((term: string) => {
-      console.log(term);
       sortedMap.set(term, sortedMap.get(term)!.sort((a: ProfAveragesByTerm, b: ProfAveragesByTerm) => a.GPA! - b.GPA!));
     });
     return sortedMap;
-  }, [maps.averagesByTerm]);
+  }, [maps.termToProfAverages]);
 
   const contextValue: ProfProviderContextValue = useMemo(() => ({
-    profAverages: data.averages,
-    profAveragesMap: maps.averages,
-    profAveragesByCourse: data.averagesByCourse,
-    profAveragesByCourseMap: maps.averagesByCourse,
-    profAveragesByTerm: data.averagesByTerm,
-    profAveragesByTermMap: maps.averagesByTerm,
-    profs: data.profs,
-    profMap: maps.profs,
-    hotCourses: data.hotCourses,
-    hotCoursesMap: maps.hotCourses,
-    coursesTaughtByTerm: data.coursesTaughtByTerm,
-    coursesTaughtByTermMap: maps.coursesTaughtByTerm,
+    data: data,
+    maps: maps,
     getSortedAveragesByTermMap: getSortedAveragesByTermMap,
     loading: loading,
-  }), [data, maps, loading]);
+  }), [data, maps, getSortedAveragesByTermMap, loading]);
 
   return (
     <GlobalProfContext.Provider value={contextValue}>

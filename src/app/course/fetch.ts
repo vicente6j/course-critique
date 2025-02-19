@@ -93,9 +93,6 @@ export interface SectionDataTruncated {
   GPA: number | null;
 }
 
-export const courseNumsToEscape: string[] = ['2699', '4699', '2698', '4698', '9000', '7000', '8801', '8000', '6000',
-  '8802', '8803', '8804', '8805', '8901', '8902', '8903', '8904', '8905', 'R', 'X', 'L']
-
 export interface CourseHistory {
   terms: TermData[];
 }
@@ -127,10 +124,8 @@ const compileAverages = (courseDetails: CourseResponse): CompiledResponse => {
     GPA: null
   };
   for (const section of courseDetails.raw) {
-    /** Don't consider any courses which are recitations, have X, etc. */
-    const courseNum = section.course_id.split(' ')[1];
-    if (courseNumsToEscape.some(num => courseNum.includes(num)) || section.enrollment < 3 || section.U || section.V || section.S) {
-      continue; 
+    if (section['GPA'] == null) {
+      continue;
     }
     for (const grade of movingAverages) {
       if (res[grade] == null) {
@@ -152,10 +147,8 @@ const compileAverages = (courseDetails: CourseResponse): CompiledResponse => {
 const compileProfs = (courseDetails: CourseResponse): CompiledProf[] => {
   let res: Map<string, CompiledProf> = new Map();
   for (const section of courseDetails.raw) {
-    /** Don't consider any courses which are recitations, have X, etc. */
-    const courseNum = section.course_id.split(' ')[1];
-    if (courseNumsToEscape.some(num => courseNum.includes(num)) || section.enrollment < 3 || section.U || section.V || section.S) {
-      continue; 
+    if (section['GPA'] == null) {
+      continue;
     }
     let instructor_id: string = section.instructor_id;
     if (!res.has(instructor_id)) {
@@ -197,10 +190,8 @@ const compileHistory = (courseDetails: CourseResponse): CourseHistory => {
   let sectionMap: Map<string, Map<string, SectionDataTruncated[]>> = new Map();
 
   for (const section of courseDetails.raw) {
-    /** Don't consider any courses which are recitations, have X, etc. */
-    const courseNum = section.course_id.split(' ')[1];
-    if (courseNumsToEscape.some(num => courseNum.includes(num)) || section.enrollment < 3 || section.U || section.V || section.S) {
-      continue; 
+    if (section['GPA'] == null) {
+      continue;
     }
     let term = section.term;
     if (!map.has(term)) {
@@ -243,7 +234,15 @@ const compileHistory = (courseDetails: CourseResponse): CourseHistory => {
     if (!sectionMap.get(term)?.has(relProf)) {
       sectionMap.get(term)!.set(relProf, []);
     }
-
+    
+    /**
+     * Hierarchy is such that termData is the overarching dictionary 
+     * which compiles all grade averages for a given term.
+     * 
+     * Meanwhile, sections just keeps track of all the sections seen so far.
+     * 
+     * Prof averages keeps track of a given prof's average within a given term.
+     */
     const termData = map.get(term)!;
     const prof = profMap.get(term)!.get(relProf)!;
     const sections = sectionMap.get(term)!.get(relProf)!;

@@ -1,4 +1,4 @@
-import { ALL_DEGREE_PROGRAMS_JSON, ALL_DEGREE_REQUIREMENTS_JSON, MOCK_DEGREE_PROGRAMS_JSON } from "../endpoints";
+import { DEGREE_PROGRAMS_JSON, DEGREE_REQUIREMENTS_JSON, MOCK_DEGREE_PROGRAMS_JSON, MOCK_DEGREE_REQUIREMENTS_JSON, MOCK_PROGRAM_AVERAGES_BY_TERM_JSON, PROGRAM_AVERAGES_BY_TERM_JSON } from "../endpoints";
 
 export interface DegreeProgram {
   id: string;
@@ -18,6 +18,19 @@ export interface DegreeProgramRequirement {
   description_credits: number | null;
 }
 
+export interface DegreeProgramAveragesByTerm {
+  program: string;
+  term: string;
+  A: number | null;
+  B: number | null;
+  C: number | null;
+  D: number | null;
+  F: number | null;
+  W: number | null;
+  GPA: number | null;
+  enrollment: number | null;
+}
+
 /**
  * 'Force-cache' doesn't persist across builds, but once built and deployed it remains
  * available to all users. This allows subsequent users of the website to 
@@ -26,18 +39,9 @@ export interface DegreeProgramRequirement {
  * @returns Degree Programs list.
  */
 export const fetchDegreePrograms = async (): Promise<DegreeProgram[]> => {
-  if (process.env.NODE_ENV === 'development') {
-    const res = await fetch(MOCK_DEGREE_PROGRAMS_JSON, { 
-      cache: 'force-cache' 
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch degree programs: ${res.status}`);
-    }
-    return res.json();
-  }
-
-  const res = await fetch(ALL_DEGREE_PROGRAMS_JSON, {
-    cache: 'force-cache'
+  const dataSource =  process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_DEGREE_PROGRAMS_JSON : DEGREE_PROGRAMS_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'no-store'
   });
   if (!res.ok) {
     throw new Error(`Could not fetch degree programs. Error: ${res.status}`);
@@ -46,11 +50,20 @@ export const fetchDegreePrograms = async (): Promise<DegreeProgram[]> => {
 }
 
 export const fetchDegreeProgramRequirements = async (): Promise<DegreeProgramRequirement[]> => {
-  if (process.env.NODE_ENV === 'development') {
-    return [];
+  const dataSource =  process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_DEGREE_REQUIREMENTS_JSON : DEGREE_REQUIREMENTS_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'no-store'
+  });
+  if (!res.ok) {
+    throw new Error(`Could not fetch degree requirements. Error: ${res.status}`);
   }
-  const res = await fetch(ALL_DEGREE_REQUIREMENTS_JSON, {
-    cache: 'force-cache'
+  return res.json();
+}
+
+export const fetchDegreeProgramAveragesByTerm = async (): Promise<DegreeProgramAveragesByTerm[]> => {
+  const dataSource =  process.env.NEXT_PUBLIC_USE_MOCK_DATA ? MOCK_PROGRAM_AVERAGES_BY_TERM_JSON : PROGRAM_AVERAGES_BY_TERM_JSON;
+  const res = await fetch(dataSource, {
+    cache: 'no-store'
   });
   if (!res.ok) {
     throw new Error(`Could not fetch degree requirements. Error: ${res.status}`);

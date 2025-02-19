@@ -1,24 +1,23 @@
 'use client'
 import { FC, useCallback, useEffect, useState } from "react";
-import { Prof, useProfs } from "../server-contexts/prof";
 import { CompiledCourse, CompiledProfResponse, ProfHistory, RelatedProf } from "./fetch";
 import GradeTable, { formatGPA, GradeTableRow } from "../shared/gradeTable";
-import { useAllProfs } from "../server-contexts/allProf";
 import { useRouter } from "next/navigation";
 import Navbar from "../shared/navbar";
 import { Spinner } from "@nextui-org/spinner";
-import { CourseProvider } from "../server-contexts/course";
 import ProfHeader from "./header";
 import { Link } from "@nextui-org/react";
 import DonutChart from "../shared/donutChart";
 import ProfessorOrCourseTable from "../shared/professorOrCourseTable";
 import History from "./history";
 import Info from "./info";
+import { ProfInfo } from "../api/prof";
+import { useProfs } from "../server-contexts/prof/provider";
 
 export interface ProfClientProps {
   compiledProfResponse: CompiledProfResponse | null;
   compiledCourses: CompiledCourse[] | null;
-  profInfo: Prof | null;
+  profInfo: ProfInfo | null;
   profHistory: ProfHistory | null;
   relatedProfs: RelatedProf[] | null;
   loading: boolean;
@@ -37,8 +36,10 @@ const ProfClient: FC<ProfClientProps> = ({
   const [courseRows, setCourseRows] = useState<GradeTableRow[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>('overview');
 
-  const { profs, profsLoading, profError, profMap, hotMap } = useProfs();
-  const { averages, averagesLoading, averagesMap, averagesErr, termAveragesProf, termAveragesProfMap } = useAllProfs();
+  const { 
+    maps,
+    data,
+  } = useProfs();
 
   const router = useRouter();
 

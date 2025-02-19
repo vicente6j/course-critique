@@ -37,7 +37,7 @@ const CustomSearchbar: FC<CustomSearchbarProps> = ({
         onValueChange={onSearchChange}
       />
     );
-  } 
+  }
 
   return (
     <div className="py-1 sticky top-0 bg-white z-10">

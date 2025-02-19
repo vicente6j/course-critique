@@ -26,40 +26,40 @@ const SearchBar: FC<SearchBarProps> = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<VariableSizeList | null>(null);
 
-  const { courses } = useCourses();
-  const { profs } = useProfs();
+  const { data } = useCourses();
+  const { data: profData } = useProfs();
   const router = useRouter();
 
   const filteredCourses: Course[] = useMemo(() => {
-    if (!courses) {
+    if (!data.courses) {
       return [];
     } else if (!query) {
-      return courses;
+      return data.courses;
     }
-    return courses?.filter(course => {
+    return data.courses?.filter(course => {
       return course.id.toLowerCase().includes(query.toLowerCase())
     });
-  }, [courses, query]);
+  }, [data.courses, query]);
 
   /**
    * Filters profs via obtaining tokens (split by space)
    * and checking for presence in query string.
    */
   const filteredProfs: Prof[] = useMemo(() => {
-    if (!profs) {
+    if (!profData.profs) {
       return [];
     } else if (!query) {
-      return profs;
+      return profData.profs;
     }
     const token1 = query.includes(' ') ? query.split(' ')[0] : null;
     const token2 = query.includes(' ') ? query.split(' ')[1] : null;
-    return profs!.filter((prof: Prof) => {
+    return profData.profs!.filter((prof: Prof) => {
       const profName = prof.instructor_name.toLowerCase();
       const includesToken1: boolean = (token1 && profName.includes(token1)) as boolean;
       const includesToken2: boolean = (token2 && profName.includes(token2)) as boolean;
       return profName.includes(query.toLowerCase()) || (includesToken1 && includesToken2);
     });
-  }, [profs, query]);
+  }, [profData.profs, query]);
 
   /**
    * Give precedence to courses, then to profs. Give precedence to matches which start with the
@@ -67,7 +67,7 @@ const SearchBar: FC<SearchBarProps> = ({
    */
   const compiledResults: Result[] = useMemo(() => {
     if (!query) {
-      return courses ? courses!.slice(0, 3) : [];
+      return data.courses ? data.courses!.slice(0, 3) : [];
     }
     const res: Result[] = [];
     /** Add those courses that start with query */
@@ -90,7 +90,7 @@ const SearchBar: FC<SearchBarProps> = ({
       }
     }
     return res.slice(0, 5);
-  }, [courses, filteredCourses, filteredProfs, query]);
+  }, [data.courses, filteredCourses, filteredProfs, query]);
 
   const activeResult: Result = useMemo(() => {
     return activeIndex === -1 ? null : compiledResults[activeIndex!];

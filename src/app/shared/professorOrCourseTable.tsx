@@ -65,7 +65,7 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
    * a given course, but for professor professor IDs isn't particularly indicative,
    * so we fetch their full name instead (given their ID).
    */
-  const { profMap } = useProfs();
+  const { maps } = useProfs();
 
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
     column: forProf ? 'professor' : 'course_id',
@@ -79,7 +79,7 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
       return [...rows];
     }
     return [...rows].filter(row => {
-      return forProf ? profMap!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
+      return forProf ? maps.profs!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
         : (row.course_id as string).toLowerCase().includes(searchValue.toLowerCase());
       }
     );
@@ -111,11 +111,11 @@ const ProfessorOrCourseTable: FC<ProfessorOrCourseTableProps> = ({
           }}
           className="text-sm hover:underline cursor-pointer"
         >
-          {profMap!.get(profId)?.instructor_name}
+          {maps.profs!.get(profId)?.instructor_name}
         </Link>
       </TableCell>
     );
-  }, [profMap]);
+  }, [maps.profs]);
 
   const formatCourse: (courseId: string) => JSX.Element = useCallback((courseId: string) => {
     return (

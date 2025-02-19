@@ -7,12 +7,12 @@ export interface BannerProps {}
 const Banner: FC<BannerProps> = ({
 
 }: BannerProps) => {
+
   return (
-    <div className="flex flex-row gap-4 border rounded-lg bg-gray-200 p-4">
+    <div className="flex flex-row gap-4 border rounded-lg bg-gray-200 p-4 items-center">
       <InfoIcon style={{ width: '20px' }} />
       <p className="text-sm">
-        Welcome to an updated version of Course Critique! I think you'll enjoy
-        this newer and hopefully improved version of the site. If you have any questions or feedback, please don't hesitate
+        Welcome to an updated version of Course Critique! If you have any questions or feedback, please don't hesitate
         to 
         <a 
           href="mailto:vmiranda6@gatech.edu" 

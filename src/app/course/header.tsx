@@ -19,10 +19,9 @@ const CourseHeader: FC<CourseHeaderProps> = ({
   setSelectedTab,
 }: CourseHeaderProps) => {
 
-  const [addedToSchedule, setAddedToSchedule] = useState(false);
   const [seeOthers, setSeeOthers] = useState<boolean>(false);
   
-  const { profMap } = useProfs();
+  const { maps: profMaps } = useProfs();
   const router = useRouter();
 
   const formatProfs: (start: number, end: number) => JSX.Element[] = useCallback((start, end) => {
@@ -35,11 +34,11 @@ const CourseHeader: FC<CourseHeaderProps> = ({
           }}
           className="text-sm hover:underline cursor-pointer text-gray-800"
         >
-          {profMap!.get(id)?.instructor_name}
+          {profMaps.profs!.get(id)?.instructor_name}
         </Link>
       );
     })
-  }, [profMap, taughtByIds]);
+  }, [profMaps.profs, taughtByIds]);
 
   return (
     <div className="flex flex-col w-full shadow-sm">
@@ -71,26 +70,6 @@ const CourseHeader: FC<CourseHeaderProps> = ({
             </>
           )}
         </div>
-        <RadioGroup
-          value={addedToSchedule ? 'add-to' : ''}
-          onValueChange={() => {
-            setAddedToSchedule(true);
-          }}
-          size="sm"
-        >
-          <Radio 
-            value="add-to"
-            onClick={(e) => {
-              if (addedToSchedule) {
-                e.preventDefault();
-                setAddedToSchedule(false);
-              }
-            }}
-            size="sm"
-          >
-            Add to schedule
-          </Radio>
-        </RadioGroup>
       </div>
 
       <Tabs 

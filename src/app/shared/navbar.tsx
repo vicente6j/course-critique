@@ -9,11 +9,13 @@ import ActionDropdown, { ActionDropdownOption } from "../components/actionDropdo
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import RankingsDropdown from "./rankingsDropdown";
+import { useCourses } from "../server-contexts/course/provider";
 
 export interface NavbarProps {}
 const Navbar: FC<NavbarProps> = ({
 
 }: NavbarProps) => {
+
 
   /** 
    * If we use our custom useSession hook, there's a small performance improvement
