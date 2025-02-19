@@ -24,6 +24,7 @@ export const courseCols: RankingsTableColumn[] = [
   { key: "course_id", label: "Course ID", },
   { key: "course_name", label: "Course Name", },
   { key: "GPA", label: "Average GPA", },
+  { key: "enrollment", label: "Enrollment", },
 ];
 
 export const profCols: RankingsTableColumn[] = [
@@ -200,6 +201,12 @@ const RankingsTable: FC<RankingsTableProps> = ({
                       <TableCell
                         className="pl-5"
                       >
+                        {value}
+                      </TableCell>
+                    );
+                  } else if (columnKey === 'enrollment') {
+                    return (
+                      <TableCell>
                         {value}
                       </TableCell>
                     );

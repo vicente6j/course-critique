@@ -20,8 +20,13 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
 
-  const { getSortedAveragesByTermMap, maps } = useCourses();
-  const { tabs } = useRankings();
+  const { 
+    getSortedAveragesByTermMap, 
+    maps 
+  } = useCourses();
+  const { 
+    tabs 
+  } = useRankings();
 
   const generateRankingsMap: () => void = useCallback(() => {
     const sortedTermsMap = getSortedAveragesByTermMap();
@@ -36,6 +41,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
           course_id: termAverage.course_id,
           course_name: maps.courseMap!.get(termAverage.course_id)?.course_name || 'Unknown course',
           GPA: termAverage.GPA!,
+          enrollment: termAverage.total,
         });
         rank++;
       }
@@ -101,8 +107,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
               <h1 className="heading-md">Hardest Classes Rankings</h1>
             </div>
             <p className="text-sm w-full text-gray-600">
-              In order to be on the list, the class must have enrolled more than three students
-              and (naturally) have had a non-null GPA.
+              In order to be on the list, the class must have had a non-null GPA.
             </p>
           </div>
           <div className="flex flex-col gap-2">

@@ -3,6 +3,8 @@ import { useDegreePrograms } from "../server-contexts/degree-programs/provider";
 import { DegreeProgramAveragesByTerm } from "../api/degree-programs";
 import { metadata } from "../metadata";
 import PersonIcon from '@mui/icons-material/Person';
+import InfoIcon from '@mui/icons-material/Info';
+import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 
 export interface PopularDegreeProgramsProps {}
 
@@ -29,7 +31,7 @@ const PopularDegreePrograms: FC<PopularDegreeProgramsProps> = ({
 
   const numItems: number = useMemo(() => {
     /** Want around 350px per item */
-    return (screenWidth - 310) / 300;
+    return (screenWidth - 340) / 290;
   }, [screenWidth]);
 
   const popularDegreePrograms: DegreeProgramAveragesByTerm[] | null = useMemo(() => {
@@ -52,17 +54,11 @@ const PopularDegreePrograms: FC<PopularDegreeProgramsProps> = ({
 
     return (
       <div 
-        className="h-fit min-w-[280px] max-w-[280px] bg-gray-200 cursor-pointer px-6 pb-4 flex flex-col rounded-md hover:bg-gray-300"
+        className="min-w-[280px] max-w-[280px] min-h-[120px] max-h-[120px] bg-gray-200 cursor-pointer px-6 py-4 flex flex-col rounded-md hover:bg-gray-300 flex-grow"
         key={programId}
       >
-        <div className="flex flex-col gap-2 py-4 px-2 overflow-y-auto">
+        <div className="flex flex-col gap-2 overflow-y-auto flex-grow">
           <h1 className="text-md text-left">{name}</h1>
-          <div className="flex flex-row gap-2 items-center">
-            <PersonIcon 
-              style={{ width: '20px' }}
-            />
-            <p className="text-sm">{averagesInfo?.enrollment || 0}</p>
-          </div>
         </div>
         <p className="text-sm text-gray-600">{maps.degreePrograms?.get(programId)?.total_credits} hours</p>
       </div>
@@ -70,8 +66,20 @@ const PopularDegreePrograms: FC<PopularDegreeProgramsProps> = ({
   }, [maps.degreePrograms]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="heading-md font-regular">Popular Degree Programs</h1>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-row gap-4 items-center">
+        <h1 className="heading-md font-regular">Popular Degree Programs</h1>
+        <NextToolTip 
+          content={`Weighing estimated enrollment by program`} 
+          className="w-fit"
+        >
+          <InfoIcon 
+            style={{ 
+              width: '20px' 
+            }} 
+          />
+        </NextToolTip>
+      </div>
       <div className="flex flex-row gap-8 justify-center">
         {popularDegreePrograms.slice(0, numItems).map(program => (
           degreeProgramCard(program.program)
