@@ -1,9 +1,7 @@
 import { FC } from "react";
 import { Link } from "@nextui-org/react";
 
-export interface RightHandPanelProps {
-
-};
+export interface RightHandPanelProps {};
 
 const RightHandPanel: FC<RightHandPanelProps> = ({
 

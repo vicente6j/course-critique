@@ -13,60 +13,28 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
 
 }: RankingsPageProfClientProps) => {
 
-  const [rankingsMap, setRankingsMap] = useState<Map<string, RankingsTableRow[]>>(new Map());
   const [termSelected, setTermSelected] = useState<string>('Summer 2024');
   const [searchValue, setSearchValue] = useState<string>('');
   const [showAll, setShowAll] = useState<boolean>(false);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
 
-  const { getSortedAveragesByTermMap, maps: profMaps } = useProfs();
-  const { tabs } = useRankings();
-  const { maps: courseMaps } = useCourses();
+  const { 
+    tabs,
+    profRankingsMap,
+    loading,
+  } = useRankings();
 
-  const generateRankingsMap: () => void = useCallback(() => {
-    if (!profMaps.coursesTaughtByTerm) {
-      return;
-    }
-    /** 
-     * This is just a dictionary which maps term to a list of <textbf>sorted professors</textbf>
-     * by GPA only.
-     */
-    const sortedTermsMap = getSortedAveragesByTermMap();
-    const rankingsMap = new Map();
-
-    for (const term of sortedTermsMap!.keys()) {
-      rankingsMap.set(term, []);
-      let rank = 1;
-      for (const termAverage of sortedTermsMap!.get(term)!) {
-        let courses_taught_this_sem = profMaps.coursesTaughtByTerm!.get(term)!.get(termAverage.prof_id)?.courses_taught;
-        courses_taught_this_sem = courses_taught_this_sem!.filter((course) => (
-          profMaps.coursesTaughtByTerm?.has(course)
-        ));
-
-        rankingsMap.get(term)!.push({
-          key: termAverage.prof_id,
-          rank: rank,
-          prof_id: termAverage.prof_id,
-          courses_taught_this_sem: courses_taught_this_sem,
-          GPA: termAverage.GPA!,
-        });
-        rank++;
-      }
-    }
-    setRankingsMap(rankingsMap);
-  }, [getSortedAveragesByTermMap, profMaps.coursesTaughtByTerm]);
-
-  useEffect(() => {
-    generateRankingsMap();
-  }, [generateRankingsMap]);
+  const {
+    maps: profMaps,
+  } = useProfs();
 
   const numPages: number = useMemo(() => {
-    if (!rankingsMap || !rankingsMap.has(termSelected)) {
+    if (!profRankingsMap || !profRankingsMap.has(termSelected)) {
       return 0;
     }
-    return Math.ceil(rankingsMap.get(termSelected!)!.length / rowsPerPage);
-  }, [rankingsMap, termSelected, rowsPerPage]);
+    return Math.ceil(profRankingsMap.get(termSelected!)!.length / rowsPerPage);
+  }, [profRankingsMap, termSelected, rowsPerPage]);
 
   const onRowsPerPageChange: (e: any) => void = useCallback((e: any) => {
     setRowsPerPage(Number(e.target.value));
@@ -84,14 +52,14 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
   }, []);
 
   const filteredItems: RankingsTableRow[] = useMemo(() => {
-    if (!rankingsMap || !rankingsMap.has(termSelected) || !profMaps.profs) {
+    if (!profRankingsMap || !profRankingsMap.has(termSelected)) {
       return [];
     }
-    return rankingsMap.get(termSelected)!.filter((row) => {
+    return profRankingsMap.get(termSelected)!.filter((row) => {
       const name = profMaps.profs!.get(row.prof_id as string)!.instructor_name;
       return name.toLowerCase().includes(searchValue.toLowerCase())
     });
-  }, [searchValue, rankingsMap, termSelected, profMaps.profs]);
+  }, [searchValue, profRankingsMap, termSelected, profMaps.profs]);
 
   const finalItems: RankingsTableRow[] = useMemo(() => {
     if (!filteredItems) {

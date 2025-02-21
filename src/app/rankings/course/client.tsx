@@ -6,6 +6,8 @@ import { useCourses } from "@/app/server-contexts/course/provider";
 import CustomSearchbar from "@/app/shared/customSearchbar";
 import RightHandPanel from "./rightHandPanel";
 import { useRankings } from "@/app/hooks/useRankings";
+import { dataTerms } from "@/app/metadata";
+import { Spinner } from "@heroui/spinner";
 
 export interface RankingsPageClientProps {}
 
@@ -13,52 +15,30 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
 
 }: RankingsPageClientProps) => {
 
-  const [termMap, setTermMap] = useState<Map<string, RankingsTableRow[]>>(new Map());
   const [termSelected, setTermSelected] = useState<string>('Fall 2024');
   const [searchValue, setSearchValue] = useState<string>('');
   const [showAll, setShowAll] = useState<boolean>(false);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
+  const [differentialStateChecked, setDifferentialStateChecked] = useState<boolean>(false);
+  const [rankingTableRenderCount, setRankingTableRenderCount] = useState<number>(0);
 
-  const { 
-    getSortedAveragesByTermMap, 
-    maps 
-  } = useCourses();
-  const { 
-    tabs 
+  const {
+    courseRankingsMap,
+    loading: rankingsLoading,
+    tabs
   } = useRankings();
 
-  const generateRankingsMap: () => void = useCallback(() => {
-    const sortedTermsMap = getSortedAveragesByTermMap();
-    const map = new Map();
-    for (const term of sortedTermsMap!.keys()) {
-      map.set(term, []);
-      let rank = 1;
-      for (const termAverage of sortedTermsMap!.get(term)!) {
-        map.get(term)!.push({
-          key: termAverage.course_id,
-          rank: rank,
-          course_id: termAverage.course_id,
-          course_name: maps.courseMap!.get(termAverage.course_id)?.course_name || 'Unknown course',
-          GPA: termAverage.GPA!,
-          enrollment: termAverage.total,
-        });
-        rank++;
-      }
-    }
-    setTermMap(map);
-  }, [getSortedAveragesByTermMap]);
-
   useEffect(() => {
-    generateRankingsMap();
-  }, [generateRankingsMap]);
+    setRankingTableRenderCount(prev => prev + 1);
+  }, [differentialStateChecked]);
 
   const numPages: number = useMemo(() => {
-    if (!termMap || !termMap.has(termSelected)) {
+    if (!courseRankingsMap || !courseRankingsMap.has(termSelected)) {
       return 0;
     }
-    return Math.ceil(termMap.get(termSelected!)!.length / rowsPerPage);
-  }, [termMap, termSelected]);
+    return Math.ceil(courseRankingsMap.get(termSelected!)!.length / rowsPerPage);
+  }, [courseRankingsMap, termSelected]);
 
   const onRowsPerPageChange: (e: any) => void = useCallback((e: any) => {
     setRowsPerPage(Number(e.target.value));
@@ -76,13 +56,13 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
   }, []);
 
   const filteredItems: RankingsTableRow[] = useMemo(() => {
-    if (!termMap || !termMap.has(termSelected)) {
+    if (!courseRankingsMap || !courseRankingsMap.has(termSelected)) {
       return [];
     }
-    return termMap.get(termSelected)!.filter((row) => 
+    return courseRankingsMap.get(termSelected)!.filter((row) => 
       (row.course_id as string).toLowerCase().includes(searchValue.toLowerCase())
     );
-  }, [searchValue, termMap, termSelected]);
+  }, [searchValue, courseRankingsMap, termSelected]);
 
   const finalItems: RankingsTableRow[] = useMemo(() => {
     if (!filteredItems) {
@@ -107,7 +87,9 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
               <h1 className="heading-md">Hardest Classes Rankings</h1>
             </div>
             <p className="text-sm w-full text-gray-600">
-              In order to be on the list, the class must have had a non-null GPA.
+              In order to obtain this list, we naturally filter across all courses 
+              which contain an invalid GPA, e.g. recitation sections, lab sections, 
+              research, etc.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -120,7 +102,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
               disableAnimation
               classNames={{
                 tabList: "flex flex-row flex-wrap gap-0 bg-transparent items-center scrollbar-hide rounded-none p-0",
-                tab: "w-fit bg-default-100 rounded-none data-[selected=true]:rounded-lg",
+                tab: "w-[120px] bg-default-100 rounded-none data-[selected=true]:rounded-lg",
               }}
               items={showAll 
                 ? [...tabs] 
@@ -144,19 +126,65 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
             </p>
           </div>
 
-          <CustomSearchbar
-            searchValue={searchValue}
-            onClear={onClear}
-            onSearchChange={onSearchChange}
-            variation={'regular'}
-            searchString={`Search for a course...`}
-          />
-
-          <div className="flex flex-col gap-8">
-            <RankingsTable 
-              rows={finalItems} 
-              type={'course'}
+          <div className="flex flex-row gap-4 items-center">
+            <CustomSearchbar
+              searchValue={searchValue}
+              onClear={onClear}
+              onSearchChange={onSearchChange}
+              variation={'regular'}
+              searchString={`Search for a course...`}
             />
+            <div 
+              className="flex flex-row gap-2 items-center cursor-pointer"
+              onClick={(e) => setDifferentialStateChecked(!differentialStateChecked)}
+            >
+              <div className="flex gap-2 relative">
+                <input 
+                  type="checkbox" 
+                  id="differential-checkbox" 
+                  className="
+                    relative peer shrink-0 
+                    appearance-none w-4 h-4 border border-gray-300 
+                    rounded-md bg-white checked:bg-blue-500 checked:border-0
+                    cursor-pointer focus:outline-none focus:ring-offset-0
+                  "
+                  checked={differentialStateChecked}
+                />
+                <svg
+                  className="
+                    absolute 
+                    w-3 h-3
+                    hidden peer-checked:block
+                    pointer-events-none
+                    left-0.5 top-0.5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <p className="text-sm text-gray-500">Show differential</p>
+            </div>
+
+          </div>
+
+          <div className="flex flex-col gap-8 min-h-[600px]">
+            {rankingsLoading ? (
+              <Spinner />
+            ) : (
+              <RankingsTable 
+                rows={finalItems} 
+                type={'course'}
+                showDifferential={differentialStateChecked}
+                key={rankingTableRenderCount}
+              />
+            )}
+
             <div className="flex flex-col gap-4 mb-24">
               <label className="flex items-center text-sm">
                 Rows per page:

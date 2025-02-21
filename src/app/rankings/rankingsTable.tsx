@@ -13,30 +13,33 @@ import { formatGPA } from "../shared/gradeTable";
 import { Link } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { useProfs } from "../server-contexts/prof/provider";
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import RemoveIcon from '@mui/icons-material/Remove';
 
 export interface RankingsTableColumn {
   key: string;
   label: string;
+  width: string;
 }
 
 export const courseCols: RankingsTableColumn[] = [
-  { key: "rank", label: "Rank", },
-  { key: "course_id", label: "Course ID", },
-  { key: "course_name", label: "Course Name", },
-  { key: "GPA", label: "Average GPA", },
-  { key: "enrollment", label: "Enrollment", },
+  { key: "rank", label: "Rank", width: 'w-[10%]' },
+  { key: "course_id", label: "Course ID", width: 'w-[15%]' },
+  { key: "course_name", label: "Course Name", width: 'w-[55%]' },
+  { key: "GPA", label: "Average GPA", width: 'w-[20%]' },
 ];
 
 export const profCols: RankingsTableColumn[] = [
-  { key: "rank", label: "Rank", },
-  { key: "prof_id", label: "Profesor Name", },
-  { key: "courses_taught_this_sem", label: "Course Taught This Semester", },
-  { key: "GPA", label: "Average GPA", },
+  { key: "rank", label: "Rank", width: 'w-[10%]' },
+  { key: "prof_id", label: "Profesor Name", width: 'w-[20%]' },
+  { key: "courses_taught_this_sem", label: "Course Taught This Semester", width: 'w-[50%]' },
+  { key: "GPA", label: "Average GPA", width: 'w-[20%]' },
 ];
 
 export interface RankingsTableRow {
   key: string;
-  [key: string]: number | string;
+  [key: string]: number | string | null;
 }
 
 export type RankingsTableType = 'prof' | 'course';
@@ -44,10 +47,12 @@ export type RankingsTableType = 'prof' | 'course';
 export interface RankingsTableProps {
   rows: RankingsTableRow[];
   type: RankingsTableType;
+  showDifferential?: boolean;
 }
 
 const RankingsTable: FC<RankingsTableProps> = ({
   rows,
+  showDifferential,
   type,
 }: RankingsTableProps) => {
   
@@ -126,7 +131,7 @@ const RankingsTable: FC<RankingsTableProps> = ({
                   } else if (columnKey === 'rank') {
                     return (
                       <TableCell
-                        className="pl-5"
+                        className="text-center"
                       >
                         {value}
                       </TableCell>
@@ -151,6 +156,7 @@ const RankingsTable: FC<RankingsTableProps> = ({
           {(column) => (
             <TableColumn 
               key={column.key}
+              className={`${column.width}`}
             >
               {column.label}
             </TableColumn>
@@ -197,17 +203,59 @@ const RankingsTable: FC<RankingsTableProps> = ({
                       </TableCell>
                     );
                   } else if (columnKey === 'rank') {
+                    const rankingDiff = item['rankingDifferential'] === null ? null : item['rankingDifferential'] as number;
+                    const absDiff = rankingDiff !== null ? Math.abs(rankingDiff) : null;
+                    
                     return (
                       <TableCell
-                        className="pl-5"
+                        className="text-left pl-5"
                       >
-                        {value}
-                      </TableCell>
-                    );
-                  } else if (columnKey === 'enrollment') {
-                    return (
-                      <TableCell>
-                        {value}
+                        {showDifferential ? (
+                          <div className="flex flex-row gap-2 items-center">
+                            {value}
+                            <div className="flex items-center">
+                              {rankingDiff === null ? (
+                                <p className="text-xs text-gray-800 px-2 py-1 rounded-lg bg-gray-200">
+                                  NEW
+                                </p>
+                              ) : rankingDiff < 0 ? (
+                                <ArrowUpwardIcon 
+                                  style={{
+                                    color: 'rgb(16,185,129)',
+                                    width: '16px',
+                                  }}
+                                />
+                              ) : rankingDiff > 0 ? (
+                                <ArrowDownwardIcon 
+                                  style={{
+                                    color: 'rgb(239,68,68)',
+                                    width: '16px'
+                                  }}
+                                />
+                              ) : (
+                                <RemoveIcon
+                                  style={{
+                                    color: '#666',
+                                    width: '16px'
+                                  }}
+                                />
+                              )}
+                              {rankingDiff !== null && (
+                                <p 
+                                  className={`${rankingDiff < 0 
+                                    ? 'text-green-500' : rankingDiff > 0 
+                                    ? 'text-red-500' : 'text-gray-500'}
+                                    text-sm
+                                  `}
+                                >
+                                  {absDiff}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <>{value}</>
+                        )}
                       </TableCell>
                     );
                   }

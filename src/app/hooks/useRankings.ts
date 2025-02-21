@@ -40,28 +40,28 @@ export const useRankings = (): UseRankingsValue => {
    */
   const generateCourseRankingsMap: () => void = useCallback(() => {
     const sortedTermsMap = getSortedAveragesByTermMap();
-    if (!sortedTermsMap) {
-      return;
-    }
-    const termMap = new Map();
+    const map = new Map();
+
     for (const term of sortedTermsMap!.keys()) {
-      termMap.set(term, []);
-      let rank = 1;
-      for (const termAverage of sortedTermsMap!.get(term)!) {
-        if (termAverage.course_id === 'ALL') {
-          continue;
-        }
-        termMap.get(term)!.push({
+      map.set(term, []);
+      sortedTermsMap.get(term)!.forEach((termAverage, index) => {
+        const termIndex = dataTerms.findIndex(termA => termA === term);
+        const prevTerm = dataTerms[termIndex - 1 < 0 ? 0 : termIndex - 1];
+        const prevRank = sortedTermsMap.get(prevTerm)!.findIndex(termAverageA => termAverageA.course_id === termAverage.course_id);
+        const rankingDifferential = prevRank === -1 ? null : index - prevRank;
+
+        map.get(term)!.push({
           key: termAverage.course_id,
-          rank: rank,
+          rank: index + 1,
           course_id: termAverage.course_id,
           course_name: maps.courseMap!.get(termAverage.course_id)?.course_name || 'Unknown course',
           GPA: termAverage.GPA!,
+          enrollment: termAverage.total,
+          rankingDifferential: rankingDifferential,
         });
-        rank++;
-      }
+      })
     }
-    setCourseRankingsMap(termMap);
+    setCourseRankingsMap(map);
   }, [getSortedAveragesByTermMap, maps]);
 
   const generateProfRankingsMap: () => void = useCallback(() => {

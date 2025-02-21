@@ -5,6 +5,7 @@ import { metadata } from "../metadata";
 import PersonIcon from '@mui/icons-material/Person';
 import InfoIcon from '@mui/icons-material/Info';
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
+import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 
 export interface PopularDegreeProgramsProps {}
 

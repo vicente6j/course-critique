@@ -1,3 +1,4 @@
+import {heroui} from '@heroui/theme';
 import {nextui} from '@nextui-org/theme';
 import type { Config } from "tailwindcss";
 
@@ -7,6 +8,7 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./node_modules/@nextui-org/theme/dist/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@heroui/theme/dist/components/(checkbox|form).js"
   ],
   darkMode: 'class',
   theme: {
@@ -20,9 +22,18 @@ const config: Config = {
             marginLeft: "6px",
           },
         },
+        fadeIn: {
+          '0%': { 
+            opacity: '0' 
+          },
+          '100%': { 
+            opacity: '1' 
+          },
+        }
       },
       animation: {
         moveRight: "moveRight 0.3s ease-in-out",
+        fadeIn: "fadeIn 1s ease-in"
       },
       transitionProperty: {
         'margin': 'margin-left',  // Apply transition to margin-left
@@ -62,6 +73,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [nextui()],
+  plugins: [nextui(),heroui()],
 };
 export default config;
