@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authConfig";
 import { SessionProvider } from "next-auth/react";
 import { Footer } from "@/app/shared/footer";
-import Navbar from "@/app/shared/navbar";
+import Navbar from "@/app/navigation/navbar";
 
 export interface SignInProps {}
 

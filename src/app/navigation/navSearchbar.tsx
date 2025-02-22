@@ -8,16 +8,15 @@ import { useCourses } from "../server-contexts/course/provider";
 import { useProfs } from "../server-contexts/prof/provider";
 import { CourseInfo } from "../api/course";
 import { ProfInfo } from "../api/prof";
+import { VariableSizeListRowType } from "../shared/courseSearchbar";
 
-export type Course = CourseInfo;
-export type Prof = ProfInfo;
 export type Result = ProfInfo | CourseInfo | null;
 
-export interface SearchBarProps {}
+export interface NavSearchbarProps {}
 
-const SearchBar: FC<SearchBarProps> = ({
+const NavSearchbar: FC<NavSearchbarProps> = ({
 
-}: SearchBarProps) => {
+}: NavSearchbarProps) => {
   
   const [query, setQuery] = useState<string | null>('');
   const [activeIndex, setActiveIndex] = useState<number | null>(-1);
@@ -26,26 +25,30 @@ const SearchBar: FC<SearchBarProps> = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<VariableSizeList | null>(null);
 
-  const { data } = useCourses();
-  const { data: profData } = useProfs();
+  const { 
+    data 
+  } = useCourses();
+
+  const { 
+    data: profData 
+  } = useProfs();
   const router = useRouter();
 
-  const filteredCourses: Course[] = useMemo(() => {
+  const filteredCourses: CourseInfo[] = useMemo(() => {
     if (!data.courses) {
       return [];
     } else if (!query) {
       return data.courses;
     }
-    return data.courses?.filter(course => {
-      return course.id.toLowerCase().includes(query.toLowerCase())
-    });
+    return data.courses?.filter(course => (
+      course.id.toLowerCase().includes(query.toLowerCase())
+    ));
   }, [data.courses, query]);
 
   /**
-   * Filters profs via obtaining tokens (split by space)
-   * and checking for presence in query string.
+   * Filters profs via obtaining tokens (split by space) and checking for presence in query string.
    */
-  const filteredProfs: Prof[] = useMemo(() => {
+  const filteredProfs: ProfInfo[] = useMemo(() => {
     if (!profData.profs) {
       return [];
     } else if (!query) {
@@ -53,17 +56,18 @@ const SearchBar: FC<SearchBarProps> = ({
     }
     const token1 = query.includes(' ') ? query.split(' ')[0] : null;
     const token2 = query.includes(' ') ? query.split(' ')[1] : null;
-    return profData.profs!.filter((prof: Prof) => {
+    return profData.profs!.filter(prof => {
       const profName = prof.instructor_name.toLowerCase();
-      const includesToken1: boolean = (token1 && profName.includes(token1)) as boolean;
-      const includesToken2: boolean = (token2 && profName.includes(token2)) as boolean;
+      const includesToken1 = (token1 && profName.includes(token1)) as boolean;
+      const includesToken2 = (token2 && profName.includes(token2)) as boolean;
       return profName.includes(query.toLowerCase()) || (includesToken1 && includesToken2);
     });
   }, [profData.profs, query]);
 
   /**
-   * Give precedence to courses, then to profs. Give precedence to matches which start with the
-   * query string rather than simply include it.
+   * Give precedence to courses, then to profs. 
+   * 
+   * - Within profs, gives precedence to matches which start with the query string rather than simply include it.
    */
   const compiledResults: Result[] = useMemo(() => {
     if (!query) {
@@ -101,21 +105,20 @@ const SearchBar: FC<SearchBarProps> = ({
     setActiveIndex(-1);
   }, []);
 
-  /** Assumes non-nullness. */
-  const isCourse: (result: Result) => boolean = useCallback((result: Result) => {
-    return 'course_name' in result! || 'course_id' in result!;
+  const isCourse: (result: Result) => boolean = useCallback((result) => {
+    return result !== null && ('course_name' in result! || 'course_id' in result!);
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     switch (e.key) {
       case 'Enter':
-        const result: Result = activeIndex === -1 ? compiledResults[0] : compiledResults[activeIndex!];
+        const immResult = activeIndex === -1 ? compiledResults[0] : compiledResults[activeIndex!];
         setIsFocused(false);
         setActiveIndex(-1);
-        if (isCourse(result)) {
-          router.push(`/course?courseID=${(result as Course).id}`);
+        if (isCourse(immResult)) {
+          router.push(`/course?courseID=${(immResult as CourseInfo).id}`);
         } else {
-          router.push(`/prof?profID=${(result as Prof).instructor_id}`);
+          router.push(`/prof?profID=${(immResult as ProfInfo).instructor_id}`);
         }
         setQuery('');
         break;
@@ -150,12 +153,12 @@ const SearchBar: FC<SearchBarProps> = ({
     }
   }, [compiledResults]);
 
-  const getItemSize: (index: number) => number = useCallback((index: number) => {
-    const result: Result = compiledResults[index]!;
+  const getItemSize: (index: number) => number = useCallback((index) => {
+    const result = compiledResults[index]!;
     if (isCourse(result)) {
       return 40;
     }
-    const prof: Prof = result as Prof;
+    const prof = result as ProfInfo;
     const profName = prof.instructor_name;
     const baseSize = 40;
     const extraHeight = profName.length > 40 ? 20 : 0;
@@ -163,16 +166,16 @@ const SearchBar: FC<SearchBarProps> = ({
   }, [compiledResults, compiledResults.length]);
 
   const getTotalHeight: (items: any[]) => number = useCallback((items: any[]) => {
-    return items.reduce((totalHeight: number, _, index: number) => totalHeight + getItemSize(index), 0);
+    return items.reduce((totalHeight, _, index) => totalHeight + getItemSize(index), 0);
   }, [getItemSize]);
 
   const handleEventClick: (index: number) => void = useCallback((index: number) => {
     const result: Result = compiledResults[index]!;
     if (isCourse(result)) {
-      const courseId = (compiledResults[index] as Course).id;
+      const courseId = (compiledResults[index] as CourseInfo).id;
       router.push(`/course?courseID=${courseId}`);
     } else {
-      const instructorID = (compiledResults[index] as Prof).instructor_id;
+      const instructorID = (compiledResults[index] as ProfInfo).instructor_id;
       router.push(`/prof?profID=${instructorID}`);
     }
     setQuery('');
@@ -187,13 +190,18 @@ const SearchBar: FC<SearchBarProps> = ({
    * @param param0 
    * @returns 
    */
-  const Row: ({ index, style }: { index: number; style: React.CSSProperties }) => JSX.Element = useCallback(({ index, style }) => (
+  const Row: ({ 
+    index, 
+    style 
+  }: VariableSizeListRowType) => JSX.Element = useCallback(({ 
+    index, 
+    style 
+  }) => (
     <div 
       style={style}
       onClick={() => {
         handleEventClick(index);
         setActiveIndex(-1);
-        setQuery('');
         setIsFocused(false);
       }}
       onMouseEnter={() => setActiveIndex(index)}
@@ -201,13 +209,9 @@ const SearchBar: FC<SearchBarProps> = ({
       className={`${activeIndex == index && 'bg-gray-200'} text-sm cursor-pointer py-2 px-4 rounded-none`}
     >
       {isCourse(compiledResults[index]!) ? (
-        <>
-          {(compiledResults[index] as Course).id}
-        </>
+        (compiledResults[index] as CourseInfo).id
       ) : (
-        <>
-          {(compiledResults[index] as Prof).instructor_name}
-        </>
+        (compiledResults[index] as ProfInfo).instructor_name
       )}
     </div>
   ), [handleEventClick, compiledResults, activeIndex]);
@@ -219,11 +223,13 @@ const SearchBar: FC<SearchBarProps> = ({
           <div className="absolute t-0 l-0 ml-3 p-2 z-10 text-search">
             <span className="opacity-0">{query}</span>
             {isCourse(activeResult) ? (
-              <span className="text-gray-600">{(activeResult as Course).id.slice(query?.length || 0).toLowerCase()}</span>
-            ) : query && (activeResult as Prof).instructor_name.toLowerCase().startsWith(query) ? (
-              <span className="text-gray-600">{(activeResult as Prof).instructor_name.slice(query?.length || 0).toLowerCase()}</span>
-            ) : (
-              <></>
+              <span className="text-gray-600">
+                {(activeResult as CourseInfo).id.slice(query?.length || 0).toLowerCase()}
+              </span>
+            ) : query && (activeResult as ProfInfo).instructor_name.toLowerCase().startsWith(query) && (
+              <span className="text-gray-600">
+                {(activeResult as ProfInfo).instructor_name.slice(query?.length || 0).toLowerCase()}
+              </span>
             )}
           </div>
         )}
@@ -270,9 +276,7 @@ const SearchBar: FC<SearchBarProps> = ({
         </VariableSizeList>
       </div>
     </div>
-  )
-
-
+  );
 }
 
-export default SearchBar;
+export default NavSearchbar;

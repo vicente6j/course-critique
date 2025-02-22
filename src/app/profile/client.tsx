@@ -13,7 +13,9 @@ import { useDegreePrograms } from "../server-contexts/degree-programs/provider";
 import { DegreeProgram } from "../api/degree-programs";
 import { updateProfileField } from "../api/profile";
 import { Skeleton } from "@nextui-org/skeleton";
-import Dropdown from "../shared/selectionDropdown";
+import Dropdown, { SelectionOption } from "../shared/selectionDropdown";
+import { DegreeProgramType } from "../globalTypes";
+import { formatDate } from "../utils";
 
 export const suffixDict: Record<number, string> = {
   1: '1st',
@@ -35,21 +37,11 @@ const yearItems: DropdownMenuItem[] = [
   { key: '4th year', label: '4th year', }
 ];
 
-export const formatDate: (timestamp: string) => string = (timestamp: string) => {
-  if (timestamp === '') {
-    return '';
-  }
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(date);
-}
-
 export interface ProfilePageClientProps {}
 
 const ProfilePageClient: FC<ProfilePageClientProps> = ({
 
 }: ProfilePageClientProps) => {
-
-  const { profile, refetchProfile } = useProfile();
 
   const [selectedYear, setSelectedYear] = useState<string>('Select a year');
   const [selectedDegreeProgram, setSelectedDegreeProgram] = useState<string>('Select a degree program');
@@ -57,16 +49,23 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
   const [selectedMinorProgram, setSelectedMinorProgram] = useState<string>('Select a minor');
   const [level, setLevel] = useState<string>('Not specified');
   const [createdAt, setCreatedAt] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  const { degreePrograms, degreeProgramMap } = useDegreePrograms();
+  const { 
+    data,
+    maps,
+    loading: degreesLoading
+  } = useDegreePrograms();
 
-  const checkLevel: (program: DegreeProgram) => string = useCallback((program: DegreeProgram) => {
+  const { 
+    profile 
+  } = useProfile();
+
+  const checkLevel: (program: DegreeProgram) => string = useCallback((program) => {
     return program.id.includes('-bs') ? 'Undergraduate' : 'Graduate';
   }, []);
 
   const fetchFromProfile: () => void = useCallback(async () => {
-    if (!profile || !degreeProgramMap) {
+    if (!profile || !maps.degreePrograms) {
       return;
     }
     const year = profile.year;
@@ -74,45 +73,44 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
       setSelectedYear(year.toString());
     }
     const degree = profile.degree_program;
-    if (degree && degreeProgramMap.has(degree)) {
+    if (degree && maps.degreePrograms.has(degree)) {
       setSelectedDegreeProgram(degree);
-      const level = checkLevel(degreeProgramMap.get(degree)!)
+      const level = checkLevel(maps.degreePrograms.get(degree)!)
       setLevel(level);
     }
     const secondaryDegree = profile.secondary_degree_program;
-    if (secondaryDegree && degreeProgramMap.has(secondaryDegree)) {
+    if (secondaryDegree && maps.degreePrograms.has(secondaryDegree)) {
       setSelectedSecondaryDegreeProgram(secondaryDegree);
     }
     const minor = profile.minor_program;
-    if (minor && degreeProgramMap.has(minor)) {
+    if (minor && maps.degreePrograms.has(minor)) {
       setSelectedMinorProgram(minor);
     }
     const createdAt = profile.created_at;
     setCreatedAt(createdAt);
-    setIsLoading(false);
-  }, [profile, degreePrograms, degreeProgramMap]);
+  }, [profile, maps.degreePrograms]);
 
   useEffect(() => {
     fetchFromProfile();
   }, [fetchFromProfile]); 
   
   const nonMinorItems: DegreeProgram[] = useMemo(() => {
-    if (!degreePrograms) {
+    if (!data.degreePrograms) {
       return [];
     }
-    return degreePrograms.filter((degreeProgram: DegreeProgram) => {
+    return data.degreePrograms.filter(degreeProgram => {
       return !degreeProgram.id.includes('minor');
     });
-  }, [degreePrograms]);
+  }, [data.degreePrograms]);
 
   const minorItems: DegreeProgram[] = useMemo(() => {
-    if (!degreePrograms) {
+    if (!data.degreePrograms) {
       return [];
     }
-    return degreePrograms.filter((degreeProgram: DegreeProgram) => {
+    return data.degreePrograms.filter(degreeProgram => {
       return degreeProgram.id.includes('minor');
     });
-  }, [degreePrograms]);
+  }, [data.degreePrograms]);
   
   const handleSignOut: () => Promise<void> = useCallback(async () => {
     await signOut({
@@ -121,11 +119,8 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
     });
   }, []);
 
-  const handleYearChange: (year: string | number) => void = useCallback(async (year) => {
+  const handleYearChange: (year: number) => void = useCallback(async (year) => {
     setSelectedYear(String(year));
-    if (year === 'Select a year') {
-      return;
-    }
     const numericalYear = Number(year);
   }, [profile!.id]);
 
@@ -133,55 +128,38 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
    * Supports updating the degree program as well as the level of the user
    * (i.e. undergraduate or graduate).
    */
-  const handleDegreeProgramChange: (program: DegreeProgram | string) => void = useCallback(async (program) => {
-    if (program === 'Select a degree program') {
-      setSelectedDegreeProgram(program);
-      setLevel('Not specified');
-      return;
-    }
-    program = program as DegreeProgram;
+  const handleDegreeProgramChange: (program: DegreeProgram) => void = useCallback(async (program) => {
     setSelectedDegreeProgram(program.name);
-    const level = checkLevel(degreeProgramMap?.get(program.id)!);
+    const level = checkLevel(maps.degreePrograms?.get(program.id)!);
     setLevel(level); 
-  }, [degreeProgramMap]);
+  }, [maps.degreePrograms]);
 
-  const handleSecondaryDegreeProgramChange: (program: DegreeProgram | string) => void = useCallback(async (program) => {
-    if (program === 'Select a secondary degree program') {
-      setSelectedSecondaryDegreeProgram(program);
-      return;
-    }
-    program = program as DegreeProgram;
+  const handleSecondaryDegreeProgramChange: (program: DegreeProgram) => void = useCallback(async (program) => {
     setSelectedSecondaryDegreeProgram(program.name);
   }, [profile?.id]);
 
-  const handleMinorProgramChange: (program: DegreeProgram | string) => void = useCallback(async (program) => {
-    if (program === 'Select a minor') {
-      setSelectedMinorProgram(program);
-      return;
-    }
-    program = program as DegreeProgram;
+  const handleMinorProgramChange: (program: DegreeProgram) => void = useCallback(async (program) => {
     setSelectedMinorProgram(program.name);
   }, [profile?.id]);
 
-  const yearOptions: Array<{ 
-    label: string;
-    onClick: () => void;
-  }> = useMemo(() => {
-    return ['Select a year', 1, 2, 3, 4].map((year, idx) => (
-      {
-        label: String(year),
-        onClick: () => {
-          handleYearChange(year);
-        }
+  const yearOptions: SelectionOption[] = useMemo(() => {
+    const select = {
+      label: 'Select a year',
+      id: 'select',
+      onClick: () => {
+        setSelectedYear('');
       }
-    ))
+    };
+    const years = [1, 2, 3, 4].map(year => ({
+      label: String(year),
+      id: String(year),
+      onClick: () => handleYearChange(Number(year))
+    }));
+
+    return [select, ...years];
   }, []);
 
-  type DegreeProgramType = 'primary' | 'secondary';
-  const filterDegreePrograms: (searchValue: string, type: DegreeProgramType) => Array<{ 
-    label: string;
-    onClick: () => void;
-  }> = useCallback((searchValue, type) => {
+  const filterDegreePrograms: (searchValue: string, type: DegreeProgramType) => SelectionOption[] = useCallback((searchValue, type) => {
     if (!nonMinorItems) {
       return [];
     }
@@ -209,65 +187,71 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
         ...filteredItems,
       ];
     }
-    return filteredItems.map((program: DegreeProgram | string, idx) => (
-      {
-        label: program === 'Select a degree program' || program == 'Select a secondary degree program' 
-          ? program : (program as DegreeProgram).name,
-        onClick: () => {
-          if (type === 'primary') {
-            handleDegreeProgramChange(program);
-          } else {
-            handleSecondaryDegreeProgramChange(program);
-          }
+
+    const selectText = type === 'primary' ? 'Select a degree program' : 'Select a second degree program';
+    const select = {
+      label: selectText,
+      id: selectText,
+      onClick: () => {
+        if (type === 'primary') {
+          setSelectedDegreeProgram(selectText);
+        } else {
+          setSelectedSecondaryDegreeProgram(selectText);
         }
       }
-    ));
-  }, [nonMinorItems]);
-
-  const degreeProgramOptions: Array<{ 
-    label: string;
-    onClick: () => void;
-  }> = useMemo(() => {
-    if (!nonMinorItems) {
-      return [];
     }
-    return [
-      'Select a degree program',
-      ...nonMinorItems,
-    ].map((program: DegreeProgram | string, idx) => (
-      {
-        label: program === 'Select a degree program' ? program : (program as DegreeProgram).name,
-        onClick: () => {
+    const degreeItems = filteredItems.map((program: DegreeProgram) => ({
+      label: program.name,
+      id: program.name,
+      onClick: () => {
+        if (type === 'primary') {
           handleDegreeProgramChange(program);
-        }
-      }
-    ));
-  }, [nonMinorItems]);
-
-  const secondaryDegreeProgramOptions: Array<{ 
-    label: string;
-    onClick: () => void;
-  }> = useMemo(() => {
-    if (!nonMinorItems) {
-      return [];
-    }
-    return [
-      'Select a secondary degree program',
-      ...nonMinorItems,
-    ].map((program: DegreeProgram | string, idx) => (
-      {
-        label: program === 'Select a secondary degree program' ? program : (program as DegreeProgram).name,
-        onClick: () => {
+        } else {
           handleSecondaryDegreeProgramChange(program);
         }
       }
-    ));
+    }));
+    return [select, ...degreeItems];
   }, [nonMinorItems]);
 
-  const filterMinorProgramOptions: (searchValue: string) => Array<{ 
-    label: string;
-    onClick: () => void;
-  }> = useCallback((searchValue) => {
+  const degreeProgramOptions: SelectionOption[] = useMemo(() => {
+    if (!nonMinorItems) {
+      return [];
+    }
+
+    const select = {
+      label: 'Select a degree program',
+      id: 'select',
+      onClick: () => setSelectedDegreeProgram('Select a degree program')
+    };
+    const initOptions = nonMinorItems.map((program: DegreeProgram) => ({
+      label: program.name,
+      id: program.name,
+      onClick: () => handleDegreeProgramChange(program),
+    }));
+
+    return [select, ...initOptions];
+  }, [nonMinorItems]);
+
+  const secondaryDegreeProgramOptions: SelectionOption[] = useMemo(() => {
+    if (!nonMinorItems) {
+      return [];
+    }
+    const select = {
+      label: 'Select a secondary degree program',
+      id: 'select',
+      onClick: () => setSelectedSecondaryDegreeProgram('Select a secondary degree program')
+    };
+    const initOptions = nonMinorItems.map((program: DegreeProgram) => ({
+      label: program.name,
+      id: program.name,
+      onClick: () => handleSecondaryDegreeProgramChange(program),
+    }));
+
+    return [select, ...initOptions];
+  }, [nonMinorItems]);
+
+  const filterMinorProgramOptions: (searchValue: string) => SelectionOption[] = useCallback((searchValue) => {
     if (!minorItems) {
       return [];
     }
@@ -276,40 +260,35 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
       filteredMinors = minorItems.filter((item: DegreeProgram) => {
         return item.name.toLowerCase().includes(searchValue);
       });
-    } else {
-      filteredMinors = [
-        'Select a minor',
-        ...filteredMinors,
-      ];
     }
-    return filteredMinors.map((program: DegreeProgram | string, idx) => (
-      {
-        label: program === 'Select a minor' ? program : (program as DegreeProgram).name,
-        onClick: () => {
-          handleMinorProgramChange(program);
-        }
-      }
-    ));
+    const select = {
+      label: 'Select a minor',
+      id: 'Select a minor',
+      onClick: () => setSelectedMinorProgram('Select a minor')
+    };
+    const filteredOptions = filteredMinors.map((program: DegreeProgram) => ({
+      label: program.name,
+      id: program.name,
+      onClick: () => handleMinorProgramChange(program)
+    }));
+    return [select, ...filteredOptions];
   }, [minorItems]);
 
-  const minorProgramOptions: Array<{ 
-    label: string;
-    onClick: () => void;
-  }> = useMemo(() => {
+  const minorProgramOptions: SelectionOption[] = useMemo(() => {
     if (!minorItems) {
       return [];
     }
-    return [
-      'Select a minor',
-      ...minorItems,
-    ].map((program: DegreeProgram | string, idx) => (
-      {
-        label: program === 'Select a minor' ? program : (program as DegreeProgram).name,
-        onClick: () => {
-          handleMinorProgramChange(program);
-        }
-      }
-    ));
+    const select = {
+      label: 'Select a minor',
+      id: 'Select a minor',
+      onClick: () => setSelectedMinorProgram('Select a minor')
+    };
+    const filteredOptions = minorItems.map((program: DegreeProgram) => ({
+      label: program.name,
+      id: program.name,
+      onClick: () => handleMinorProgramChange(program)
+    }));
+    return [select, ...filteredOptions];
   }, [minorItems]);
 
   return (
@@ -321,7 +300,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
         </div>
         <div className="grid grid-cols-[auto_1fr] gap-y-4 gap-x-10 text-md items-center">
           <p className="text-md">Year</p>
-          <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
+          <Skeleton isLoaded={!degreesLoading} className="w-full inline-block max-w-96">
             <Dropdown 
               options={yearOptions}
               text={selectedYear === 'Select a year' ? 'Select a year' : `${suffixDict[parseInt(selectedYear)]} year`}
@@ -338,7 +317,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
           <p className="text-sm">{level}</p>
 
           <p className="text-md">Degree Program</p>
-          <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
+          <Skeleton isLoaded={!degreesLoading} className="w-full inline-block max-w-96">
             <Dropdown 
               options={degreeProgramOptions}
               text={selectedDegreeProgram}
@@ -356,7 +335,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
               <InfoIcon style={{ width: '18px' }} />
             </NextToolTip>
           </div>
-          <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
+          <Skeleton isLoaded={!degreesLoading} className="w-full inline-block max-w-96">
             <Dropdown 
               options={secondaryDegreeProgramOptions}
               text={selectedSecondaryDegreeProgram}
@@ -374,7 +353,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
               <InfoIcon style={{ width: '18px' }} />
             </NextToolTip>
           </div>
-          <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
+          <Skeleton isLoaded={!degreesLoading} className="w-full inline-block max-w-96">
             <Dropdown 
               options={minorProgramOptions}
               text={selectedMinorProgram}
@@ -386,7 +365,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
           </Skeleton>
 
           <p className="text-md">Created at</p>
-          <Skeleton isLoaded={!isLoading} className="w-full inline-block max-w-96">
+          <Skeleton isLoaded={!degreesLoading} className="w-full inline-block max-w-96">
             <p className="text-sm">{formatDate(createdAt)}</p>
           </Skeleton>
         </div>

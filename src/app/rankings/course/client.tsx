@@ -4,10 +4,11 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import RankingsTable, { RankingsTableRow } from "../rankingsTable";
 import { useCourses } from "@/app/server-contexts/course/provider";
 import CustomSearchbar from "@/app/shared/customSearchbar";
-import RightHandPanel from "./rightHandPanel";
 import { useRankings } from "@/app/hooks/useRankings";
 import { dataTerms } from "@/app/metadata";
 import { Spinner } from "@heroui/spinner";
+import Checkbox from "@/app/components/checkbox";
+import RightHandPanel from "../rightHandPanel";
 
 export interface RankingsPageClientProps {}
 
@@ -28,6 +29,10 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
     loading: rankingsLoading,
     tabs
   } = useRankings();
+
+  useEffect(() => {
+    setPage(1);
+  }, [termSelected]);
 
   useEffect(() => {
     setRankingTableRenderCount(prev => prev + 1);
@@ -89,7 +94,7 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
             <p className="text-sm w-full text-gray-600">
               In order to obtain this list, we naturally filter across all courses 
               which contain an invalid GPA, e.g. recitation sections, lab sections, 
-              research, etc.
+              research, etc. Enrollment not considered.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -134,43 +139,11 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
               variation={'regular'}
               searchString={`Search for a course...`}
             />
-            <div 
-              className="flex flex-row gap-2 items-center cursor-pointer"
-              onClick={(e) => setDifferentialStateChecked(!differentialStateChecked)}
-            >
-              <div className="flex gap-2 relative">
-                <input 
-                  type="checkbox" 
-                  id="differential-checkbox" 
-                  className="
-                    relative peer shrink-0 
-                    appearance-none w-4 h-4 border border-gray-300 
-                    rounded-md bg-white checked:bg-blue-500 checked:border-0
-                    cursor-pointer focus:outline-none focus:ring-offset-0
-                  "
-                  checked={differentialStateChecked}
-                />
-                <svg
-                  className="
-                    absolute 
-                    w-3 h-3
-                    hidden peer-checked:block
-                    pointer-events-none
-                    left-0.5 top-0.5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#fff"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </div>
-              <p className="text-sm text-gray-500">Show differential</p>
-            </div>
-
+            <Checkbox 
+              checked={differentialStateChecked}
+              setChecked={setDifferentialStateChecked}
+              checkboxLabel={'Show differential'}
+            />
           </div>
 
           <div className="flex flex-col gap-8 min-h-[600px]">
@@ -215,7 +188,9 @@ const RankingsPageCourseClient: FC<RankingsPageClientProps> = ({
             </div>
           </div>
         </div>
-        <RightHandPanel />
+        <RightHandPanel 
+          type={'course'}
+        />
       </div>
     </div>
   );  

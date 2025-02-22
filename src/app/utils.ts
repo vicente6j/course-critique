@@ -1,3 +1,10 @@
+/**
+ * Simply converts a term into a sortable integer (in ascending order).
+ * e.g. Fall 24 -> 20243, which is strictly greater than
+ *      Summer 24 -> 20242
+ * @param term 
+ * @returns 
+ */
 export const termToSortableInteger: (term: string) => number = (term) => {
   const [semester, year] = term.split(' ');
   const yearNum = parseInt(year);
@@ -32,3 +39,16 @@ export const getClientColorFromGPA: (gpa: number) => string = (gpa: number) => {
   }
   return color;
 };
+
+export const tailwindConversion: Record<string, string> = {
+  'text-green-500': 'rgb(16,185,129)',
+  'text-red-500': 'rgb(239,68,68)',
+}
+
+export const formatDate: (timestamp: string) => string = (timestamp: string) => {
+  if (timestamp === '') {
+    return '';
+  }
+  const date = new Date(timestamp);
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(date);
+}

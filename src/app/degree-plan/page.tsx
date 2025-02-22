@@ -2,7 +2,7 @@
 import { FC } from 'react';
 import DegreePlanPageClient from './client';
 import { Footer } from '../shared/footer';
-import Navbar from '../shared/navbar';
+import Navbar from '../navigation/navbar';
 import { TermSelectionProvider } from '../client-contexts/termSelectionContext';
 import { DegreePlanContextProvider } from '../client-contexts/degreePlanContext';
 

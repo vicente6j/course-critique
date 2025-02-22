@@ -5,7 +5,9 @@ import RankingsTable, { RankingsTableRow } from "../rankingsTable";
 import CustomSearchbar from "@/app/shared/customSearchbar";
 import { useProfs } from "@/app/server-contexts/prof/provider";
 import { useRankings } from "@/app/hooks/useRankings";
-import { useCourses } from "@/app/server-contexts/course/provider";
+import { Spinner } from "@heroui/spinner";
+import Checkbox from "@/app/components/checkbox";
+import RightHandPanel from "../rightHandPanel";
 
 export interface RankingsPageProfClientProps {}
 
@@ -13,21 +15,31 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
 
 }: RankingsPageProfClientProps) => {
 
-  const [termSelected, setTermSelected] = useState<string>('Summer 2024');
+  const [termSelected, setTermSelected] = useState<string>('Fall 2024');
   const [searchValue, setSearchValue] = useState<string>('');
   const [showAll, setShowAll] = useState<boolean>(false);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
+  const [differentialStateChecked, setDifferentialStateChecked] = useState<boolean>(false);
+  const [rankingTableRenderCount, setRankingTableRenderCount] = useState<number>(0);
 
   const { 
     tabs,
     profRankingsMap,
-    loading,
+    loading: rankingsLoading,
   } = useRankings();
 
   const {
     maps: profMaps,
   } = useProfs();
+
+  useEffect(() => {
+    setPage(1);
+  }, [termSelected]);
+
+  useEffect(() => {
+    setRankingTableRenderCount(prev => prev + 1);
+  }, [differentialStateChecked]);
 
   const numPages: number = useMemo(() => {
     if (!profRankingsMap || !profRankingsMap.has(termSelected)) {
@@ -84,8 +96,7 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
               <h1 className="heading-md">Hardest Professors Rankings</h1>
             </div>
             <p className="text-sm w-full text-gray-600">
-              A small caveat here is we again filter professors based on an enrollment. i.e. a professor who teaches
-              a course with less than three students won't have that course count towards his GPA (listed and sorted here).
+              Filtered by professors with enrollment greater than or equal to six.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -98,7 +109,7 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
               disableAnimation
               classNames={{
                 tabList: "flex flex-row flex-wrap gap-0 bg-transparent items-center scrollbar-hide rounded-none p-0",
-                tab: "w-fit bg-default-100 rounded-none data-[selected=true]:rounded-lg",
+                tab: "w-[120px] bg-default-100 rounded-none data-[selected=true]:rounded-lg",
               }}
               items={showAll 
                 ? [...tabs] 
@@ -122,19 +133,33 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
             </p>
           </div>
 
-          <CustomSearchbar
-            searchValue={searchValue}
-            onClear={onClear}
-            onSearchChange={onSearchChange}
-            variation={'regular'}
-            searchString={`Search for a professor...`}
-          />
+          <div className="flex flex-row gap-4 items-center">
+            <CustomSearchbar
+              searchValue={searchValue}
+              onClear={onClear}
+              onSearchChange={onSearchChange}
+              variation={'regular'}
+              searchString={`Search for a professor...`}
+            />
+            <Checkbox 
+              checked={differentialStateChecked}
+              setChecked={setDifferentialStateChecked}
+              checkboxLabel={'Show differential'}
+            />
+          </div>
 
           <div className="flex flex-col gap-8">
-            <RankingsTable 
-              rows={finalItems} 
-              type={'prof'}
-            />
+            {rankingsLoading ? (
+              <Spinner />
+            ) : (
+              <RankingsTable 
+                rows={finalItems} 
+                type={'prof'}
+                showDifferential={differentialStateChecked}
+                key={rankingTableRenderCount}
+              />
+            )}
+
             <div className="flex flex-col gap-4 mb-24">
               <label className="flex items-center text-sm">
                 Rows per page:
@@ -165,6 +190,9 @@ const RankingsPageProfClient: FC<RankingsPageProfClientProps> = ({
             </div>
           </div>
         </div>
+        <RightHandPanel 
+          type={'prof'}
+        />
       </div>
     </div>
   );  

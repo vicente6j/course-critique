@@ -3,7 +3,7 @@ import { FC, useCallback, useEffect, useState } from "react";
 import { CompiledCourse, CompiledProfResponse, ProfHistory, RelatedProf } from "./fetch";
 import GradeTable, { formatGPA, GradeTableRow } from "../shared/gradeTable";
 import { useRouter } from "next/navigation";
-import Navbar from "../shared/navbar";
+import Navbar from "../navigation/navbar";
 import { Spinner } from "@nextui-org/spinner";
 import ProfHeader from "./header";
 import { Link } from "@nextui-org/react";

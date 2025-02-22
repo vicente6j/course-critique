@@ -1,16 +1,18 @@
 'use client'
-import { FC, useCallback, useMemo, useState } from "react";
+import { FC, useCallback, useState } from "react";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckIcon from '@mui/icons-material/Check';
-import { Input } from "@nextui-org/input";
-import { SearchIcon } from "../../../public/icons/searchIcon";
 import CustomSearchbar from "./customSearchbar";
+import { DegreeProgram } from "../api/degree-programs";
+
+export interface SelectionOption {
+  label: string | React.ReactNode;
+  id: string;
+  onClick?: () => void;
+}
 
 export interface SelectionDropdownProps {
-  options: Array<{ 
-    label: string | React.ReactNode;
-    onClick: () => void;
-  }>;
+  options: SelectionOption[];
   selectedOption: string;
   text?: string;
   customTrigger?: React.ReactNode;
@@ -33,19 +35,21 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
 
   const [searchValue, setSearchValue] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  /** Need a separate state for options because this might change with a search query */
   const [options, setOptions] = useState<any[]>(initOptions);
 
-  const onSearchChange = (value: string) => {
+  const onSearchChange: (value: string) => void = useCallback((value) => {
     setSearchValue(value || '');
     if (containsSearch) {
       const newOptions: any[] = filterType ? filterOptions!(value, filterType) : filterOptions!(value);
       setOptions(newOptions);
     }
-  }
+  }, []);
 
-  const onClear = () => {
+  const onClear: () => void = useCallback(() => {
     onSearchChange('');
-  }
+  }, []);
 
   return (
     <div 
@@ -61,7 +65,10 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
         <div className="w-fit flex flex-row gap-2 items-center hover:bg-gray-100 cursor-pointer px-4 py-2 rounded-md border border-gray-300">
           <p className="text-sm">{text}</p>
           <ArrowDropDownIcon 
-            style={{ width: '22px', height: '22px' }}
+            style={{ 
+              width: '22px', 
+              height: '22px' 
+            }}
             className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
@@ -77,9 +84,9 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
               variation="sticky"
             />
           )}
-          {options.map((option, index) => (
+          {options.map((option) => (
             <button
-              key={index}
+              key={option.id}
               onClick={(e) => {
                 e.stopPropagation();
                 option.onClick();

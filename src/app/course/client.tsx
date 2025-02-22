@@ -3,7 +3,7 @@ import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { CompiledProf, CompiledResponse, CourseFetchAggregate, CourseHistory, CourseInfo, CourseResponse, RelatedCourse } from "./fetch";
 import GradeTable, { formatGPA, GradeTableRow } from "../shared/gradeTable";
 import FlexCol from "../deprecated/design-system/flexCol";
-import Navbar from "../shared/navbar";
+import Navbar from "../navigation/navbar";
 import { Spinner } from "@nextui-org/spinner";
 import CourseHeader from "./header";
 import History from "./history";

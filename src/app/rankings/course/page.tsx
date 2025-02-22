@@ -1,5 +1,5 @@
 'use client'
-import Navbar from '@/app/shared/navbar';
+import Navbar from '@/app/navigation/navbar';
 import { FC, useCallback, useEffect, useState } from 'react';
 import { Footer } from '@/app/shared/footer';
 import RankingsPageCourseClient from './client';

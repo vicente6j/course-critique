@@ -1,13 +1,14 @@
 import { FC, useState } from "react";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { Link } from "@nextui-org/react";
 
 export type DropdownType = 'auto' | 'trigger';
 
 export interface ActionDropdownOption {
   label: string;
   id: string;
-  onClick: () => void;
+  onClick?: () => void;
+  link?: string;
   customIcon?: React.ReactNode;
 }
 
@@ -53,17 +54,17 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
         {isOpen && (
           <div className="absolute top-full left-0 z-10 w-fit bg-white border border-gray-200 rounded-none shadow-md">
             {options.map((option, index) => (
-              <button
+              <Link
                 key={index}
+                href={option.link}
                 onClick={() => {
-                  option.onClick();
                   setIsOpen(false);
                 }}
-                className="flex flex-row gap-2 items-center w-full px-4 py-2 text-left hover:bg-gray-100 text-sm whitespace-nowrap"
+                className="block px-4 py-2 text-left hover:bg-gray-100 text-sm text-black flex flex-row gap-2 items-center whitespace-nowrap"
               >
-                {option.customIcon ?? option.customIcon}
+                {option.customIcon}
                 {option.label}
-              </button>
+              </Link>
             ))}
           </div>
         )}
@@ -93,11 +94,14 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
               <button
                 key={index}
                 onClick={() => {
-                  option.onClick();
+                  if (option.onClick) {
+                    option.onClick();
+                  }
                   setIsOpen(false);
                 }}
-                className="block w-fit px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                className="flex flex-row gap-2 items-center w-full px-4 py-2 text-left hover:bg-gray-100 text-sm whitespace-nowrap"
               >
+                {option.customIcon ?? option.customIcon}
                 {option.label}
               </button>
             ))}

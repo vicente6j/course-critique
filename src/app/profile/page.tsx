@@ -1,7 +1,7 @@
 'use client'
 import { FC } from "react";
 import { Footer } from "@/app/shared/footer";
-import Navbar from "@/app/shared/navbar";
+import Navbar from "@/app/navigation/navbar";
 import ProfilePageClient from "./client";
 
 export interface ProfilePageProps {}

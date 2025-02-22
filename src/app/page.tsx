@@ -1,6 +1,6 @@
 'use server'
 import { Footer } from "./shared/footer";
-import Navbar from "./shared/navbar";
+import Navbar from "./navigation/navbar";
 import { FC } from "react"; 
 import HomePageWrapper from "./home/homePageWrapper";
 

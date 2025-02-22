@@ -5,7 +5,7 @@ import { createContext, FC, useCallback, useContext, useEffect, useMemo, useStat
 export interface ProfProviderContextValue {
   data: ProfProviderData;
   maps: ProfProviderMaps;
-  getSortedAveragesByTermMap: () => Map<string, ProfAveragesByTerm[]>;
+  sortByDecreasingGPAAndFilterEnrollment: () => Map<string, ProfAveragesByTerm[]>;
   loading: boolean;
 }
 
@@ -118,10 +118,15 @@ const ProfProvider: FC<ProfProviderProps> = ({
     constructMaps();
   }, [constructMaps]);
 
-  const getSortedAveragesByTermMap: () => Map<string, ProfAveragesByTerm[]>  = useCallback(() => {
+  const sortByDecreasingGPAAndFilterEnrollment: () => Map<string, ProfAveragesByTerm[]>  = useCallback(() => {
     const sortedMap = new Map(maps.termToProfAverages);
-    sortedMap.keys().forEach((term: string) => {
-      sortedMap.set(term, sortedMap.get(term)!.sort((a: ProfAveragesByTerm, b: ProfAveragesByTerm) => a.GPA! - b.GPA!));
+    const minEnrollment = 6;
+    sortedMap.keys().forEach((term) => {
+      sortedMap.set(term, 
+        sortedMap.get(term)!
+          .sort((a: ProfAveragesByTerm, b: ProfAveragesByTerm) => a.GPA! - b.GPA!)
+          .filter(termAverage => termAverage.total! >= minEnrollment)
+      );
     });
     return sortedMap;
   }, [maps.termToProfAverages]);
@@ -129,9 +134,9 @@ const ProfProvider: FC<ProfProviderProps> = ({
   const contextValue: ProfProviderContextValue = useMemo(() => ({
     data: data,
     maps: maps,
-    getSortedAveragesByTermMap: getSortedAveragesByTermMap,
+    sortByDecreasingGPAAndFilterEnrollment: sortByDecreasingGPAAndFilterEnrollment,
     loading: loading,
-  }), [data, maps, getSortedAveragesByTermMap, loading]);
+  }), [data, maps, sortByDecreasingGPAAndFilterEnrollment, loading]);
 
   return (
     <GlobalProfContext.Provider value={contextValue}>

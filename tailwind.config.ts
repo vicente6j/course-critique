@@ -8,7 +8,7 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./node_modules/@nextui-org/theme/dist/**/*.{js,ts,jsx,tsx}",
-    "./node_modules/@heroui/theme/dist/components/(checkbox|form).js"
+    "./node_modules/@heroui/theme/dist/components/(checkbox|image|form).js"
   ],
   darkMode: 'class',
   theme: {

@@ -37,7 +37,7 @@ export interface HelperDropdownProps {
   activeHelper?: string | null;
   setActiveHelper?:  Dispatch<SetStateAction<string | null>>;
   incrementIndex?: () => void;
-  decrementIndex: () => void;
+  decrementIndex?: () => void;
 }
 
 const HelperDropdown: FC<HelperDropdownProps> = ({

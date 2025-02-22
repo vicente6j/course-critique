@@ -1,6 +1,5 @@
 import { FC, useMemo } from "react";
 import ActionDropdown, { ActionDropdownOption } from "../components/actionDropdown";
-import { useRouter } from "next/navigation";
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -12,15 +11,11 @@ const RankingsDropdown: FC<RankingsDropdownProps> = ({
 
 }: RankingsDropdownProps) => {
 
-  const router = useRouter();
-
   const rankingsOptions: ActionDropdownOption[] = useMemo(() => {
     const hardestCourses = {
       label: 'Hardest Courses',
       id: 'hardest-courses',
-      onClick: () => {
-        router.push('/rankings/course');
-      },
+      link: '/rankings/course',
       customIcon: (
         <AutoStoriesIcon 
           style={{
@@ -32,9 +27,7 @@ const RankingsDropdown: FC<RankingsDropdownProps> = ({
     const hardestProfs = {
       label: 'Hardest Professors',
       id: 'hardest-profs',
-      onClick: () => {
-        router.push('/rankings/prof');
-      },
+      link: '/rankings/prof',
       customIcon: (
         <FontAwesomeIcon icon={faChalkboardUser} />
       )
