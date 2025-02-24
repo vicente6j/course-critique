@@ -52,3 +52,7 @@ export const formatDate: (timestamp: string) => string = (timestamp: string) => 
   const date = new Date(timestamp);
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(date);
 }
+
+export const toggleHasReloaded: (hasReloaded: boolean) => void = (hasReloaded) => {
+  localStorage.setItem('hasReloaded', hasReloaded.toString());
+}

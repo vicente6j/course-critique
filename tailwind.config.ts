@@ -22,18 +22,18 @@ const config: Config = {
             marginLeft: "6px",
           },
         },
-        fadeIn: {
-          '0%': { 
-            opacity: '0' 
+        spanRight: {
+          '0%': {
+            transform: 'translateX(-100%)',
           },
-          '100%': { 
-            opacity: '1' 
+          '100%': {
+            transform: 'translateX(0%)',
           },
         }
       },
       animation: {
         moveRight: "moveRight 0.3s ease-in-out",
-        fadeIn: "fadeIn 1s ease-in"
+        spanRight: 'spanRight 0.5s ease-in-out infinite'
       },
       transitionProperty: {
         'margin': 'margin-left',  // Apply transition to margin-left
