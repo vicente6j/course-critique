@@ -24,7 +24,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { courseCols, professorCols } from "./professorOrCourseTable";
 import { useRouter } from "next/navigation";
-import { useProfs } from "../server-contexts/prof/provider";
+import { useProfs } from "../contexts/server/prof/provider";
 import PersonIcon from '@mui/icons-material/Person';
 
 export interface ExpandableTableProps {

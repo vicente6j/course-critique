@@ -2,7 +2,7 @@
 import { FC, useMemo } from "react";
 import { CompiledResponse, CourseInfo } from "./fetch";
 import { termOrder } from "./history";
-import { useProfs } from "../server-contexts/prof/provider";
+import { useProfs } from "../contexts/server/prof/provider";
 
 export interface InfoProps {
   courseInfo: CourseInfo | null;

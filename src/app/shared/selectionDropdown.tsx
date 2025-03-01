@@ -13,11 +13,11 @@ export interface SelectionOption {
 
 export interface SelectionDropdownProps {
   options: SelectionOption[];
-  selectedOption: string;
-  text?: string;
+  selectedOption: string; /** Represents the ID of the option selected, NOT the label */
+  text?: string; /** Text which is shown when the dropdown isn't expanded/at the top */
   customTrigger?: React.ReactNode;
   containsSearch?: boolean;
-  searchString?: string | null;
+  searchString?: string | null; /** If the dropdown contains search, optional placeholder text for the search query */
   filterOptions?: (searchValue: string, filterType?: any) => any[];
   filterType?: any;
 }
@@ -69,7 +69,7 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
               width: '22px', 
               height: '22px' 
             }}
-            className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       )}
@@ -93,9 +93,11 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
                 setIsOpen(false);
                 onClear();
               }}
-              className={`${selectedOption === option.label ? 'bg-gray-100' : ''} block w-full px-4 py-2 text-left hover:bg-gray-100 text-sm`}
+              className={`${selectedOption === option.id ? 'bg-gray-100' : ''} 
+                block w-full px-4 py-2 text-left hover:bg-gray-100 text-sm
+              `}
             >
-              {selectedOption === option.label ? 
+              {selectedOption === option.id ? 
                 <div className="p-0 w-full flex flex-row justify-between gap-4 items-center">
                   {option.label}
                   <CheckIcon 

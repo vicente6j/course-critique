@@ -1,6 +1,6 @@
+import { ScheduleInfo } from "@/app/api/schedule";
+import { useDegreePlan } from "@/app/hooks/useDegreePlan";
 import { createContext, Dispatch, FC, SetStateAction, useContext } from "react";
-import { useDegreePlan } from "../hooks/useDegreePlan";
-import { ScheduleInfo } from "../api/schedule";
 
 interface DegreePlanContextType {
   termSelected: string | null;

@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { useDegreePrograms } from "../server-contexts/degree-programs/provider";
+import { useDegreePrograms } from "../contexts/server/degree-programs/provider";
 import { DegreeProgramAveragesByTerm } from "../api/degree-programs";
 import { metadata } from "../metadata";
 import PersonIcon from '@mui/icons-material/Person';

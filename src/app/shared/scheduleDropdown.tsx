@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import HelperDropdown, { HelperDropdownOption } from "../components/helperDropdown";
-import { useProfile } from "../server-contexts/profile/provider";
+import { useProfile } from "../contexts/server/profile/provider";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import { ScheduleInfo, updateSchedule } from "../api/schedule";

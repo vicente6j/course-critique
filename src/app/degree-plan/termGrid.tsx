@@ -1,7 +1,7 @@
 import { FC, useCallback, useEffect, useRef } from "react";
 import TermTable from "./termTable";
 import { Skeleton } from "@nextui-org/skeleton";
-import { useProfile } from "../server-contexts/profile/provider";
+import { useProfile } from "../contexts/server/profile/provider";
 import { ALL_TERMS } from "../metadata";
 import { ScheduleAssignment } from "../api/schedule-assignments";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";

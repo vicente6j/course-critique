@@ -4,7 +4,7 @@ import { Line } from "react-chartjs-2";
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale } from "chart.js";
 import { hexToRgb } from "@mui/material";
-import { useCourses } from "../server-contexts/course/provider";
+import { useCourses } from "../contexts/server/course/provider";
 import { LineChartDataset, LineDataPoint } from "../home/lineChart";
 import { TERMS_WITH_DATA } from "../metadata";
 import { termToSortableInteger } from "../utils";

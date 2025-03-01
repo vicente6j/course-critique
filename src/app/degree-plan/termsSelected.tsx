@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect, useState } from "react";
-import { useProfile } from "../server-contexts/profile/provider";
+import { useProfile } from "../contexts/server/profile/provider";
 import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
 import { ALL_TERMS } from "../metadata";
 import AddIcon from '@mui/icons-material/Add';

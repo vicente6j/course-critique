@@ -1,3 +1,5 @@
+import { DegreeProgram } from "./api/degree-programs";
+
 /**
  * Simply converts a term into a sortable integer (in ascending order).
  * e.g. Fall 24 -> 20243, which is strictly greater than
@@ -53,6 +55,7 @@ export const formatDate: (timestamp: string) => string = (timestamp: string) => 
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(date);
 }
 
-export const toggleHasReloaded: (hasReloaded: boolean) => void = (hasReloaded) => {
-  localStorage.setItem('hasReloaded', hasReloaded.toString());
+export const checkLevel: (program: DegreeProgram) => string = (program) => {
+  return program.id.includes('-bs') ? 'Undergraduate' : 'Graduate';
 }
+

@@ -3,7 +3,7 @@ import { Pagination, Tab, Tabs } from "@nextui-org/react";
 import BarChartIcon from '@mui/icons-material/BarChart';
 import RankingsTable, { RankingsTableRow } from "../rankingsTable";
 import CustomSearchbar from "@/app/shared/customSearchbar";
-import { useProfs } from "@/app/server-contexts/prof/provider";
+import { useProfs } from "@/app/contexts/server/prof/provider";
 import { useRankings } from "@/app/hooks/useRankings";
 import { Spinner } from "@heroui/spinner";
 import Checkbox from "@/app/components/checkbox";

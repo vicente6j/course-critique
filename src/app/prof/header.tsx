@@ -1,7 +1,7 @@
 import { Dispatch, FC, SetStateAction, useState } from "react";
-import { Prof, useProfs } from "../server-contexts/prof";
+import { Prof, useProfs } from "../contexts/server/prof";
 import { Card, CardBody, Link, Tab, Tabs } from "@nextui-org/react";
-import { useCourses } from "../server-contexts/course";
+import { useCourses } from "../contexts/server/course";
 import { useRouter } from "next/navigation";
 
 export interface ProfHeaderProps {

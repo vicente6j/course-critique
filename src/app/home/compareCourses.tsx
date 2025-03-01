@@ -1,7 +1,7 @@
 'use client'
 
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { useCourses } from "../server-contexts/course/provider";
+import { useCourses } from "../contexts/server/course/provider";
 import LineChart, { LineChartDataset, LineDataPoint } from "./lineChart";
 import { CourseAveragesByTerm, CourseInfo } from "../api/course";
 import InfoIcon from '@mui/icons-material/Info';

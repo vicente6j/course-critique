@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useState } from "react";
 import { createSchedule, ScheduleInfo, deleteSchedule } from "../api/schedule";
-import { useProfile } from "../server-contexts/profile/provider";
+import { useProfile } from "../contexts/server/profile/provider";
 import { createScheduleAssignment, deleteScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
 
 interface UseDegreePlanValue {

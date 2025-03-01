@@ -1,6 +1,6 @@
 import { FC, useCallback, useMemo, useRef, useState } from "react";
 import { CourseInfo } from "../api/course";
-import { useCourses } from "../server-contexts/course/provider";
+import { useCourses } from "../contexts/server/course/provider";
 import { SearchIcon } from "../../../public/icons/searchIcon";
 import { VariableSizeList } from "react-window";
 

@@ -1,7 +1,7 @@
 'use server'
 
 import { FC } from "react";
-import ProfileProvider from "./provider";
+import DatabaseProfileProvider from "./provider";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authConfig";
 import { fetchProfile, ProfileResponse } from "@/app/api/profile";
@@ -11,7 +11,7 @@ import { fetchAssignments, ScheduleAssignment } from "@/app/api/schedule-assignm
 import { fetchGrades, ScheduleGrade } from "@/app/api/schedule-grades";
 import { fetchTermSelections, TermSelection } from "@/app/api/term-selections";
 
-export interface ProfileProviderWrapperProps {
+export interface DatabaseProfileProviderWrapperProps {
   children: React.ReactNode;
 }
 
@@ -22,9 +22,9 @@ export interface ProfileProviderWrapperProps {
  * @param param0 
  * @returns Children of wrapper.
  */
-const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
+const DatabaseProfileProviderWrapper: FC<DatabaseProfileProviderWrapperProps> = async ({
   children,
-}: ProfileProviderWrapperProps) => {
+}: DatabaseProfileProviderWrapperProps) => {
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -35,8 +35,6 @@ const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
     );
   }
 
-  console.log(session);
-
   const profile: ProfileResponse = await fetchProfile(session.user.email);
   const schedules: ScheduleInfo[] = await fetchSchedules(profile.id);
   const scheduleEntries: ScheduleEntry[] = await fetchScheduleEntries(profile.id);
@@ -45,7 +43,7 @@ const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
   const termSelections: TermSelection[] = await fetchTermSelections(profile.id);
 
   return (
-    <ProfileProvider
+    <DatabaseProfileProvider
       profile={profile}
       schedules={schedules}
       scheduleEntries={scheduleEntries}
@@ -54,8 +52,8 @@ const ProfileProviderWrapper: FC<ProfileProviderWrapperProps> = async ({
       termSelections={termSelections}
     >
       {children}
-    </ProfileProvider>
+    </DatabaseProfileProvider>
   );
 }
 
-export default ProfileProviderWrapper;
+export default DatabaseProfileProviderWrapper;

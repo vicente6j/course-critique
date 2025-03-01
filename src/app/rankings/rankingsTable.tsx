@@ -12,7 +12,7 @@ import {
 import { formatGPA } from "../shared/gradeTable";
 import { Link } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
-import { useProfs } from "../server-contexts/prof/provider";
+import { useProfs } from "../contexts/server/prof/provider";
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';

@@ -3,7 +3,7 @@ import { CourseInfo, RelatedCourse } from "./fetch";
 import { Link } from "@nextui-org/react";
 import { formatGPA } from "../shared/gradeTable";
 import { useRouter } from "next/navigation";
-import { useCourses } from "../server-contexts/course/provider";
+import { useCourses } from "../contexts/server/course/provider";
 import {Skeleton} from "@nextui-org/skeleton";
 
 export interface SidePanelProps {

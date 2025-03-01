@@ -1,5 +1,5 @@
+import { useTermSelection } from "@/app/hooks/useTermSelection";
 import { createContext, FC, useContext } from "react";
-import { useTermSelection } from "../hooks/useTermSelection";
 
 interface TermSelectionContextType {
   termsSelected: string[] | null;

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import CourseProviderWrapper from "./server-contexts/course/wrapper";
-import ProfProviderWrapper from "./server-contexts/prof/wrapper";
+import CourseProviderWrapper from "./contexts/server/course/wrapper";
+import ProfProviderWrapper from "./contexts/server/prof/wrapper";
 import { SessionProviderWrapper } from "./sessionWrapper";
-import ProfileProviderWrapper from "./server-contexts/profile/wrapper";
-import DegreeProgramProviderWrapper from "./server-contexts/degree-programs/wrapper";
+import DegreeProgramProviderWrapper from "./contexts/server/degree-programs/wrapper";
+import DatabaseProfileProviderWrapper from "./contexts/server/profile/wrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -41,9 +41,9 @@ export default function RootLayout({
           <ProfProviderWrapper>
             <DegreeProgramProviderWrapper>
               <SessionProviderWrapper>
-                <ProfileProviderWrapper>
+                <DatabaseProfileProviderWrapper>
                     {children}
-                </ProfileProviderWrapper>
+                </DatabaseProfileProviderWrapper>
               </SessionProviderWrapper>
             </DegreeProgramProviderWrapper>
           </ProfProviderWrapper>

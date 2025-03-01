@@ -5,8 +5,8 @@ import { Skeleton } from "@nextui-org/skeleton";
 import { suffixDict } from "../profile/client";
 import { Link } from "@nextui-org/react";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
-import { useProfile } from "../server-contexts/profile/provider";
-import { useDegreePrograms } from "../server-contexts/degree-programs/provider";
+import { useProfile } from "../contexts/server/profile/provider";
+import { useDegreePrograms } from "../contexts/server/degree-programs/provider";
 
 export interface DegreePlanHeaderProps {}
 
@@ -17,8 +17,13 @@ const DegreePlanHeader: FC<DegreePlanHeaderProps> = ({
   const [arrowRight, setArrowRight] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const { degreeProgramMap } = useDegreePrograms();
-  const { profile } = useProfile();
+  const { 
+    maps
+  } = useDegreePrograms();
+
+  const { 
+    profile 
+  } = useProfile();
 
   const router = useRouter();
 
@@ -26,14 +31,20 @@ const DegreePlanHeader: FC<DegreePlanHeaderProps> = ({
     <div className="flex flex-col w-full shadow-sm">
       <div className="relative flex flex-col gap-4 w-full bg-white p-8 rounded-top">
         <div className="flex flex-col gap-2">
-          <Skeleton isLoaded={!loading} className="w-fit">
+          <Skeleton 
+            isLoaded={!loading} 
+            className="w-fit"
+          >
             {profile?.degree_program ? (
-              <h1 className="heading-md">{degreeProgramMap?.get(profile!.degree_program!)!.name}</h1>
+              <h1 className="heading-md">{maps.degreePrograms?.get(profile!.degree_program!)!.name}</h1>
             ) : (
               <h1 className="heading-md">No degree program specified</h1>
             )}
           </Skeleton>
-          <Skeleton isLoaded={!loading}>
+          <Skeleton 
+            isLoaded={!loading}
+            className="w-fit"
+          >
             <div className="grid grid-cols-[auto_1fr] gap-y-1 gap-x-10 text-md items-center">
               <h1 className="heading-xs">Year</h1>
               {profile?.year ? (

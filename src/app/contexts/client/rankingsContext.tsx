@@ -1,7 +1,7 @@
 'use client'
+import { RankingsPageTab, useRankings } from "@/app/hooks/useRankings";
+import { RankingsTableRow } from "@/app/rankings/rankingsTable";
 import { createContext, FC, useContext } from "react";
-import { RankingsPageTab, useRankings } from "../hooks/useRankings";
-import { RankingsTableRow } from "../rankings/rankingsTable";
 
 interface RankingsContextType {
   tabs: RankingsPageTab[];

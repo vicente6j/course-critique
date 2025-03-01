@@ -1,6 +1,6 @@
 import { FC, useEffect, useMemo, useState } from "react";
 import { CourseAveragesByTerm } from "../api/course";
-import { useCourses } from "../server-contexts/course/provider";
+import { useCourses } from "../contexts/server/course/provider";
 import { LineChartDataset, LineDataPoint } from "../home/lineChart";
 import { getClientColorFromGPA } from "../utils";
 import HideSourceIcon from '@mui/icons-material/HideSource';

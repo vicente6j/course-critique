@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import NavSearchbar from "./navSearchbar";
 import RankingsDropdown from "./rankingsDropdown";
 import Link from "next/link";
-import { Link as ReactLink } from "@nextui-org/react";
 import SchoolIcon from '@mui/icons-material/School';
 import LoadingBar from "./loadingBar";
 
@@ -31,13 +30,13 @@ const Navbar: FC<NavbarProps> = ({
         <div className="w-4/5 mx-auto py-4">
           <div className="flex flex-row justify-between items-center">
             <div className="flex flex-row items-center gap-8">
-              <div className="flex flex-col gap-0">
-                <ReactLink 
+              <div className="flex flex-row gap-1 items-center">
+                <Link 
                   href="/"
                   className="heading-md text-black"
                 >
-                  Course Critique
-                </ReactLink>
+                  Course Critique 
+                </Link>
               </div>
               <NavSearchbar />
               <RankingsDropdown />

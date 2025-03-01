@@ -2,7 +2,7 @@ import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Pagination, Tab, Tabs } from "@nextui-org/react";
 import BarChartIcon from '@mui/icons-material/BarChart';
 import RankingsTable, { RankingsTableRow } from "../rankingsTable";
-import { useCourses } from "@/app/server-contexts/course/provider";
+import { useCourses } from "@/app/contexts/server/course/provider";
 import CustomSearchbar from "@/app/shared/customSearchbar";
 import { useRankings } from "@/app/hooks/useRankings";
 import { dataTerms } from "@/app/metadata";

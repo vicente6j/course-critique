@@ -52,7 +52,7 @@ export type ProfileField =
 | 'secondary_degree_program' 
 | 'minor_program';
 
-type FieldValue = string | number;
+type FieldValue = string | number | null;
 
 /**
  * Modifier to update fields for a given user.

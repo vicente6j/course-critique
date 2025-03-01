@@ -12,7 +12,7 @@ import ProfessorOrCourseTable from "../shared/professorOrCourseTable";
 import History from "./history";
 import Info from "./info";
 import { ProfInfo } from "../api/prof";
-import { useProfs } from "../server-contexts/prof/provider";
+import { useProfs } from "../contexts/server/prof/provider";
 
 export interface ProfClientProps {
   compiledProfResponse: CompiledProfResponse | null;
