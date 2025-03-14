@@ -1,7 +1,7 @@
-import { useProfile, UseProfileValue } from "@/app/hooks/useProfile";
+import { useUserProfile, UseUserProfileValue } from "@/app/hooks/useProfile";
 import { createContext, FC, useContext } from "react";
 
-const ProfileContext = createContext<UseProfileValue | undefined>(undefined);
+const ProfileContext = createContext<UseUserProfileValue | undefined>(undefined);
 
 interface ProfileContextProviderProps {
   children: React.ReactNode;
@@ -11,7 +11,7 @@ export const ProfileContextProvider: FC<ProfileContextProviderProps> = ({
   children,
 }: ProfileContextProviderProps) => {
   
-  const profile = useProfile();
+  const profile = useUserProfile();
 
   return (
     <ProfileContext.Provider value={profile}>
@@ -20,7 +20,7 @@ export const ProfileContextProvider: FC<ProfileContextProviderProps> = ({
   );
 }
 
-export const useProfileContext = (): UseProfileValue => {
+export const useProfileContext = (): UseUserProfileValue => {
   const context = useContext(ProfileContext);
   if (context === undefined) {
     throw new Error('useProfileContext must be used within a ProfileContextProvider');

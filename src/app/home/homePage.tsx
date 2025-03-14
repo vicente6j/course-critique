@@ -1,21 +1,17 @@
 'use client'
 
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useMemo } from "react";
 import Banner from "./banner";
-import AverageOverTime from "./compareCourses";
-import { useRankingsContext } from "../client-contexts/rankingsContext";
-import RankingsTable, { RankingsTableRow } from "../rankings/rankingsTable";
+import { RankingsTableRow } from "../rankings/rankingsTable";
 import { metadata } from "../metadata";
 import { useCourses } from "../contexts/server/course/provider";
 import { getClientColorFromGPA } from "../utils";
-import { useRouter } from "next/navigation";
-import ArrowRight from "../components/arrowRight";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import MiniRankingsTable from "../shared/miniRankingsTable";
 import InfoIcon from '@mui/icons-material/Info';
 import CompareCourses from "./compareCourses";
-import { useDegreePrograms } from "../contexts/server/degree-programs/provider";
 import PopularDegreePrograms from "./popularDegreePrograms";
+import { useRankingsContext } from "../contexts/client/rankingsContext";
 
 export interface PrevTermInfo {
   term: string;

@@ -3,6 +3,7 @@ import { FC } from "react";
 import { Footer } from "@/app/shared/footer";
 import Navbar from "@/app/navigation/navbar";
 import ProfilePageClient from "./client";
+import { ProfileContextProvider } from "../contexts/client/profile";
 
 export interface ProfilePageProps {}
 
@@ -14,7 +15,9 @@ const ProfilePage: FC<ProfilePageProps> = ({
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <div className="flex-grow">
-        <ProfilePageClient />
+        <ProfileContextProvider>
+          <ProfilePageClient />
+        </ProfileContextProvider>
       </div>
       <Footer />
     </div>

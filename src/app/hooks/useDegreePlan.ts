@@ -1,14 +1,13 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useState } from "react";
 import { createSchedule, ScheduleInfo, deleteSchedule } from "../api/schedule";
-import { useProfile } from "../contexts/server/profile/provider";
 import { createScheduleAssignment, deleteScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
+import { useDatabaseProfile } from "../contexts/server/profile/provider";
 
 interface UseDegreePlanValue {
   termScheduleMap: Map<string, string> | null;
   setTermScheduleMap: Dispatch<SetStateAction<Map<string, string> | null>>;
   termSelected: string | null;
   setTermSelected: (term: string | null) => void;
-  error: string | null;
   replaceScheduleAssignment: (schedule: ScheduleInfo | null) => void;
   createNewSchedule: (scheduleName: string) => Promise<ScheduleInfo | null>;
   tempInfoObject: ScheduleInfo | null;
@@ -17,6 +16,7 @@ interface UseDegreePlanValue {
   scheduleEdited: string | null;
   setScheduleEdited: Dispatch<SetStateAction<string | null>>;
   deleteSchedulePing: (schedule: ScheduleInfo) => Promise<void>;
+  error: string | null;
 }
 
 export const useDegreePlan = (
@@ -50,7 +50,10 @@ export const useDegreePlan = (
   const [isEditing, setIsEditing] = useState<boolean | null>(false);
   const [scheduleEdited, setScheduleEdited] = useState<string | null>(null);
 
-  const { profile, schedules, refetchSchedules, scheduleAssignments, refetchScheduleAssignments } = useProfile();
+  const { 
+    data,
+    revalidate
+  } = useDatabaseProfile();
 
   /**
    * If there's no term currently selected, then this function doesn't really have a purpose
@@ -61,7 +64,7 @@ export const useDegreePlan = (
    * @param schedule schedule to update for the selected term
    */
   const replaceScheduleAssignment: (schedule: ScheduleInfo | null) => void = useCallback(async (schedule) => {
-    if (!profile || !scheduleAssignments) {
+    if (!data.profile?.id || !data.scheduleAssignments) {
       setError('Profile or assignments weren\'t found.');
       return;
     } else if (!termSelected) {
@@ -78,8 +81,8 @@ export const useDegreePlan = (
         });
 
         /** Clears the selection */
-        await deleteScheduleAssignment(termSelected, profile!.id);
-        await refetchScheduleAssignments();
+        await deleteScheduleAssignment(termSelected, data.profile!.id);
+        await revalidate.refetchScheduleAssignments();
 
         return;
       }
@@ -91,22 +94,22 @@ export const useDegreePlan = (
         return newMap;
       });
 
-      if (scheduleAssignments.some(assignment => assignment.term === termSelected)) {
-        await updateScheduleAssignment(termSelected, schedule!.schedule_id!, profile!.id);
+      if (data.scheduleAssignments.some(assignment => assignment.term === termSelected)) {
+        await updateScheduleAssignment(termSelected, schedule!.schedule_id!, data.profile.id);
       } else {
-        await createScheduleAssignment(schedule!.schedule_id!, termSelected, profile!.id);
+        await createScheduleAssignment(schedule!.schedule_id!, termSelected, data.profile.id);
       }
-      await refetchScheduleAssignments();
+      await revalidate.refetchScheduleAssignments();
 
     } catch (e) {
       setError(e as string);
       console.error(e);
     }
 
-  }, [profile, scheduleAssignments, termSelected]);
+  }, [data.profile, data.scheduleAssignments, termSelected]);
 
   const deleteSchedulePing: (schedule: ScheduleInfo | null) => Promise<void> = useCallback(async (schedule) => {
-    if (!profile || !schedules) {
+    if (!data.profile || !data.schedules) {
       setError('One of profile or schedules was null.');
       return;
     }

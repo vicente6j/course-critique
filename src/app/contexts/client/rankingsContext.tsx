@@ -1,16 +1,8 @@
 'use client'
-import { RankingsPageTab, useRankings } from "@/app/hooks/useRankings";
-import { RankingsTableRow } from "@/app/rankings/rankingsTable";
+import { useRankings, UseRankingsValue } from "@/app/hooks/useRankings";
 import { createContext, FC, useContext } from "react";
 
-interface RankingsContextType {
-  tabs: RankingsPageTab[];
-  courseRankingsMap: Map<string, RankingsTableRow[]> | null;
-  profRankingsMap: Map<string, RankingsTableRow[]> | null;
-  loading: boolean;
-}
-
-const RankingsContext = createContext<RankingsContextType | undefined>(undefined);
+const RankingsContext = createContext<UseRankingsValue | undefined>(undefined);
 
 interface RankingsProviderProps {
   children: React.ReactNode;
@@ -29,7 +21,7 @@ export const RankingsContextProvider: FC<RankingsProviderProps> = ({
   );
 }
 
-export const useRankingsContext = (): RankingsContextType => {
+export const useRankingsContext = (): UseRankingsValue => {
   const context = useContext(RankingsContext);
   if (context === undefined) {
     throw new Error('useRankingsContextProvider must be used within a RankingsProvider');

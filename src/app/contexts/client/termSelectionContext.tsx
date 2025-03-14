@@ -1,18 +1,12 @@
-import { useTermSelection } from "@/app/hooks/useTermSelection";
+import { TermSelection } from "@/app/api/term-selections";
+import { useTermSelection, UseTermSelectionValue } from "@/app/hooks/useTermSelection";
 import { createContext, FC, useContext } from "react";
 
-interface TermSelectionContextType {
-  termsSelected: string[] | null;
-  handleSelectTerm: (term: string) => void;
-  handleUnselectTerm: (term: string) => void;
-  setTermsSelected: (terms: string[] | null) => void;
-}
-
-const TermSelectionContext = createContext<TermSelectionContextType | undefined>(undefined);
+const TermSelectionContext = createContext<UseTermSelectionValue | undefined>(undefined);
 
 interface TermSelectionProviderProps {
   children: React.ReactNode;
-  initialTerms?: string[] | null;
+  initialTerms?: TermSelection[] | null;
 }
 
 export const TermSelectionProvider: FC<TermSelectionProviderProps> = ({
@@ -29,7 +23,7 @@ export const TermSelectionProvider: FC<TermSelectionProviderProps> = ({
   );
 }
 
-export const useTermSelectionContext = (): TermSelectionContextType => {
+export const useTermSelectionContext = (): UseTermSelectionValue => {
   const context = useContext(TermSelectionContext);
   if (context === undefined) {
     throw new Error('useTermSelectionContext must be used within a TermSelectionProvider');

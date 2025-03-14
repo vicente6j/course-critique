@@ -6,18 +6,20 @@ import { FC, useState } from "react";
 export interface ArrowRightProps {
   displayText: string;
   href: string;
+  justify?: string;
 }
 
 const ArrowRight: FC<ArrowRightProps> = ({
   displayText,
   href,
+  justify,
 }: ArrowRightProps) => {
 
   const router = useRouter();
   const [arrowRight, setArrowRight] = useState<boolean>(false);
 
   return (
-    <div className="flex flex-row justify-end">
+    <div className={`flex flex-row ${justify ? justify : 'justify-end'}`}>
       <div 
         className="flex flex-row gap-1"
         onClick={() => {

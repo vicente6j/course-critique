@@ -264,5 +264,61 @@
     "overview": "For more information about the Computer Science PhD program, visit www.cc.gatech.edu.",
     "total_credits": 0,
     "link": "https://catalog.gatech.edu/programs/computer-science-phd/"
+  },
+  {
+    "id": "minor-computing-business",
+    "name": "Minor in Computing and Business",
+    "overview": "The Scheller College of Business and the College of Computing offer the competitive-admission computing & business minor through the Denning Technology & Management (T&M) Program. It is a course of study that enables computing and IT management business undergraduate students to learn one another\u2019s language through innovative coursework and interdisciplinary team projects focused on solving real-world problems presented by T&M\u2019s corporate affiliates.  The minor in computing & business curriculum requires completing 22 semester credit hours after being accepted to the T&M Program. T&M accepts applications each October.  Admission information is available at: https://www.scheller.gatech.edu/centers-and-initiatives/steven-a-denning-tech-and-management-program/admissions.html  Course requirements are available at: https://www.scheller.gatech.edu/centers-and-initiatives/steven-a-denning-tech-and-management-program/curriculum.html",
+    "total_credits": 22.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-business/"
+  },
+  {
+    "id": "minor-computing-devices",
+    "name": "Minor in Computing and Devices",
+    "overview": " Minor in Computing  For those students majoring in disciplines other than computer science who wish to gain a deeper understanding of computing and its applications, the College of Computing offers the minor in computer science. Click here for additional information.  Computing & Media Computing & People Computing & Intelligence Computing & Devices Computing & Information Internetworks Computing & Systems and Architecture Computing & Theory  Minor Program of Study & Guidelines",
+    "total_credits": 17.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-devices/"
+  },
+  {
+    "id": "minor-computing-information-internetworks",
+    "name": "Minor in Computing Information Internetworks",
+    "overview": "Minor in Computing  For those students majoring in disciplines other than computer science who wish to gain a deeper understanding of computing and its applications, the College of Computing offers the minor in computer science. Click here for additional information.  Computing & Media Computing & People Computing & Intelligence Computing & Devices Computing & Information Internetworks Computing & Systems and Architecture Computing & Theory  Minor Program of Study & Guidelines",
+    "total_credits": 17.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-information-internetworks/"
+  },
+  {
+    "id": "minor-computing-intelligence",
+    "name": "Minor in Computing and Intelligence",
+    "overview": "Minor in Computing  For those students majoring in disciplines other than computer science who wish to gain a deeper understanding of computing and its applications, the College of Computing offers the minor in computer science. Click here for additional information.  Computing & Media Computing & People Computing & Intelligence Computing & Devices Computing & Information Internetworks Computing & Systems and Architecture Computing & Theory  Minor Program of Study & Guidelines",
+    "total_credits": 16.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-intelligence/"
+  },
+  {
+    "id": "minor-computing-media",
+    "name": "Minor in Computing and Media",
+    "overview": "Minor in Computing For those students majoring in disciplines other than computer science who wish to gain a deeper understanding of computing and its applications, the College of Computing offers the minor in computer science. Click here for additional information.  Computing & Media Computing & People Computing & Intelligence Computing & Devices Computing & Information Internetworks Computing & Systems and Architecture Computing & Theory  Minor Program of Study & Guidelines",
+    "total_credits": 19.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-media/"
+  },
+  {
+    "id": "minor-computing-people",
+    "name": "Minor in Computing and People",
+    "overview": "Minor in Computing  For those students majoring in disciplines other than computer science who wish to gain a deeper understanding of computing and its applications, the College of Computing offers the minor in computer science. Click here for additional information.  Computing & Media Computing & People Computing & Intelligence Computing & Devices Computing & Information Internetworks Computing & Systems and Architecture Computing & Theory Minor Program of Study & Guidelines",
+    "total_credits": 15.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-people/"
+  },
+  {
+    "id": "minor-computing-systems-architecture",
+    "name": "Minor in Computing and Systems Architecture",
+    "overview": "Minor in Computing  For those students majoring in disciplines other than computer science who wish to gain a deeper understanding of computing and its applications, the College of Computing offers the minor in computer science. Click here for additional information.  Computing & Media Computing & People Computing & Intelligence Computing & Devices Computing & Information Internetworks Computing & Systems and Architecture Computing & Theory  Minor Program of Study & Guidelines",
+    "total_credits": 17.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-systems-architecture/"
+  },
+  {
+    "id": "minor-computing-theory",
+    "name": "Minor in Computing and Theory",
+    "overview": "Minor in Computing  For those students majoring in disciplines other than computer science who wish to gain a deeper understanding of computing and its applications, the College of Computing offers the minor in computer science. Click here for additional information.  Computing & Media Computing & People Computing & Intelligence Computing & Devices Computing & Information Internetworks Computing & Systems and Architecture Computing & Theory  Minor Program of Study & Guidelines",
+    "total_credits": 15.0,
+    "link": "https://catalog.gatech.edu/programs/minor-computing-theory/"
   }
 ]

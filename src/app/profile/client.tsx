@@ -201,17 +201,22 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
             />
           </Skeleton>
 
-          <div className="flex flex-row gap-2">
+          <div className="flex flex-row gap-2 items-center">
             <p className="text-md">Level</p>
             <NextToolTip content={'Inferred from your primary degree program.'}>
               <InfoIcon 
                 style={{ 
-                  width: '18px' 
+                  width: '16px' 
                 }} 
               />
             </NextToolTip>
           </div>
-          <p className="text-sm">{data.level}</p>
+          <Skeleton 
+            isLoaded={!degreesLoading} 
+            className="w-full inline-block max-w-96"
+          >
+            <p className="text-sm">{data.level}</p>
+          </Skeleton>
 
           <p className="text-md">Degree Program</p>
           <Skeleton 
@@ -235,12 +240,12 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
             />
           </Skeleton>
 
-          <div className="flex flex-row gap-2">
+          <div className="flex flex-row gap-2 items-center">
             <p className="text-md">Secondary degree program</p>
             <NextToolTip content={'This is completely optional'}>
               <InfoIcon 
                 style={{ 
-                  width: '18px' 
+                  width: '16px' 
                 }} 
               />
             </NextToolTip>
@@ -267,12 +272,12 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
             />
           </Skeleton>
 
-          <div className="flex flex-row gap-2">
+          <div className="flex flex-row gap-2 items-center">
             <p className="text-md">Minor</p>
             <NextToolTip content={'This is also optional'}>
               <InfoIcon 
                 style={{ 
-                  width: '18px' 
+                  width: '16px' 
                 }} 
               />
             </NextToolTip>
@@ -315,7 +320,7 @@ const ProfilePageClient: FC<ProfilePageClientProps> = ({
             startContent={
               <LogoutIcon 
                 style={{ 
-                  width: '20px' 
+                  width: '18px' 
                 }}
               />
             }

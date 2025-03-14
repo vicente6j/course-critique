@@ -1,7 +1,6 @@
 import { FC } from "react";
 import TermGrid from "./termGrid";
 import DegreePlanHeader from "./header";
-import TermTable from "./termTable";
 import HowToUse from "./howToUse";
 import TermsSelected from "./termsSelected";
 
@@ -19,7 +18,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
           <TermsSelected />
           <HowToUse />
         </div>
-        <TermGrid />
+        {/* <TermGrid /> */}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import ProfProviderWrapper from "./contexts/server/prof/wrapper";
 import { SessionProviderWrapper } from "./sessionWrapper";
 import DegreeProgramProviderWrapper from "./contexts/server/degree-programs/wrapper";
 import DatabaseProfileProviderWrapper from "./contexts/server/profile/wrapper";
+import { RankingsContextProvider } from "./contexts/client/rankingsContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -42,7 +43,9 @@ export default function RootLayout({
             <DegreeProgramProviderWrapper>
               <SessionProviderWrapper>
                 <DatabaseProfileProviderWrapper>
+                  <RankingsContextProvider>
                     {children}
+                  </RankingsContextProvider>
                 </DatabaseProfileProviderWrapper>
               </SessionProviderWrapper>
             </DegreeProgramProviderWrapper>

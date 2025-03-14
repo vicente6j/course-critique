@@ -13,25 +13,25 @@ export interface ExposedProfileData {
   createdAt: string | null;
 };
 
-export interface ProfileHandlers {
+export interface ExposedProfileHandlers {
   handleYearChange: (year: number | null) => Promise<void>;
   handleDegreeProgramChange: (programId: string | null) => Promise<void>;
   handleSecondaryDegreeProgramChange: (programId: string | null) => Promise<void>;
   handleMinorProgramChange: (programId: string | null) => Promise<void>;
 }
 
-export interface UseProfileValue {
+export interface UseUserProfileValue {
   data: ExposedProfileData;
-  handlers: ProfileHandlers;
+  handlers: ExposedProfileHandlers;
 }
 
-export const useProfile = (): UseProfileValue => {
+export const useUserProfile = (): UseUserProfileValue => {
 
   const [year, setYear] = useState<number | null>(null);
   const [degreeProgram, setDegreeProgram] = useState<string | null>(null);
   const [secondaryDegreeProgram, setSecondaryDegreeProgram] = useState<string | null>(null);
   const [minorProgram, setMinorProgram] = useState<string | null>(null);
-  const [level, setLevel] = useState<string | null>(null);
+  const [level, setLevel] = useState<string | null>('Not specified');
   const [createdAt, setCreatedAt] = useState<string | null>(null);
 
   const { 
@@ -92,6 +92,7 @@ export const useProfile = (): UseProfileValue => {
     setDegreeProgram(programId);
     await updateProfileField('degree_program', programId, data.profile!.id);
     await revalidate.refetchProfile();
+    
     if (programId) {
       const level = checkLevel(programMaps.degreePrograms?.get(programId)!);
       setLevel(level); 

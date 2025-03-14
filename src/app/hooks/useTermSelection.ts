@@ -1,35 +1,90 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { termToSortableInteger } from "../utils";
+import { createTermSelection, deleteTermSelection, TermSelection } from "../api/term-selections";
+import { useDatabaseProfile } from "../contexts/server/profile/provider";
 
-interface UseTermSelectionValue {
+export interface UseTermSelectionValue {
   termsSelected: string[] | null;
-  handleSelectTerm: (term: string) => void;
-  handleUnselectTerm: (term: string) => void;
-  setTermsSelected: (terms: string[] | null) => void;
+  handlers: TermSelectionHandlers;
 }
 
-export const useTermSelection = (initialTerms: string[] | null = null): UseTermSelectionValue => {
-  const [termsSelected, setTermsSelected] = useState<string[] | null>(initialTerms);
+export interface TermSelectionHandlers {
+  handleSelectTerm: (term: string) => Promise<void>;
+  handleUnselectTerm: (term: string) => Promise<void>;
+}
 
-  const handleSelectTerm: (term: string) => void = useCallback((term) => {
+export const useTermSelection = (initialTerms: TermSelection[] | null = null): UseTermSelectionValue => {
+
+  const [termsSelected, setTermsSelected] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const {
+    data
+  } = useDatabaseProfile();
+
+  useEffect(() => {
+    if (initialTerms) {
+      setTermsSelected(initialTerms.map(selection => selection.term));
+    }
+  }, [initialTerms]);
+
+  const handleSelectTerm: (term: string) => Promise<void> = useCallback(async (term) => {
+    if (termsSelected && termsSelected.includes(term)) {
+      setError('Already selected this term.');
+      return;
+    } else if (!data.profile || !data.profile.id) {
+      setError('No profile found.');
+      return;
+    }
+
+    const prevSelections = termsSelected ? [...termsSelected] : [];
+
+    /** Optimistic udpate */
     setTermsSelected(prev => {
       if (!prev) {
         return [term];
       }
       const newArr = [...prev, term];
-      newArr.sort((a: string, b: string) => termToSortableInteger(a) - termToSortableInteger(b));
+      newArr.sort((a, b) => termToSortableInteger(a) - termToSortableInteger(b));
       return newArr;
-    })
-  }, []);
+    });
 
-  const handleUnselectTerm: (term: string) => void = useCallback((term) => {
+    try {
+      await createTermSelection(term, data.profile.id);
+    } catch (e) {
+      setError(e as string);
+      setTermsSelected(prevSelections); /** Reset if failed */
+      console.error(e);
+    }
+  }, [termsSelected, data.profile]);
+
+  const handleUnselectTerm: (term: string) => Promise<void> = useCallback(async (term) => {
+    if (termsSelected && !termsSelected.includes(term)) {
+      setError('Haven\'t actually selected this term.');
+      return;
+    } else if (!data.profile || !data.profile.id) {
+      setError('No profile found.');
+      return;
+    }
+
+    const prevSelections = termsSelected ? [...termsSelected] : [];
+    /** Optimistic udpate */
     setTermsSelected(prev => prev ? [...prev.filter(el => el !== term)] : null);
-  }, []);
+
+    try {
+      await deleteTermSelection(term, data.profile.id);
+    } catch (e) {
+      setError(e as string);
+      setTermsSelected(prevSelections); /** Reset if failed */
+      console.error(e);
+    }
+  }, [termsSelected, data.profile]);
 
   return {
     termsSelected,
-    setTermsSelected,
-    handleSelectTerm,
-    handleUnselectTerm,
+    handlers: {
+      handleSelectTerm,
+      handleUnselectTerm,
+    }
   };
 };

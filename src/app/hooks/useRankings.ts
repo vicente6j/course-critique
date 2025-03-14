@@ -6,7 +6,7 @@ import { RankingsTableRow } from "../rankings/rankingsTable";
 import { dataTerms } from "../metadata";
 import { useProfs } from "../contexts/server/prof/provider";
 
-interface UseRankingsValue {
+export interface UseRankingsValue {
   tabs: RankingsPageTab[];
   courseRankingsMap: Map<string, RankingsTableRow[]> | null;
   profRankingsMap: Map<string, RankingsTableRow[]> | null;

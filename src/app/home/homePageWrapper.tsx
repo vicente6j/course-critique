@@ -1,7 +1,6 @@
 'use client';
 
 import { FC } from "react";
-import { RankingsContextProvider } from "../client-contexts/rankingsContext";
 import HomePage from "./homePage";
 
 export interface HomePageWrapperProps {}
@@ -13,6 +12,7 @@ export interface HomePageWrapperProps {}
  * CONSUMES the course context. Therefore it necessitates that everything in rankings context
  * provider live in a client component, since the course context which gets consumed is also
  * a client level component.
+ * 
  * @param param0 
  * @returns HomePage
  */
@@ -21,9 +21,7 @@ const HomePageWrapper: FC<HomePageWrapperProps> = ({
 }: HomePageWrapperProps) => {
 
   return (
-    <RankingsContextProvider>
-      <HomePage />
-    </RankingsContextProvider>
+    <HomePage />
   );
 }
 
