@@ -74,7 +74,6 @@ export const updateScheduleEntry = async (scheduleId: string, entryId: number, n
 }
 
 export const deleteScheduleEntry = async (scheduleId: string, entryId: number): Promise<void> => {
-  console.log('deleting entry...');
   const response = await fetch(`${PROD_ENDPOINT}/schedules/entries`, {
     method: 'DELETE',
     headers: {

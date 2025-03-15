@@ -8,9 +8,12 @@ export interface ScheduleGrade {
   name: string | null;
   schedule_created_at: string | null;
   schedule_updated_at: string | null;
+
+  /** combination of schedule_id, term, and entry_id creates idempotency key */
   term: string;
   entry_id: number;
   grade: string;
+  
   grade_updated_at: string | null;
 }
 

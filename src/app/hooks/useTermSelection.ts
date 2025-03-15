@@ -6,6 +6,7 @@ import { useDatabaseProfile } from "../contexts/server/profile/provider";
 export interface UseTermSelectionValue {
   termsSelected: string[] | null;
   handlers: TermSelectionHandlers;
+  error: string | null;
 }
 
 export interface TermSelectionHandlers {
@@ -19,7 +20,8 @@ export const useTermSelection = (initialTerms: TermSelection[] | null = null): U
   const [error, setError] = useState<string | null>(null);
 
   const {
-    data
+    data,
+    revalidate
   } = useDatabaseProfile();
 
   useEffect(() => {
@@ -51,6 +53,8 @@ export const useTermSelection = (initialTerms: TermSelection[] | null = null): U
 
     try {
       await createTermSelection(term, data.profile.id);
+      await revalidate.refetchTermSelections();
+
     } catch (e) {
       setError(e as string);
       setTermsSelected(prevSelections); /** Reset if failed */
@@ -73,6 +77,8 @@ export const useTermSelection = (initialTerms: TermSelection[] | null = null): U
 
     try {
       await deleteTermSelection(term, data.profile.id);
+      await revalidate.refetchTermSelections();
+      
     } catch (e) {
       setError(e as string);
       setTermsSelected(prevSelections); /** Reset if failed */
@@ -85,6 +91,7 @@ export const useTermSelection = (initialTerms: TermSelection[] | null = null): U
     handlers: {
       handleSelectTerm,
       handleUnselectTerm,
-    }
+    },
+    error
   };
 };
