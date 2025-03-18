@@ -11,10 +11,9 @@ interface TermSelectionProviderProps {
 
 export const TermSelectionProvider: FC<TermSelectionProviderProps> = ({
   children,
-  initialTerms = null /** Is defined as null initially, but set later */
 }: TermSelectionProviderProps) => {
   
-  const termSelection = useTermSelection(initialTerms);
+  const termSelection = useTermSelection();
 
   return (
     <TermSelectionContext.Provider value={termSelection}>

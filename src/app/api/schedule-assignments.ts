@@ -4,7 +4,6 @@ import { PROD_ENDPOINT } from "../endpoints";
 
 export interface ScheduleAssignment {
   term: string;
-  user_id: string;
   schedule_id: string;
   assigned_at: string | null;
 }
@@ -12,7 +11,6 @@ export interface ScheduleAssignment {
 export const createScheduleAssignment = async (
   scheduleId: string, 
   term: string, 
-  userId: string
 ): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/assignments`, {
     method: 'POST',
@@ -23,18 +21,19 @@ export const createScheduleAssignment = async (
       action: 'create',
       scheduleId: scheduleId,
       term: term,
-      userId: userId,
     }),
   });
   if (!response.ok) {
     throw new Error(
-      `Failed to create schedule assignment on term ${term} for schedule with ID ${scheduleId} and user with ID ${userId}.
+      `Failed to create schedule assignment on term ${term} for schedule with ID ${scheduleId}.
       Status: ${response.status}.`
     );
   }
 }
 
-export const fetchAssignments = async (userId: string): Promise<ScheduleAssignment[]> => {
+export const fetchScheduleAssignments = async (
+  userId: string
+): Promise<ScheduleAssignment[]> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/assignments`, {
     method: 'POST',
     headers: {
@@ -47,31 +46,18 @@ export const fetchAssignments = async (userId: string): Promise<ScheduleAssignme
     cache: 'no-store'  // Explicitly tell Next.js to never cache this
   });
   if (!response.ok) {
-    throw new Error(`Failed to fetch schedule assignments for user with ID ${userId}. Status: ${response.status}.`);
+    throw new Error(
+      `Failed to fetch schedule assignments for user with ID ${userId}.
+      Status: ${response.status}.`
+    );
   }
   return response.json();
 }
 
-export const updateScheduleAssignment = async (term: string, scheduleId: string, userId: string): Promise<void> => {
-  const response = await fetch(`${PROD_ENDPOINT}/schedules/assignments`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      scheduleId: scheduleId,
-      term: term,
-      userId: userId
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(
-      `Failed to update schedule assignment with schedule ID ${scheduleId}, user ID ${userId}, and term ${term}. Status: ${response.status}.`
-    );
-  }
-}
-
-export const deleteScheduleAssignment = async (term: string, userId: string): Promise<void> => {
+export const deleteScheduleAssignment = async (
+  scheduleId: string, 
+  term: string
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/assignments`, {
     method: 'DELETE',
     headers: {
@@ -79,11 +65,14 @@ export const deleteScheduleAssignment = async (term: string, userId: string): Pr
     },
     body: JSON.stringify({
       term: term,
-      userId: userId,
+      scheduleId: scheduleId,
     }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to delete schedule assignment for term ${term} and user ID ${userId}. Status: ${response.status}.`);
+    throw new Error(
+      `Failed to delete schedule assignment on term ${term} for schedule with ID ${scheduleId}.
+      Status: ${response.status}.`
+    );
   }
 }
 

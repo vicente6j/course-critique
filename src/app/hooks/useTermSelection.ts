@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { termToSortableInteger } from "../utils";
 import { createTermSelection, deleteTermSelection, TermSelection } from "../api/term-selections";
 import { useDatabaseProfile } from "../contexts/server/profile/provider";
@@ -14,10 +14,13 @@ export interface TermSelectionHandlers {
   handleUnselectTerm: (term: string) => Promise<void>;
 }
 
-export const useTermSelection = (initialTerms: TermSelection[] | null = null): UseTermSelectionValue => {
+export const useTermSelection = (): UseTermSelectionValue => {
 
   const [termsSelected, setTermsSelected] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const initLoadComplete = useRef<boolean>(false);
+  const numUpdates = useRef<number>(0);
 
   const {
     data,
@@ -25,10 +28,11 @@ export const useTermSelection = (initialTerms: TermSelection[] | null = null): U
   } = useDatabaseProfile();
 
   useEffect(() => {
-    if (initialTerms) {
-      setTermsSelected(initialTerms.map(selection => selection.term));
+    if (!initLoadComplete.current && data.termSelections) {
+      setTermsSelected(data.termSelections.map(term => term.term));
+      initLoadComplete.current = true;
     }
-  }, [initialTerms]);
+  }, [data.termSelections]);
 
   const handleSelectTerm: (term: string) => Promise<void> = useCallback(async (term) => {
     if (termsSelected && termsSelected.includes(term)) {
@@ -55,6 +59,7 @@ export const useTermSelection = (initialTerms: TermSelection[] | null = null): U
       await createTermSelection(term, data.profile.id);
       await revalidate.refetchTermSelections();
 
+      numUpdates.current += 1;
     } catch (e) {
       setError(e as string);
       setTermsSelected(prevSelections); /** Reset if failed */
@@ -78,7 +83,8 @@ export const useTermSelection = (initialTerms: TermSelection[] | null = null): U
     try {
       await deleteTermSelection(term, data.profile.id);
       await revalidate.refetchTermSelections();
-      
+
+      numUpdates.current += 1;
     } catch (e) {
       setError(e as string);
       setTermsSelected(prevSelections); /** Reset if failed */

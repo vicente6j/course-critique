@@ -2,7 +2,7 @@
 
 import { fetchProfile, ProfileResponse } from "@/app/api/profile";
 import { fetchSchedules, ScheduleInfo } from "@/app/api/schedule";
-import { fetchAssignments, ScheduleAssignment } from "@/app/api/schedule-assignments";
+import { fetchScheduleAssignments, ScheduleAssignment } from "@/app/api/schedule-assignments";
 import { fetchScheduleEntries, ScheduleEntry } from "@/app/api/schedule-entries";
 import { fetchGrades, ScheduleGrade } from "@/app/api/schedule-grades";
 import { fetchTermSelections, TermSelection } from "@/app/api/term-selections";
@@ -207,7 +207,7 @@ const DatabaseProfileProvider: FC<DatabaseProfileProviderProps> = ({
     }
     let newAssignments: ScheduleAssignment[] = [];
     try {
-      newAssignments = await fetchAssignments(data.profile.id);
+      newAssignments = await fetchScheduleAssignments(data.profile.id);
       setData(prevData => ({
         ...prevData,
         scheduleAssignments: newAssignments,

@@ -7,7 +7,7 @@ import { authOptions } from "@/lib/auth/authConfig";
 import { fetchProfile, ProfileResponse } from "@/app/api/profile";
 import { fetchScheduleEntries, ScheduleEntry } from "@/app/api/schedule-entries";
 import { fetchSchedules, ScheduleInfo } from "@/app/api/schedule";
-import { fetchAssignments, ScheduleAssignment } from "@/app/api/schedule-assignments";
+import { fetchScheduleAssignments, ScheduleAssignment } from "@/app/api/schedule-assignments";
 import { fetchGrades, ScheduleGrade } from "@/app/api/schedule-grades";
 import { fetchTermSelections, TermSelection } from "@/app/api/term-selections";
 
@@ -38,7 +38,7 @@ const DatabaseProfileProviderWrapper: FC<DatabaseProfileProviderWrapperProps> = 
   const profile: ProfileResponse = await fetchProfile(session.user.email);
   const schedules: ScheduleInfo[] = await fetchSchedules(profile.id);
   const scheduleEntries: ScheduleEntry[] = await fetchScheduleEntries(profile.id);
-  const scheduleAssignments: ScheduleAssignment[] = await fetchAssignments(profile.id);
+  const scheduleAssignments: ScheduleAssignment[] = await fetchScheduleAssignments(profile.id);
   const scheduleGrades: ScheduleGrade[] = await fetchGrades(profile.id);
   const termSelections: TermSelection[] = await fetchTermSelections(profile.id);
 

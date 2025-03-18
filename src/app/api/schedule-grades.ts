@@ -4,16 +4,9 @@ import { PROD_ENDPOINT } from "../endpoints";
 
 export interface ScheduleGrade {
   schedule_id: string;
-  user_id: string;
-  name: string | null;
-  schedule_created_at: string | null;
-  schedule_updated_at: string | null;
-
-  /** combination of schedule_id, term, and entry_id creates idempotency key */
   term: string;
   entry_id: number;
   grade: string;
-  
   grade_updated_at: string | null;
 }
 
@@ -38,13 +31,16 @@ export const createScheduleGrade = async (
   });
   if (!response.ok) {
     throw new Error(
-      `Failed to create schedule grade (${grade}) for schedule with ID ${scheduleId} and entry ${entryId} (only happening for term ${term}).
+      `Failed to create schedule grade ${grade} for schedule with ID ${scheduleId} and entry ${entryId} 
+      (only happening for term ${term}).
       Status: ${response.status}.`
     );
   }
 }
 
-export const fetchGrades = async (userId: string): Promise<ScheduleGrade[]> => {
+export const fetchGrades = async (
+  userId: string
+): Promise<ScheduleGrade[]> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/grades`, {
     method: 'POST',
     headers: {
@@ -57,7 +53,9 @@ export const fetchGrades = async (userId: string): Promise<ScheduleGrade[]> => {
     cache: 'no-store',
   });
   if (!response.ok) {
-    throw new Error(`Failed to fetch schedule grades for user with ID ${userId}. Status: ${response.status}.`);
+    throw new Error(
+      `Failed to fetch schedule grades for user with ID ${userId}. 
+      Status: ${response.status}.`);
   }
   return response.json();
 }
@@ -82,12 +80,17 @@ export const updateScheduleGrade = async (
   });
   if (!response.ok) {
     throw new Error(
-      `Failed to update schedule grade for schedule ID ${scheduleId}, entry ID ${entryId}, and term ${term}. Status: ${response.status}.`
+      `Failed to update schedule grade for schedule ID ${scheduleId}, entry ID ${entryId}, and term ${term}. 
+      Status: ${response.status}.`
     );
   }
 }
 
-export const deleteScheduleGrade = async (scheduleId: string, term: string, entryId: number): Promise<void> => {
+export const deleteScheduleGrade = async (
+  scheduleId: string, 
+  term: string, 
+  entryId: number
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/grades`, {
     method: 'DELETE',
     headers: {
@@ -100,7 +103,9 @@ export const deleteScheduleGrade = async (scheduleId: string, term: string, entr
     }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to delete schedule grade for schedule with ID ${scheduleId} and entry with ID ${entryId}. Status: ${response.status}.`);
+    throw new Error(`
+      Failed to delete schedule grade for schedule with ID ${scheduleId} and entry ${entryId}. 
+      Status: ${response.status}.`);
   }
 }
 

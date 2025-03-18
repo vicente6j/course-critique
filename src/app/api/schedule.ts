@@ -12,8 +12,14 @@ export interface ScheduleInfo {
 
 export type ActionType = 'list' | 'create';
 
-export const createSchedule = async (userId: string, scheduleName?: string): Promise<void> => {
+export const createSchedule = async (
+  userId: string, 
+  scheduleName?: string
+): Promise<void> => {
 
+  /**
+   * If there isn't a schedule name, don't put the field down.
+   */
   const body: {
     userId: string;
     action: string;
@@ -39,7 +45,9 @@ export const createSchedule = async (userId: string, scheduleName?: string): Pro
   }
 }
 
-export const fetchSchedules = async (userId: string): Promise<ScheduleInfo[]> => {
+export const fetchSchedules = async (
+  userId: string
+): Promise<ScheduleInfo[]> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules`, {
     method: 'POST',
     headers: {
@@ -52,7 +60,7 @@ export const fetchSchedules = async (userId: string): Promise<ScheduleInfo[]> =>
     cache: 'no-store',
   });
   if (!response.ok) {
-    throw new Error(`Failed to create a schedule for user with ID ${userId}. Status: ${response.status}.`);
+    throw new Error(`Failed to get schedules for user with ID ${userId}. Status: ${response.status}.`);
   }
   return response.json();
 }
@@ -63,7 +71,10 @@ export const fetchSchedules = async (userId: string): Promise<ScheduleInfo[]> =>
  * @param scheduleId The ID of the schedule to be updated.
  * @param scheduleName The new name for the schedule.
  */
-export const updateSchedule = async (scheduleId: string, scheduleName: string): Promise<void> => {
+export const updateSchedule = async (
+  scheduleId: string, 
+  scheduleName: string
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules`, {
     method: 'PUT',
     headers: {
@@ -79,7 +90,9 @@ export const updateSchedule = async (scheduleId: string, scheduleName: string): 
   }
 }
 
-export const deleteSchedule = async (scheduleId: string): Promise<void> => {
+export const deleteSchedule = async (
+  scheduleId: string
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules`, {
     method: 'DELETE',
     headers: {

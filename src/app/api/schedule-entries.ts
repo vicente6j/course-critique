@@ -4,15 +4,16 @@ import { PROD_ENDPOINT } from "../endpoints";
 
 export interface ScheduleEntry {
   schedule_id: string;
-  name: string | null;
-  created_at: string | null;
-  updated_at: string | null;
   entry_id: number;
   course_id: string | null;
   inserted_at: string | null;
+  updated_at: string | null;
 }
 
-export const createScheduleEntry = async (scheduleId: string, courseId: string): Promise<void> => {
+export const createScheduleEntry = async (
+  scheduleId: string, 
+  courseId: string
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/entries`, {
     method: 'POST',
     headers: {
@@ -26,12 +27,15 @@ export const createScheduleEntry = async (scheduleId: string, courseId: string):
   });
   if (!response.ok) {
     throw new Error(
-      `Failed to create schedule entry ${courseId} for schedule with ID ${scheduleId}. Status: ${response.status}.`
+      `Failed to create schedule entry for schedule with ID ${scheduleId} and course ${courseId}.
+      Status: ${response.status}.`
     );
   }
 }
 
-export const fetchScheduleEntries = async (userId: string): Promise<ScheduleEntry[]> => {
+export const fetchScheduleEntries = async (
+  userId: string
+): Promise<ScheduleEntry[]> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/entries`, {
     method: 'POST',
     headers: {
@@ -44,7 +48,10 @@ export const fetchScheduleEntries = async (userId: string): Promise<ScheduleEntr
     cache: 'no-store',
   });
   if (!response.ok) {
-    throw new Error(`Failed to fetch schedule entries for user with ID ${userId}. Status: ${response.status}.`);
+    throw new Error(
+      `Failed to fetch schedule entries for user with ID ${userId}.
+      Status: ${response.status}.`
+    );
   }
   return response.json();
 }
@@ -56,7 +63,11 @@ export const fetchScheduleEntries = async (userId: string): Promise<ScheduleEntr
  * @param entryId Monotonic entry ID.
  * @param newCourseId New course ID.
  */
-export const updateScheduleEntry = async (scheduleId: string, entryId: number, newCourseId: string): Promise<void> => {
+export const updateScheduleEntry = async (
+  scheduleId: string, 
+  entryId: number, 
+  newCourseId: string
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/entries`, {
     method: 'PUT',
     headers: {
@@ -69,11 +80,17 @@ export const updateScheduleEntry = async (scheduleId: string, entryId: number, n
     }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to update schedule entry with schedule ID ${scheduleId} and entry ID ${entryId}. Status: ${response.status}.`);
+    throw new Error(
+      `Failed to update schedule entry for schedule with schedule ID ${scheduleId} and entry ${entryId}.
+      Status: ${response.status}.`
+    );
   }
 }
 
-export const deleteScheduleEntry = async (scheduleId: string, entryId: number): Promise<void> => {
+export const deleteScheduleEntry = async (
+  scheduleId: string, 
+  entryId: number
+): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/entries`, {
     method: 'DELETE',
     headers: {
@@ -85,7 +102,10 @@ export const deleteScheduleEntry = async (scheduleId: string, entryId: number): 
     }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to delete schedule entry with schedule ID ${scheduleId} and entry ID ${entryId}. Status: ${response.status}.`);
+    throw new Error(
+      `Failed to delete schedule entry for schedule with ID ${scheduleId} and entry ${entryId}.
+      Status: ${response.status}.`
+    );
   }
   console.log('success');
 }

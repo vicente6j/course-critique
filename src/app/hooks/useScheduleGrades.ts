@@ -1,29 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ScheduleInfo } from "../api/schedule";
 import { useDatabaseProfile } from "../contexts/server/profile/provider";
-import { createScheduleAssignment, deleteScheduleAssignment, ScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
+import { createScheduleGrade, deleteScheduleGrade, ScheduleGrade, updateScheduleGrade } from "../api/schedule-grades";
 
-export interface ExposedScheduleAssignmentHandlers {
-  createNewScheduleAssignment: (scheduleId: string, term: string) => Promise<ScheduleAssignment | null>;
-  updateAssignment: (term: string, scheduleId: string) => Promise<ScheduleAssignment | null>;
-  deleteAssignment: (term: string) => Promise<boolean | null>;
+export interface ExposedScheduleGradeHandlers {
+  createGrade: (scheduleId: string, term: string, entryId: number, grade: string) => Promise<ScheduleGrade | null>;
+  updateGrade: (scheduleId: string, term: string, entryId: number, grade: string) => Promise<ScheduleGrade | null>;
+  deleteGrade: (scheduleId: string, term: string, entryId: number) => Promise<boolean | null>;
 }
 
-export interface UseScheduleAssignmentsValue {
-  data: {
-    assignments: ScheduleAssignment[] | null;
-  },
-  maps: {
-    assignmentsMap: Map<string, ScheduleAssignment> | null;
-  }
-  handlers: ExposedScheduleAssignmentHandlers;
+export interface UseScheduleGradeValues {
+  grades: ScheduleGrade[] | null;
+  gradeMap: Map<string, Map<string, ScheduleGrade[]>> | null;
+  handlers: ExposedScheduleGradeHandlers;
   error: string | null;
 }
 
-export const useScheduleAssignments = (): UseScheduleAssignmentsValue => {
+export const useScheduleGrades = (): UseScheduleGradeValues => {
 
-  const [assignments, setAssignments] = useState<ScheduleAssignment[] | null>(null);
-  const [assignmentsMap, setAssignmentsMap] = useState<Map<string, ScheduleAssignment> | null>(null);
+  const [grades, setGrades] = useState<ScheduleGrade[] | null>(null);
+  const [gradeMap, setGradeMap] = useState<Map<string, Map<string, ScheduleGrade[]>> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const initLoadComplete = useRef<boolean>(false);
@@ -36,123 +31,140 @@ export const useScheduleAssignments = (): UseScheduleAssignmentsValue => {
 
   useEffect(() => {
     if (!initLoadComplete.current) {
-      setAssignments(data.scheduleAssignments);
+      setGrades(data.scheduleGrades);
       initLoadComplete.current = true;
     }
-  }, [data.scheduleAssignments]);
+  }, [data.scheduleGrades]);
 
   useEffect(() => {
-    setAssignmentsMap(new Map(assignments?.map(assignment => [assignment.term, assignment])));
-  }, [assignments]);
+    const map: Map<string, Map<string, ScheduleGrade[]>> = new Map();
+    grades?.forEach(grade => {
+      if (!map.has(grade.schedule_id)) {
+        map.set(grade.schedule_id, new Map());
+      }
+      if (!map.get(grade.schedule_id)!.has(grade.term)) {
+        map.get(grade.schedule_id)!.set(grade.term, []);
+      }
+      map.get(grade.schedule_id)!.get(grade.term)!.push(grade);
+    })
+    setGradeMap(map);
+  }, [grades]);
 
-  const createNewScheduleAssignment: (
+  const createGrade: (
     scheduleId: string, 
-    term: string
-  ) => Promise<ScheduleAssignment | null> = useCallback(async (scheduleId, term) => {
-    if (!assignments || !data.profile || !data.profile.id) {
-      setError('One of assignments or data (profile) was null.');
+    term: string,
+    entryId: number,
+    grade: string, 
+  ) => Promise<ScheduleGrade | null> = useCallback(async (scheduleId, term, entryId, grade) => {
+    if (!grades) {
+      setError('Grades was null.');
       return null;
     }
 
-    const prevAssignments = [...assignments];
-    const newAssignment: ScheduleAssignment = {
-      term: term,
+    const prevGrades = [...grades];
+    const tempGrade: ScheduleGrade = {
       schedule_id: scheduleId,
-      user_id: data.profile.id,
-      assigned_at: Date.now().toLocaleString(),
+      term: term,
+      entry_id: entryId,
+      grade: grade,
+      grade_updated_at: Date.now().toLocaleString(),
     };
+    setGrades(prev => [...prev!, tempGrade]);
 
-    /** Optimistic update */
-    setAssignments(prev => [...prev!, newAssignment]);
     try {
-      await createScheduleAssignment(scheduleId, term, data.profile.id);
-      const newAssignments = await revalidate.refetchScheduleAssignments();
+      await createScheduleGrade(scheduleId, term, entryId, grade);
+      const newGrades = await revalidate.refetchScheduleGrades();
+      setGrades(newGrades);
 
-      const newAssignmentReal = newAssignments?.find(assignment => 
-        assignment.schedule_id === scheduleId && assignment.term === term
-      )!;
-      setAssignments(newAssignments);
+      const newGrade = newGrades?.find(grade => 
+        grade.entry_id === entryId && grade.schedule_id === scheduleId && grade.term === term
+      );
       numUpdates.current += 1;
 
-      return newAssignmentReal;
+      return newGrade!;
     } catch (e) {
       setError(e as string);
-      setAssignments(prevAssignments);
+      setGrades(prevGrades);
       console.error(e);
     }
     return null;
-  }, [assignments, data.profile, revalidate]);
+  }, [grades, revalidate]);
 
-  const updateAssignment: (
+  const updateGrade: (
+    scheduleId: string, 
     term: string,
-    scheduleId: string,
-  ) => Promise<ScheduleAssignment | null> = useCallback(async (term, scheduleId) => {
-    if (!assignments || !data.profile || !data.profile.id) {
-      setError('One of assignments or data (profile) was null.');
+    entryId: number,
+    grade: string, 
+  ) => Promise<ScheduleGrade | null> = useCallback(async (scheduleId, term, entryId, grade) => {
+    if (!grades) {
+      setError('Grades was null.');
       return null;
     }
 
-    const prevAssignments = [...assignments];
-    /** Optimistic update */
-    setAssignments(prev => (
-      prev!.map(assignment => 
-        assignment.term === term  
-          ? { ...assignment, scheduleId: scheduleId }
-          : assignment
+    const prevGrades = [...grades];
+    setGrades(prev => (
+      prev!.map(gradeEntry => 
+        gradeEntry.schedule_id === scheduleId && gradeEntry.entry_id === entryId && gradeEntry.term === term 
+          ? { ...gradeEntry, grade: grade }
+          : gradeEntry
     )));
 
     try {
-      await updateScheduleAssignment(term, scheduleId, data.profile.id);
-      const newAssignments = await revalidate.refetchScheduleAssignments();
-      const newAssignment = newAssignments?.find(assignment => assignment.term === term);
+      await updateScheduleGrade(scheduleId, term, entryId, grade);
+      const newGrades = await revalidate.refetchScheduleGrades();
+      setGrades(newGrades);
 
+      const updatedGrade = newGrades?.find(grade => 
+        grade.entry_id === entryId && grade.schedule_id === scheduleId && grade.term === term
+      );
       numUpdates.current += 1;
-      return newAssignment!;
+
+      return updatedGrade!;
     } catch (e) {
       setError(e as string);
-      setAssignments(prevAssignments);
+      setGrades(prevGrades);
       console.error(e);
     }
     return null;
-  }, [assignments, data.profile, revalidate]);
+  }, [grades, revalidate]);
 
-  const deleteAssignment: (
+  const deleteGrade: (
+    scheduleId: string,
     term: string,
-  ) => Promise<boolean | null> = useCallback(async (term) => {
-    if (!assignments || !data.profile || !data.profile.id) {
-      setError('One of assignments or data (profile) was null.');
+    entryId: number,
+  ) => Promise<boolean | null> = useCallback(async (scheduleId, term, entryId) => {
+    if (!grades) {
+      setError('Grades was null.');
       return false;
     }
 
-    const prevAssignments = [...assignments];
+    const prevGrades = [...grades];
     /** Optimistic update */
-    setAssignments(prev => prev?.filter(assignment => assignment.term !== term) || []);
+    setGrades(prev => 
+      prev?.filter(grade => grade.entry_id !== entryId && grade.schedule_id !== scheduleId && grade.term !== term) 
+      || []);
 
     try {
-      await deleteScheduleAssignment(term, data.profile.id);
-      await revalidate.refetchScheduleAssignments();
+      await deleteScheduleGrade(scheduleId, term, entryId);
+      await revalidate.refetchScheduleGrades();
 
       numUpdates.current += 1;
       return true;
     } catch (e) {
       setError(e as string);
-      setAssignments(prevAssignments);
+      setGrades(prevGrades);
       console.error(e);
     }
     return false;
-  }, [assignments, data.profile, revalidate]);
+  }, [grades, revalidate]);
 
   return {
-    data: {
-      assignments,
-    },
-    maps: {
-      assignmentsMap
-    },
+    grades,
+    gradeMap,
     handlers: {
-      createNewScheduleAssignment,
-      updateAssignment,
-      deleteAssignment
+      createGrade,
+      updateGrade,
+      deleteGrade
     },
     error
   };

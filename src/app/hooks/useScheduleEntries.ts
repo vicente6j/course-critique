@@ -1,31 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDatabaseProfile } from "../contexts/server/profile/provider";
-import { createScheduleAssignment, deleteScheduleAssignment, ScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
 import { createScheduleEntry, deleteScheduleEntry, ScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
 
 export interface ExposedScheduleEntryHandlers {
-  createNewScheduleEntry: (scheduleId: string, courseId: string) => Promise<ScheduleEntry | null>;
+  createEntry: (scheduleId: string, courseId: string) => Promise<ScheduleEntry | null>;
   updateEntry: (scheduleId: string, entryId: number, newCourseId: string) => Promise<ScheduleEntry | null>;
   deleteEntry: (scheduleId: string, entryId: number) => Promise<boolean | null>;
 }
 
 export interface UseScheduleEntriesValue {
-  data: {
-    entries: ScheduleEntry[] | null;
-  },
-  maps: {
-    entryMap: Map<string, ScheduleEntry[]> | null;
-  }
+  entries: ScheduleEntry[] | null;
+  entryMap: Map<string, ScheduleEntry[]> | null;
   handlers: ExposedScheduleEntryHandlers;
   error: string | null;
 }
 
 export const useScheduleEntries = (): UseScheduleEntriesValue => {
 
-  /** all schedule entries */
   const [entries, setEntries] = useState<ScheduleEntry[] | null>(null);
-
-  /** schedule entries for each schedule (by ID) */
   const [entryMap, setEntryMap] = useState<Map<string, ScheduleEntry[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,17 +42,17 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       if (!map.has(entry.schedule_id)) {
         map.set(entry.schedule_id, []);
       }
-      map.get(entry.schedule_id)?.push(entry);
+      map.get(entry.schedule_id)!.push(entry);
     });
     setEntryMap(map);
   }, [entries]);
 
-  const createNewScheduleEntry: (
+  const createEntry: (
     scheduleId: string, 
     courseId: string
   ) => Promise<ScheduleEntry | null> = useCallback(async (scheduleId, courseId) => {
-    if (!entries || !data.profile || !data.profile.id) {
-      setError('One of entries or data (profile) was null.');
+    if (!entries) {
+      setError('Entries was null.');
       return null;
     }
 
@@ -69,10 +61,8 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       schedule_id: scheduleId,
       entry_id: -1, /** to indicate temporary nature of addition */
       course_id: courseId,
-      name: null,
-      created_at: null,
-      updated_at: null,
       inserted_at: Date.now().toLocaleString(),
+      updated_at: Date.now().toLocaleString(),
     };
     setEntries(prev => [...prev!, tempEntry]);
 
@@ -81,6 +71,9 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       const newEntries = await revalidate.refetchScheduleEntries();
       setEntries(newEntries);
 
+      /**
+       * Just have to make sure that there are no duplicate courses.
+       */
       const newEntry = newEntries?.find(entry => entry.course_id === courseId && entry.schedule_id === scheduleId);
       numUpdates.current += 1;
 
@@ -91,15 +84,15 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       console.error(e);
     }
     return null;
-  }, [entries, data.profile, revalidate]);
+  }, [entries, revalidate]);
 
   const updateEntry: (
     scheduleId: string,
     entryId: number,
     newCourseId: string,
   ) => Promise<ScheduleEntry | null> = useCallback(async (scheduleId, entryId, newCourseId) => {
-    if (!entries || !data.profile || !data.profile.id) {
-      setError('One of entries or data (profile) was null.');
+    if (!entries) {
+      setError('Entries was null.');
       return null;
     }
 
@@ -124,14 +117,14 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       console.error(e);
     }
     return null;
-  }, [entries, data.profile, revalidate]);
+  }, [entries, revalidate]);
 
   const deleteEntry: (
     scheduleId: string,
     entryId: number,
   ) => Promise<boolean | null> = useCallback(async (scheduleId, entryId) => {
-    if (!entries || !data.profile || !data.profile.id) {
-      setError('One of entries or data (profile) was null.');
+    if (!entries) {
+      setError('Entries was null.');
       return false;
     }
 
@@ -151,17 +144,13 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       console.error(e);
     }
     return false;
-  }, [entries, data.profile, revalidate]);
+  }, [entries, revalidate]);
 
   return {
-    data: {
-      entries,
-    },
-    maps: {
-      entryMap
-    },
+    entries,
+    entryMap,
     handlers: {
-      createNewScheduleEntry,
+      createEntry,
       updateEntry,
       deleteEntry
     },

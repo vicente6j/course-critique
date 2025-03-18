@@ -1,20 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createSchedule, updateSchedule as updateScheduleProp, ScheduleInfo } from "../api/schedule";
+import { createSchedule as createSchedulePing, updateSchedule as updateSchedulePing, deleteSchedule as deleteSchedulePing, ScheduleInfo } from "../api/schedule";
 import { useDatabaseProfile } from "../contexts/server/profile/provider";
 
 export interface ExposedScheduleHandlers {
-  createNewSchedule: (scheduleName: string) => Promise<ScheduleInfo | null>;
+  createSchedule: (scheduleName: string) => Promise<ScheduleInfo | null>;
   updateSchedule: (scheduleId: string, scheduleName: string) => Promise<ScheduleInfo | null>;
   deleteSchedule: (scheduleId: string) => Promise<boolean | null>;
 }
 
 export interface UseSchedulesValue {
-  data: {
-    schedules: ScheduleInfo[] | null;
-  },
-  maps: {
-    scheduleMap: Map<string, ScheduleInfo> | null;
-  }
+  schedules: ScheduleInfo[] | null;
+  scheduleMap: Map<string, ScheduleInfo> | null;
   handlers: ExposedScheduleHandlers;
   error: string | null;
 }
@@ -45,7 +41,9 @@ export const useSchedules = (): UseSchedulesValue => {
     setScheduleMap(new Map(schedules?.map(schedule => [schedule.schedule_id, schedule])));
   }, [schedules]);
 
-  const createNewSchedule: (scheduleName: string) => Promise<ScheduleInfo | null> = useCallback(async (scheduleName) => {
+  const createSchedule: (
+    scheduleName: string
+  ) => Promise<ScheduleInfo | null> = useCallback(async (scheduleName) => {
     if (!data.profile || !data.profile.id || !schedules) {
       setError('One of profile (ID) or schedules was null.');
       return null;
@@ -66,7 +64,7 @@ export const useSchedules = (): UseSchedulesValue => {
     });
     
     try {
-      await createSchedule(data.profile.id, scheduleName);
+      await createSchedulePing(data.profile.id, scheduleName);
       const newSchedules = await revalidate.refetchSchedules();
 
       const newSchedule = newSchedules!.find(schedule => (
@@ -91,8 +89,8 @@ export const useSchedules = (): UseSchedulesValue => {
     scheduleId: string, 
     scheduleName: string
   ) => Promise<ScheduleInfo | null> = useCallback(async (scheduleId, scheduleName) => {
-    if (!data.profile || !data.profile.id || !schedules) {
-      setError('One of profile or schedules was null.');
+    if (!schedules) {
+      setError('Schedules was null.');
       return null;
     }
 
@@ -106,7 +104,7 @@ export const useSchedules = (): UseSchedulesValue => {
     )));
 
     try {
-      await updateScheduleProp(scheduleId, scheduleName);
+      await updateSchedulePing(scheduleId, scheduleName);
       const newSchedules = await revalidate.refetchSchedules();
 
       const updatedSchedule = newSchedules?.find(schedule => (schedule.schedule_id === scheduleId))!;
@@ -119,11 +117,11 @@ export const useSchedules = (): UseSchedulesValue => {
       console.error(e);
     }
     return null;
-  }, [schedules, data.profile, revalidate]);
+  }, [schedules, revalidate]);
 
-  const deleteSchedule: (scheduleId: string) => Promise<boolean> = useCallback(async (scheduleId) => {
-    if (!data.profile || !data.profile.id || !schedules) {
-      setError('One of profile or schedules was null.');
+  const deleteSchedule: (scheduleId: string) => Promise<boolean | null> = useCallback(async (scheduleId) => {
+    if (!schedules) {
+      setError('Schedules was null.');
       return false;
     }
 
@@ -133,29 +131,25 @@ export const useSchedules = (): UseSchedulesValue => {
     ));
 
     try {
-      await deleteSchedule(scheduleId);
+      await deleteSchedulePing(scheduleId);
       await revalidate.refetchSchedules();
 
       numUpdates.current += 1;
+      return true;
     } catch (e) {
       setError(e as string);
       setSchedules(prevSchedules);
       console.error(e);
-      return false;
     }
-    return true;
-  }, [schedules, data.profile, revalidate]);
+    return false;
+  }, [schedules, revalidate]);
 
 
   return {
-    data: {
-      schedules,
-    },
-    maps: {
-      scheduleMap
-    },
+    schedules,
+    scheduleMap,
     handlers: {
-      createNewSchedule,
+      createSchedule,
       updateSchedule,
       deleteSchedule
     },

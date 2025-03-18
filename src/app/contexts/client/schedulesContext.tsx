@@ -23,7 +23,7 @@ export const SchedulesContextProvider: FC<SchedulesContextProviderProps> = ({
 export const useSchedulesContext = (): UseSchedulesValue => {
   const context = useContext(SchedulesContext);
   if (context === undefined) {
-    throw new Error('use must be used within a TermSelectionProvider');
+    throw new Error('useSchedulesContext must be used within a SchedulesContextProvider');
   }
   return context;
 }
