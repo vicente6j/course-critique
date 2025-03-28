@@ -108,6 +108,7 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       await updateScheduleEntry(scheduleId, entryId, newCourseId);
       const newEntries = await revalidate.refetchScheduleEntries();
       const updatedEntry = newEntries?.find(entry => entry.entry_id === entryId && entry.schedule_id === scheduleId);
+      setEntries(newEntries);
 
       numUpdates.current += 1;
       return updatedEntry!;

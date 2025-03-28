@@ -20,8 +20,8 @@ export const createScheduleEntry = async (
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      scheduleId: scheduleId,
       action: 'insert',
+      scheduleId: scheduleId,
       courseId: courseId,
     }),
   });

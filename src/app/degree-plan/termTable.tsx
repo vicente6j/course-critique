@@ -18,14 +18,17 @@ import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import InfoIcon from '@mui/icons-material/Info';
 import { CourseInfo } from "../api/course";
 import { useCourses } from "../contexts/server/course/provider";
-import { useProfile } from "../contexts/server/profile/provider";
-import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
-import { createScheduleEntry, deleteScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
+import { createScheduleEntry, deleteScheduleEntry, ScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
 import { POSSIBLE_GRADES } from "../metadata";
-import { createScheduleGrade, deleteScheduleGrade, updateScheduleGrade } from "../api/schedule-grades";
+import { createScheduleGrade, deleteScheduleGrade, ScheduleGrade, updateScheduleGrade } from "../api/schedule-grades";
 import ScheduleDropdown from "../shared/scheduleDropdown";
 import TermTableDropdown from "./termTableDropdown";
 import { ScheduleInfo } from "../api/schedule";
+import { useDegreePlan } from "../hooks/useDegreePlan";
+import { useSchedules } from "../hooks/useSchedules";
+import { useScheduleEntries } from "../hooks/useScheduleEntries";
+import { useScheduleGrades } from "../hooks/useScheduleGrades";
+import { GradeCourseType } from "../globalTypes";
 
 export interface TermTableColumn {
   key: string;
@@ -61,10 +64,35 @@ const TermTable: FC<TermTableProps> = ({
   term
 }: TermTableProps) => {
   
+  /**
+   * Allows for unique term table row IDs assuming multiple
+   * empty rows exist, e.g. 'XX 0000', 'XX 0001', ...
+   */
   const [emptyIndex, setEmptyIndex] = useState<number>(1);
+
+  /**
+   * Although schedule entries under useScheduleEntries()
+   * already has most of these rows, for the purpose of displaying updated
+   * rows & empty rows in the client format (course ID, course name, GPA...), use this.
+   */
   const [scheduleRows, setScheduleRows] = useState<TermTableRow[] | null>(null);
+
+  /**
+   * Each term table row has a search field where the user can type in a course.
+   * Use this dictionary to map term table row keys and the associated search 
+   * query which currently lives there (most will be empty).
+   */
   const [queryValues, setQueryValues] = useState<Map<string, string>>(new Map());
+
+  /** 
+   * Use active results dictionary to store the currently active result for any search
+   * query, e.g. 
+   * 'CS 1' might result in
+   * XX 0000 -> CS 13332
+   * as the result which appears. 
+   */
   const [activeResults, setActiveResults] = useState<Map<string, string | null>>(new Map());
+  
   const [error, setError] = useState<string | null>(null);
   const [previousRow, setPreviousRow] = useState<TermTableRow | null>(null);
   const [rerenderCount, setRerenderCount] = useState<number | null>(0);
@@ -76,10 +104,12 @@ const TermTable: FC<TermTableProps> = ({
    */
   const [gradeValues, setGradeValues] = useState<Map<string, string>>(new Map());
   
-  /** E.g. CS 1332, for currently editing the grade for row with key CS 1332 */
+  /** 
+   * E.g. CS 1332, for currently editing the grade for row with key CS 1332.
+   * Used to keep track of which row is currently editing a grade.
+   */
   const [activeGradeKey, setActiveGradeKey] = useState<string | null>(null);
   const [previousGrade, setPreviousGrade] = useState<string | null>(null);
-  const [showPrevious, setShowPrevious] = useState<boolean | null>(false);
 
   /** 
    * The purpose of having both activeKey and activeIndex is activeKey represents the key of
@@ -91,12 +121,34 @@ const TermTable: FC<TermTableProps> = ({
    * activeIndex a location.
    */
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+
+  /**
+   * Discriminate between editing a course or grade.
+   */
   const [activeCol, setActiveCol] = useState<number>(0);
+
+  /**
+   * Both hover row and hover grade keep track of which element on the client is currently
+   * being hovered on. The purpose of keeping this in a React field rather than simply using
+   * onMouseEnter or onMouseLeave, which is prone to bugs--especially when adding or deleting
+   * table rows and your cursor lands on a different object without moving.
+   */
   const [hoverRow, setHoverRow] = useState<string | null>(null);
   const [hoverGrade, setHoverGrade] = useState<string | null>(null);
+
+  /**
+   * Used for when we add a row or delete a row from the term table; without disabling pointer events
+   * (and hovers), adding entries will automatically hover on the next field, making deducing which
+   * entry you're actually editing more difficult.
+   */
   const [disablePointerEvents, setDisablePointerEvents] = useState<boolean>(false);
+
+  /**
+   * State to capture whether an input field should change if backspace was entered
+   * (shortcut bug).
+   */
   const [noChange, setNoChange] = useState<boolean>(false);
-  const [schedule, setSchedule] = useState<ScheduleInfo | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean | null>(false);
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
@@ -104,42 +156,79 @@ const TermTable: FC<TermTableProps> = ({
   const initLoadComplete = useRef<boolean>(false);
   const initLoadGradesComplete = useRef<boolean>(false);
 
-  const { courses, courseMap, averagesMap } = useCourses();
-  
   const { 
-    termScheduleMap, 
-    termSelected, 
-    setTermSelected, 
-    tempInfoObject,
-    setIsEditing, 
-    setScheduleEdited,
-  } = useDegreePlanContext();
+    data: courseData,
+    maps: courseMaps
+  } = useCourses();
 
-  const { 
-    scheduleMap, 
-    scheduleEntryMap, 
-    scheduleGradeMap,
-    refetchScheduleEntries,
-    refetchScheduleGrades,
-    loading: profileLoading
-  } = useProfile();
+  const {
+    termScheduleMap,
+    termSelected,
+    handlers: degreePlanHandlers
+  } = useDegreePlan();
+
+  const {
+    scheduleMap
+  } = useSchedules();
+
+  const {
+    entryMap,
+    handlers: entryHandlers
+  } = useScheduleEntries();
+
+  const {
+    gradeMap,
+    handlers: gradeHandlers
+  } = useScheduleGrades();
 
   const router = useRouter();
 
+  const scheduleId: string | null = useMemo(() => {
+    if (!termScheduleMap || !termScheduleMap.has(term)) {
+      return null;
+    }
+    return termScheduleMap.get(term) || null;
+  }, [termScheduleMap]);
+
+  const schedule: ScheduleInfo | null = useMemo(() => {
+    if (!scheduleMap || !scheduleId) {
+      return null;
+    }
+    return scheduleMap.get(scheduleId)!;
+  }, [scheduleMap, scheduleId])
+
+  const scheduleEntries: ScheduleEntry[] = useMemo(() => {
+    if (!entryMap || !scheduleId) {
+      return [];
+    }
+    return entryMap.get(scheduleId) || [];
+  }, [entryMap, scheduleId]);
+
+  const scheduleGrades: ScheduleGrade[] = useMemo(() => {
+    if (!gradeMap || !scheduleId || !gradeMap.has(scheduleId)) {
+      return [];
+    }
+    return gradeMap.get(scheduleId)!.get(term) || [];
+  }, [gradeMap, scheduleId]);
+
   /** 
-   * Runs every instance of activeKey or activeGradeKey, hoverRow,
-   * or hoverGrade changing (extremely regularly -- needed to update the base
-   * NextUI table). 
+   * Runs every instance of activeKey, activeGradeKey, hoverRow,
+   * or hoverGrade changing (extremely regularly).
+   * 
+   * This is needed to update the base NextUI table, since simply adding or deleting
+   * entries to the table won't automatically rerender it.
+   * 
+   * Rerender count is the key for the entire DOM element. 
   */
   useEffect(() => {
     setRerenderCount(prev => prev! + 1);
-  }, [activeKey, activeGradeKey, hoverRow, hoverGrade, showPrevious]);
+  }, [activeKey, activeGradeKey, hoverRow, hoverGrade]);
 
   /** 
-   * On every rerender try to activate the
-   * row indicated by 'activeKey' (if it's available).
-   * Also try to activate the grade cell indicated by
-   * 'activeGradeKey' (if it's available).
+   * On every rerender try to activate the row indicated by 'activeKey' (if it's available).
+   * Also try to activate the grade cell indicated by 'activeGradeKey' (if it's available).
+   * 
+   * i.e. keep the input fields active and hydrated.
    */
   useEffect(() => {
     if (activeKey) {
@@ -156,6 +245,9 @@ const TermTable: FC<TermTableProps> = ({
     }
   }, [rerenderCount]);
 
+  /** 
+   * Simple error display mechanism.
+   */
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
@@ -165,120 +257,72 @@ const TermTable: FC<TermTableProps> = ({
     }
   }, [error]);
 
-  const scheduleId: string | null = useMemo(() => {
-    if (!termScheduleMap) {
-      return null;
-    }
-    initLoadComplete.current = false; /** Make sure we can call fetch schedule entries and rerender everything 
-    if the schedule ID changes */
-    initLoadGradesComplete.current = false;
-    return termScheduleMap.get(term) || null;
-  }, [termScheduleMap]);
-
   useEffect(() => {
-    const isEditing = (scheduleRows ? scheduleRows!.some(schedule => schedule.key.startsWith('XX')) : false) && activeKey !== null;
-
+    const isEditing = (scheduleRows && scheduleRows!.some(schedule => schedule.key.startsWith('XX'))) && activeKey !== null;
     setIsEditing(isEditing);
-    if (isEditing) {
-      setScheduleEdited(scheduleId);
-    } else {
-      setScheduleEdited(null);
-    }
-  }, [scheduleRows, activeKey, scheduleId]);
+  }, [scheduleRows, activeKey]);
 
-  const fetchScheduleEntries: () => void = useCallback(() => {
-    if (!scheduleEntryMap || profileLoading) {
+  /**
+   * Use this function to declare the base schedule rows off
+   * of the obtained schedule entries in useScheduleEntries().
+   */
+  const declareScheduleRows: () => void = useCallback(() => {
+    if (scheduleEntries.length === 0 && !initLoadComplete.current) {
       /**
-       * Don't run this upon a few cases.
-       * (a) scheduleEntryMap is null--hasn't been fetched yet.
-       * (b) profile is still loading (this is essentially the same as above)
+       * Either no assignment exists, or the assignment which does exist
+       * has no entries associated with the inputted schedule.
        */
-      return null;
-    } else if (!scheduleId || !scheduleEntryMap.has(scheduleId)) {
-      /** No assignment exists */
       const emptyRow = { key: 'XX 0000', course_id: 'XX 0000' };
       setScheduleRows([emptyRow]);
       initLoadComplete.current = true;
       return;
+    } else if (!initLoadComplete.current) {
+      setScheduleRows(
+        scheduleEntries.map(entry => ({
+          key: entry.course_id!,
+          course_id: entry.course_id!,
+          entry_id: entry.entry_id,
+        }))
+      );
+      initLoadComplete.current = true;
     }
-    let rows: TermTableRow[] = [];
-    for (const entry of scheduleEntryMap.get(scheduleId)!) {
-      rows.push({
-        key: entry.course_id!,
-        course_id: entry.course_id!,
-        entry_id: entry.entry_id,
-      });
-    }
-    if (rows.length === 0) {
-      rows.push({
-        key: 'XX 0000',
-        course_id: 'XX 0000',
-      });
-    }
-    initLoadComplete.current = true;
-    setScheduleRows(rows);
-  }, [scheduleId, scheduleEntryMap]);
+  }, [scheduleEntries, initLoadComplete.current]);
 
-  /**
-   * Whenever we add or remove a row,
-   * we update the entries available inside of our schedule. This 
-   * thus requires that we update the grade mapping as well, and hence
-   * we rerun this function.
-   * @param newRows rather than doing scheduleRows, if we want to call this manually.
-   */
-  const fetchScheduleGrades: () => void = useCallback(() => {
-    if (!scheduleGradeMap || !scheduleRows) {
+  const declareScheduleGrades: () => void = useCallback(() => {
+    if (!scheduleRows) {
       return;
-    } else if (!scheduleId || !scheduleGradeMap.has(scheduleId)!) {
-      /** There is no grade listed for the given scheduleId, or there is no schedule at all */
-      setGradeValues(new Map(scheduleRows.map(row => [row.key, ''])));
+    } else if (scheduleGrades.length === 0 && !initLoadComplete.current) {
+      setGradeValues(
+        new Map(scheduleRows?.map(row => [row.key, '']))
+      );
       initLoadGradesComplete.current = true;
       return;
+    } else if (!initLoadComplete.current) {
+      setGradeValues(
+        new Map(scheduleRows?.map(row => {
+          const rowGrade = scheduleGrades.find(grade => grade.entry_id === row.entry_id) || null;
+          return [row.key, rowGrade ? rowGrade.grade : ''];
+        }))
+      );
+      initLoadGradesComplete.current = true;
+      setRerenderCount(prev => prev! + 1);
     }
-    const gradeMap: Map<string, string> = new Map();
-    for (const entry of scheduleGradeMap.get(scheduleId)!) {
-      const courseId = scheduleRows.find(row => row.entry_id === entry.entry_id)!.key; /** Must exist, since each entry in scheduleGradeMap has a real entryId */
-      gradeMap.set(courseId, entry.grade);
-    }
-    /** Add the null rows */
-    for (const row of scheduleRows) {
-      if (!gradeMap.has(row.key)) {
-        gradeMap.set(row.key, '');
-      }
-    }
-    initLoadGradesComplete.current = true;
-    setGradeValues(gradeMap);
-    setRerenderCount(prev => prev! + 1);
-  }, [scheduleId, scheduleGradeMap, scheduleRows]);
-
-  const fetchSchedule: () => void = useCallback(() => {
-    if (!scheduleMap || !scheduleId) {
-      setSchedule(null);
-      return;
-    } else if (tempInfoObject && termSelected === term) { 
-      /** This makes sure that it's only the selected term which is updated */
-      setSchedule(tempInfoObject)
-      return;
-    }
-    setSchedule(scheduleMap.get(scheduleId)!);
-  }, [scheduleId, scheduleMap, tempInfoObject, termSelected, term]);
+  }, [scheduleGrades, scheduleRows, initLoadGradesComplete.current]);
 
   /**
    * The sole purpose of this useEffect is to only run upon initialization.
-   * Future calls to fetchScheduleEntries, fetchScheduleGrades, and fetchSchedule
-   * should happen manually.
    */
   useEffect(() => {
     if (!initLoadComplete.current) {
-      fetchScheduleEntries();
+      declareScheduleRows();
     } else if (!initLoadGradesComplete.current) {
-      fetchScheduleGrades();
+      declareScheduleGrades();
     }
-    fetchSchedule();
-  }, [fetchScheduleEntries, fetchScheduleGrades, fetchSchedule, initLoadGradesComplete.current]);
+  }, [declareScheduleRows, declareScheduleGrades, initLoadGradesComplete.current]);
 
   /**
    * This function has a few moving parts to it.
+   * 
    * 1. Check to see if the row selected starts with 'XX'. This can mean
    * a few different things: either 
    * (a) you selected an empty row without having anything selected, or 
@@ -293,80 +337,75 @@ const TermTable: FC<TermTableProps> = ({
    * the empty one.
    * 
    * 2. The row selected doesn't start with 'XX'. i.e. it's a real row.
-   * In this case, we definitely want to add the updated edit row to our
-   * scheduledRows, and we definitely want to deselect in the case that something
-   * is previously selected. Moreover,
+   * In this case, we definitely want to add the updated edit row to our scheduleRows, and we 
+   * definitely want to deselect in the case that something is previously selected. Moreover,
    *  -- 1. Add an entry to query values to represent the string which the user is now querying
    *  -- 2. Add an entry to active results to represent the filtered suggestions as a result
    *    of the query
+   * @param key The key of the row being selected
+   * @param rows An optional parameter use passed in rows rather than state field (cascading hooks)
    */
-  const handleSelectRow: (key: string, rows?: TermTableRow[]) => void = useCallback((key: string, rows?) => {
-    if (!scheduleRows) {
+  const handleSelectRow: (
+    key: string, 
+    rows?: TermTableRow[] 
+  ) => void = useCallback((key, rows?) => {
+    if (!scheduleRows && !rows) {
       return;
     }
-
+    
     if (activeGradeKey) {
       handleDeselectGrade();
     }
-
-    let newRows: TermTableRow[] = rows ? rows : previousRow ? handleDeselect() : scheduleRows;
-    if (key.startsWith('XX')) {
-      /** 
-       * Here there's three cases. Either 
-       *   (a) we're selecting an arbitrary empty row, in which case we simply have to activate it or 
-       *   (b) we're deselecting a real row. We can catch this case by checking to see if key === activeKey
-       *   (c) we're deselecting an active empty row (I hit the empty row twice), in which case
-       *   we handle it the same as (b) and just return
-       */
-
-      if (previousRow && (previousRow.key === key || key === activeKey)) {
-        setHoverRow(previousRow.key); /** Prevents flickering */
-        return; /** I hit the empty row twice, OR I hit the same row I just selected */
-      }
-      /** Activate the empty row */
-      setActiveKey(key);
-      let index = newRows.findIndex(row => row.key === key);
-      if (activeIndex !== index) {
-        setActiveIndex(index);
-      }
-      setPreviousRow(newRows.find(row => row.key === key)!);
+    const prevRows: TermTableRow[] | null = rows || previousRow ? handleDeselect() : scheduleRows;
+    if (!prevRows) {
       return;
     }
 
-    const paddedNumber = emptyIndex.toString().padStart(4, '0');
-    setEmptyIndex(prev => prev + 1);
-    let index = newRows.findIndex(row => row.key === key);
-    let prevRow = newRows.find(row => row.key === key);
-    setPreviousRow(prevRow!);
-
-    if (activeIndex !== index) {
+    if (key.startsWith('XX')) {
+      /** 
+       * Here there's three cases. Either 
+       *   (a) we're selecting an arbitrary empty row, in which case we simply have to activate it 
+       *   (b) we're deselecting a real row. We can catch this case by checking to see if key === activeKey
+       *   (c) we're deselecting an active empty row (hit the empty row twice), in which case
+       *   we handle it the same as (b) and just return
+       */
+      if (previousRow && (previousRow.key === key || key === activeKey)) {
+        setHoverRow(previousRow.key); /** Prevents flickering */
+        return;
+      }
+      /** Activate the empty row */
+      setActiveKey(key);
+      const index = prevRows.findIndex(row => row.key === key);
       setActiveIndex(index);
+      setPreviousRow(prevRows.find(row => row.key === key)!);
+    } else {
+
+      /** 
+       * Selecting a real row with a real entry.
+       */
+      const paddedNumber = emptyIndex.toString().padStart(4, '0');
+      setEmptyIndex(prev => prev + 1);
+      const index = prevRows.findIndex(row => row.key === key);
+      setActiveIndex(index);
+      const prevRow = prevRows.find(row => row.key === key);
+      setPreviousRow(prevRow!);
+      setActiveCol(0);
+
+      const newKey = `XX ${paddedNumber}`;
+      const newRows = [
+        ...prevRows.slice(0, index),
+        { ...prevRows[index], key: newKey }, /** Maintains old entry and hover state */
+        ...prevRows.slice(index + 1)
+      ];
+      setScheduleRows(newRows);
+      setQueryValues(prev => new Map(prev).set(newKey, key));
+      setActiveResults(prev => new Map(prev).set(newKey, key));
+      setActiveKey(newKey);
     }
-    setActiveCol(0);
-
-    const newKey = `XX ${paddedNumber}`;
-    newRows = [
-      ...newRows.slice(0, index),
-      { ...newRows[index], key: newKey }, /** Maintains old entry and hover state */
-      ...newRows.slice(index + 1)
-    ];
-
-    setScheduleRows(newRows);
-    setQueryValues(prev => {
-      const newDict = new Map(prev);
-      newDict.set(newKey, key);
-      return newDict;
-    });
-    setActiveResults(prev => {
-      const newDict = new Map(prev);
-      newDict.set(newKey, key);
-      return newDict;
-    });
-    setActiveKey(newKey);
-  }, [emptyIndex, scheduleRows, rerenderCount, activeKey, previousRow, activeIndex, activeGradeKey]);
+  }, [emptyIndex, scheduleRows, activeKey, previousRow, activeGradeKey]);
 
   /**
-   * This function basically either 
+   * This function either 
    * (a) restores the original state of the table before selecting something.
    * e.g. I select a real row, then this function restores the row I selected
    * back into the table (no edit key).
@@ -375,23 +414,23 @@ const TermTable: FC<TermTableProps> = ({
    */
   const handleDeselect: () => TermTableRow[] = useCallback(() => {
     if (!activeKey || !previousRow) {
-      return scheduleRows!;
-    } 
+      return scheduleRows || [];
+    }
     
     let newRows: TermTableRow[] = [];
-    if (!previousRow!.key.startsWith('XX')) {
+    if (!previousRow.key.startsWith('XX')) {
       /**
        * We're deselecting a real entry at this point.
        * Remove from all dictionaries and reset the scheduleRows using previousRow.
        */
-      let index = scheduleRows!.findIndex(row => row.key === activeKey);
+      const remindex = scheduleRows!.findIndex(row => row.key === activeKey);
       newRows = [
-        ...scheduleRows!.slice(0, index),
-        { ...scheduleRows![index], key: previousRow!.key }, /** Maintains previous row hover state and entry */
-        ...scheduleRows!.slice(index + 1)
+        ...scheduleRows!.slice(0, remindex),
+        { ...scheduleRows![remindex], key: previousRow!.key },
+        ...scheduleRows!.slice(remindex + 1)
       ];
       setScheduleRows(newRows);
-      removeFromDictionaries(activeKey!);
+      removeFromQueryDictionaries(activeKey!);
     } else {
       newRows = scheduleRows!;
     }
@@ -401,18 +440,18 @@ const TermTable: FC<TermTableProps> = ({
     return newRows;
   }, [activeKey, scheduleRows, previousRow]);
 
-  const filterCourses: (query: string) => Course[] = useCallback((query: string) => {
-    if (!courses) {
+  const filterCourses: (query: string) => Course[] = useCallback((query) => {
+    if (!courseData.courses) {
       return [];
     } else if (!query) {
-      return courses;
+      return courseData.courses;
     }
-    return courses?.filter(course => {
-      return course.id.toLowerCase().startsWith(query!.toLowerCase());
-    });
-  }, [courses]);
+    return courseData.courses?.filter(course => (
+      course.id.toLowerCase().startsWith(query!.toLowerCase())
+    ));
+  }, [courseData.courses]);
 
-  const removeFromDictionaries: (key: string) => void = useCallback((key) => {
+  const removeFromQueryDictionaries: (key: string) => void = useCallback((key) => {
     setQueryValues(prev => {
       const newDict = new Map(prev);
       newDict.delete(key);
@@ -423,6 +462,10 @@ const TermTable: FC<TermTableProps> = ({
       newDict.delete(key);
       return newDict;
     });
+  }, []);
+
+  const removeFromAllDictionaries: (key: string) => void = useCallback((key) => {
+    removeFromQueryDictionaries(key);
     setGradeValues(prev => {
       const newDict = new Map(prev);
       newDict.delete(key);
@@ -432,24 +475,22 @@ const TermTable: FC<TermTableProps> = ({
 
   /**
    * This handles the insertion of a course entry into either 
-   *   a. an empty schedule
-   *   b. a real schedule (scheduleId is non null). this thus requires
-   *     pinging the back-end to add to the schedule and fetch that entry
-   *     for updates
-   * @param key the key of the row to create an entry for (begins with 'XX' always)
+   * (a) an empty schedule
+   * (b) a real schedule (scheduleId is non null)
+   * @param key The key of the row to create an entry for (begins with 'XX' always)
    */
   const addActiveCourse: (key: string) => Promise<void> = useCallback(async (key: string) => {
     if (!scheduleRows || !activeResults) {
       setError('Missing required data.');
       return;
-    } else if (!activeResults.get(key)) {
+    } else if (!activeResults.has(key)) {
       setError('Didn\'t find a course to add');
       return;
     }
 
     try {
       const courseId = activeResults.get(key)!;
-      if (scheduleRows!.some(row => row.key === courseId)) {
+      if (scheduleRows.some(row => row.key === courseId)) {
         setError('You already added this course.');
         setRerenderCount(prev => prev! + 1); /** Activate the input ref again */
         return;
@@ -459,12 +500,12 @@ const TermTable: FC<TermTableProps> = ({
       let isUpdate: boolean = false;
       if (previousRow && !previousRow.key.startsWith('XX')) {
         /** 
-         * We have a real previous row we're replacing 
-         * Assume that all real rows are greedily at the front of the list
+         * We have a real previous row we're replacing. 
+         * Assume that all real rows are greedily at the front of the list.
         */
         newRows = [
           ...scheduleRows.slice(0, activeIndex),
-          { key: courseId, course_id: courseId, entry_id: scheduleRows[activeIndex].entry_id, isHovering: false, isHoveringOnGrade: false },
+          { key: courseId, course_id: courseId, entry_id: scheduleRows[activeIndex].entry_id, },
           ...scheduleRows.slice(activeIndex + 1)
         ];
         isUpdate = true;
@@ -472,9 +513,8 @@ const TermTable: FC<TermTableProps> = ({
         /** We're simply adding on an empty row */
         newRows = [
           ...scheduleRows!.filter(row => row.key !== key && !row.key.startsWith('XX')),
-          { key: courseId, course_id: courseId, }, /** notice we don't have an entryId yet */
-          ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) /** In some cases we may have multiple emtpy rows,
-          which we want to carry over */
+          { key: courseId, course_id: courseId, }, /** No entryId yet */
+          ...scheduleRows!.filter(row => row.key !== key && row.key.startsWith('XX')) /** In some cases we may have multiple emoty rows */
         ];
       }
 
@@ -484,7 +524,7 @@ const TermTable: FC<TermTableProps> = ({
 
       setScheduleRows(newRows);
       setDisablePointerEvents(true); /** Disable pointer events to avoid hovering again */
-      removeFromDictionaries(key);
+      removeFromAllDictionaries(key);
       setGradeValues(prev => {
         const newDict = new Map(prev);
         newDict.set(courseId, '');
@@ -495,20 +535,19 @@ const TermTable: FC<TermTableProps> = ({
       const firstEmptyIndex = newRows.findIndex(row => row.key.startsWith('XX'));
       setActiveKey(newRows[firstEmptyIndex].key);
       setPreviousRow(newRows[firstEmptyIndex]);
-      setRerenderCount(prev => prev! + 1);
       setActiveIndex(firstEmptyIndex);
+      setRerenderCount(prev => prev! + 1);
 
       if (isUpdate && scheduleId) {
-        let entryId: number = scheduleRows[activeIndex].entry_id as number;
+        const entryId = scheduleRows[activeIndex].entry_id as number;
 
-        await updateScheduleEntry(schedule!.schedule_id, entryId, courseId);
-        await refetchScheduleEntries();
+        await entryHandlers.updateEntry(schedule!.schedule_id, entryId, courseId);
+        /** To-do: add some error handling in the case that this returns null */
 
       } else if (scheduleId) {
 
-        await createScheduleEntry(schedule!.schedule_id, courseId);
-        /** This doesn't retrigger new schedule entries since initLoadComplete.current will be set to true */
-        const newEntries = await refetchScheduleEntries();
+        const newEntry = await entryHandlers.createEntry(schedule!.schedule_id, courseId);
+        /** To-do: more error handling */
 
         /** 
          * It only remains to make sure we update the newRows with the right entry_id, so that we can delete it later. 
@@ -518,50 +557,54 @@ const TermTable: FC<TermTableProps> = ({
           const insertIndex = prev!.findIndex(row => row.key === courseId)!;
           const newArr = [
             ...prev!.slice(0, insertIndex), 
-            { ...prev![insertIndex], entry_id: newEntries?.find(row => row.course_id === courseId)!.entry_id!},
+            { ...prev![insertIndex], entry_id: newEntry!.entry_id },
             ...prev!.slice(insertIndex + 1)
           ];
-          return newArr!;
-        })
+          return newArr;
+        });
       }
     } catch (error) {
       console.error(error);
-      setError('Unable to insert into schedule');
+      setError('Unable to insert into schedule.');
     }
   }, [activeResults, scheduleRows, activeIndex]);
 
-  const removeInsertedCourse: (key: string) => Promise<void> = useCallback(async (key) => {
+  /**
+   * This handles the deletion of either
+   * (a) a real course (we'll know this if previousRow.key !== 'XX AAAA' )
+   * (b) an empty row
+   */
+  const removeRealRow: (key: string) => Promise<void> = useCallback(async (key) => {
     try {
       const newRows = [...scheduleRows!.filter(row => row.key !== key)];
       setScheduleRows(newRows);
 
       const deletedIndex = scheduleRows!.findIndex(row => row.key === activeKey);
       if (newRows.length > 0) {
-        const selectedKey = deletedIndex === 0 
+        const newSelectedKey = deletedIndex === 0 
           ? newRows[deletedIndex].key 
           : newRows[deletedIndex - 1].key;
 
-        handleSelectRow(selectedKey, newRows);
+        handleSelectRow(newSelectedKey, newRows);
         setDisablePointerEvents(true);
         setRerenderCount(prev => prev! + 1);
-
-        setActiveIndex(
-          deletedIndex === 0 ? deletedIndex : deletedIndex - 1
-        );
+        setActiveIndex(deletedIndex === 0 ? deletedIndex : deletedIndex - 1);
       } else {
         setPreviousRow(null);
         setActiveKey(null);
         setActiveIndex(-1);
       }
-      removeFromDictionaries(key);
+      removeFromAllDictionaries(key);
 
-      if (!previousRow!.key.startsWith('XX') && schedule) {
-        await deleteScheduleEntry(schedule.schedule_id, Number(previousRow!.entry_id!));
-        await refetchScheduleEntries();
+      /** 
+       * If the item we just removed was a real entry, delete from schedule.
+       */
+      if (previousRow && !previousRow.key.startsWith('XX') && schedule) {
+        await entryHandlers.deleteEntry(schedule.schedule_id, Number(previousRow!.entry_id));
       }
     } catch (error) {
       console.error(error);
-      setError('Unable to remove from schedule');
+      setError('Unable to remove from schedule.');
     }
   }, [scheduleRows, previousRow, activeKey]);
 
@@ -569,23 +612,26 @@ const TermTable: FC<TermTableProps> = ({
    * Adds an empty row to scheduled rows (based on the current empty index to avoid collisions).
    * Optional param to pass in a collection of rows to filter. Optional param to return the 
    * rows rather than set scheduleRows.
-   * @param rows optional rows to filter
-   * @param returnList optional param to return rather than set
+   * @param rows Optional rows to filter
+   * @param returnList Optional param to return rather than set
    */
-  const addEmptyRow: (rows?: TermTableRow[], returnList?: boolean) => TermTableRow[] = useCallback((rows?, returnList?) => {
+  const addEmptyRow: (
+    rows?: TermTableRow[], 
+    returnList?: boolean
+  ) => TermTableRow[] = useCallback((rows?, returnList?) => {
     if (scheduleRows!.length == 7) {
       /** Don't add more than seven courses */
       setError('Unable to insert more than seven courses.');
       return [];
-    } 
-    const myRows = rows ? rows : activeKey ? handleDeselect() : scheduleRows!;
+    }
+    const oldRows = rows || activeKey ? handleDeselect() : scheduleRows!;
     const paddedNumber = emptyIndex.toString().padStart(4, '0');
-    setEmptyIndex((prev) => prev + 1);
     const key = `XX ${paddedNumber}`;
+    setEmptyIndex(prev => prev + 1);
 
     let newRows: TermTableRow[] = [];
     /** 
-     * 1. If myRows is empty, just add the empty row and continue.
+     * 1. If oldRows is empty, just add the empty row and continue.
      * 2. If the current row selected is a real course (and potentially has real courses underneath it), 
      *    just add the empty row underneath all the non empty ones. 
      *    Otherwise, add the empty row directly underneath our current row.
@@ -593,24 +639,18 @@ const TermTable: FC<TermTableProps> = ({
      *    UPDATE Jan 25 --> Always add the new row directly underneath all rows.
      */
     const emptyRow: TermTableRow = { key: key, course_id: key };
-    newRows = [...myRows, emptyRow];
+    newRows = [...oldRows, emptyRow];
 
-    setGradeValues(prev => {
-      const newDict = new Map(prev);
-      newDict.set(key, '');
-      return newDict;
-    });
+    setGradeValues(prev => new Map(prev).set(key, ''));
     if (returnList) {
       return newRows;
     }
     setDisablePointerEvents(true); /** Disable pointer events to avoid hovering again */
     setHoverRow(null);
-
     setScheduleRows(newRows);
     setActiveKey(key);
     setPreviousRow(newRows.find(row => row.key === key)!);
-    /** Purpose of this is depending on where we put the empty row, that's where our new index is */
-    setActiveIndex(newRows.findIndex(row => row.key === key)!);
+    setActiveIndex(newRows.findIndex(row => row.key === key));
 
     return newRows;
   }, [emptyIndex, scheduleRows, activeKey]);
@@ -618,19 +658,15 @@ const TermTable: FC<TermTableProps> = ({
   /**
    * Handles search value changing. Plus, manually retriggers a rerender in the case that
    * the key is the same (most of the time).
-   * @param value value which is queried
-   * @param key key of the row which is queried on
+   * @param value Value which is queried
+   * @param key Key of the row which is queried on
    */
   const onSearchChange: (value: string, key: string) => void = useCallback((value, key) => {
     /** Avoid modifying query or results if we just deleted an entry via pressing 'backspace' */
     if (noChange) {
       return;
     }
-    setQueryValues((prev) => {
-      const newDict = new Map(prev);
-      newDict.set(key, value);
-      return newDict;
-    });
+    setQueryValues(prev => new Map(prev).set(key, value));
     setActiveResults((prev) => {
       const newDict = new Map(prev);
       if (value === '') {
@@ -644,64 +680,59 @@ const TermTable: FC<TermTableProps> = ({
     setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
   }, [filterCourses, noChange]);
 
-  const handleSelectGrade: (key: string) => void = useCallback((key) => {
-    if (activeGradeKey && activeGradeKey === key) { 
-      handleDeselectGrade();
-      return;
-    } 
-    let rows: TermTableRow[] = scheduleRows!;
-    if (activeKey) {
-      rows = handleDeselect();
-      key = activeKey === key ? previousRow!.key : key; 
-      /** Weird edge case where we select a grade belonging to a different row */
-    }
-
-    if (gradeValues.get(key)!.length > 0) {
-      setPreviousGrade(gradeValues.get(key)!);
-    }
-    setActiveGradeKey(key);
-
-    let index = rows.findIndex(row => row.key === key);
-    if (index && activeIndex !== index) {
-      setActiveIndex(index);
-    }
-    setActiveCol(1);
-
-    /** Suggested grade at this point should be null. */
-  }, [gradeValues, activeGradeKey, activeKey, handleDeselect, previousRow, scheduleRows]);
-
   const handleDeselectGrade: () => void = useCallback(() => {
     if (!activeGradeKey) {
       return;
     } 
     /** Reset the entry grade map */
     if (previousGrade) {
-      setGradeValues(prev => {
-        const newDict = new Map(prev);
-        newDict.set(activeGradeKey!, previousGrade);
-        return newDict;
-      });
+      setGradeValues(prev => new Map(prev).set(activeGradeKey, previousGrade));
     }
     setPreviousGrade(null);
     setActiveGradeKey(null);
   }, [activeGradeKey, previousGrade]);
 
   /**
+   * Handles the selection of a grade cell.
+   * @param key The key of the row which has the grade cell being edited.
+   */
+  const handleSelectGrade: (key: string) => void = useCallback((key) => {
+    if (activeGradeKey && activeGradeKey === key) { 
+      handleDeselectGrade();
+      return;
+    } 
+
+    let normKey: string = key;
+    let rows: TermTableRow[] = scheduleRows!;
+    if (activeKey) {
+      rows = handleDeselect();
+      normKey = activeKey === key ? previousRow!.key : key; /** Weird edge case where we select a grade belonging to an empty row */
+    }
+
+    if (gradeValues.get(normKey)!.length > 0) {
+      setPreviousGrade(gradeValues.get(normKey)!);
+    }
+    setActiveGradeKey(normKey);
+
+    const index = rows.findIndex(row => row.key === normKey);
+    setActiveIndex(index);
+    setActiveCol(1);
+
+    /** Suggested grade at this point should be null. */
+  }, [gradeValues, activeGradeKey, activeKey, handleDeselect, handleDeselectGrade, previousRow, scheduleRows]);
+
+  /**
    * Handles grade value changing.
-   * @param value value which is queried
-   * @param key the key which is used
+   * @param value Value which is queried
+   * @param key The key which is used
    */
   const onGradeChange: (value: string, key: string) => void = useCallback(async (value, key) => {
     value = value.toUpperCase();
     if (!POSSIBLE_GRADES.some(el => el === value) && value !== '') {
-      setError('Must insert a valid grade (A, B, C, D, F, W)');
+      setError('Must insert a valid grade (A, B, C, D, F, W).');
       return;
     }
-    setGradeValues(prev => {
-      const newDict = new Map(prev);
-      newDict.set(key, value);
-      return newDict;
-    });
+    setGradeValues(prev => prev.set(key, value));
     setDisablePointerEvents(true); /** Disable pointer events to avoid hovering again */
     setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
 
@@ -711,25 +742,25 @@ const TermTable: FC<TermTableProps> = ({
       setActiveGradeKey(null);
 
       if (previousGrade && scheduleId) {
-        await updateScheduleGrade(scheduleId!, term, entryId, value);
+        await gradeHandlers.updateGrade(scheduleId!, term, entryId, value);
       } else if (scheduleId) {
-        await createScheduleGrade(scheduleId!, term, entryId, value);
+        await gradeHandlers.createGrade(scheduleId!, term, entryId, value);
       }
-      await refetchScheduleGrades();
-
     } else if (scheduleId) {
-
-      await deleteScheduleGrade(scheduleId!, term, entryId);
-      await refetchScheduleGrades();
+      await gradeHandlers.deleteGrade(scheduleId!, term, entryId);
     }
-  }, [previousGrade, scheduleRows]);
+  }, [previousGrade, scheduleId, scheduleRows, gradeHandlers]);
 
-  type KeyDownType = 'course' | 'grade';
-  const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, key: string, type: KeyDownType) => void = useCallback((e, key, type) => {
+  const handleKeyDown: (
+    e: React.KeyboardEvent<HTMLInputElement>, 
+    key: string, 
+    type: GradeCourseType
+  ) => void = useCallback((e, key, type) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && termSelected === term) {
       /** Handles case of inserting rows with cmd-enter (don't do anything) */
       return;
     }
+
     switch (e.key) {
       case 'Enter':
         if (type === 'course') {
@@ -738,10 +769,6 @@ const TermTable: FC<TermTableProps> = ({
             return;
           }
           addActiveCourse(key);
-          const inputRef = inputRefs.current.get(key);
-          if (inputRef?.current) {
-            inputRef.current.blur();
-          }
         }
         break;
       case 'ArrowDown':
@@ -752,13 +779,13 @@ const TermTable: FC<TermTableProps> = ({
         return;
     }
     e.preventDefault();
-  }, [addActiveCourse, activeResults]);
+  }, [addActiveCourse, activeResults, termSelected]);
 
   const incrementIndex: () => void = useCallback(() => {
     if (!scheduleRows) {
       return;
     }
-    let newIndex = Math.min(activeIndex + 1, scheduleRows.length);
+    const newIndex = Math.min(activeIndex + 1, scheduleRows.length);
     if (newIndex !== scheduleRows.length) {
       if (activeCol === 0) {
         handleSelectRow(scheduleRows[newIndex].key);
@@ -781,7 +808,7 @@ const TermTable: FC<TermTableProps> = ({
     if (!scheduleRows) {
       return;
     }
-    let newIndex = Math.max(activeIndex - 1, -1);
+    const newIndex = Math.max(activeIndex - 1, -1);
     if (newIndex !== -1) {
       if (activeCol === 0) {
         handleSelectRow(scheduleRows[newIndex].key);
@@ -839,9 +866,10 @@ const TermTable: FC<TermTableProps> = ({
       setTimeout(() => {
         setNoChange(false);
       }, 1000);
-      removeInsertedCourse(activeKey);
+      removeRealRow(activeKey);
     }
-  }, [activeKey, termSelected, activeGradeKey]);
+  }, [activeKey, termSelected, activeGradeKey, 
+    removeRealRow, addEmptyRow, incrementIndex, decrementIndex, decrementCol, incrementCol]);
 
   const handleClickOutside: (event: MouseEvent) => void = useCallback((event) => {
     if (tableRef && !tableRef.current!.contains(event.target as Node) && termSelected === term) {
@@ -859,42 +887,32 @@ const TermTable: FC<TermTableProps> = ({
     };
   }, [handleShortcuts, handleClickOutside, disablePointerEvents]);
 
-  const averageGpa: number | null = useMemo(() => {
-    if (!scheduleRows || !averagesMap) {
-      return null;
+  const scheduleData: {
+    average: number | null,
+    credits: number | null
+  } = useMemo(() => {
+    if (!scheduleRows || !courseMaps.averagesMap) {
+      return { average: null, credits: null };
     }
     let average = 0;
     let credits = 0;
     for (const row of scheduleRows) {
-      if (row.key.startsWith('XX') || !averagesMap.has(row.key)) {
+      if (row.key.startsWith('XX') || !courseMaps.averagesMap.has(row.key)) {
         continue;
       }
-      const courseGpa = averagesMap.get(row.key)!.GPA!;
-      const numCredits = Number(courseMap!.get(row.key)!.credits!);
+      const courseGpa = courseMaps.averagesMap.get(row.key)!.GPA!;
+      const numCredits = Number(courseMaps.courseMap!.get(row.key)!.credits);
       average = (average * credits + courseGpa * numCredits) / (credits + numCredits);
       credits += numCredits;
     }
-    return average;
-  }, [scheduleRows, averagesMap]);
-
-  const numCredits: number | null = useMemo(() => {
-    if (!scheduleRows || !courseMap) {
-      return null;
-    }
-    let numCredits = 0;
-    for (const row of scheduleRows) {
-      if (row.key.startsWith('XX')) {
-        continue;
-      }
-      numCredits += Number(courseMap?.get(row.key)?.credits!);
-    }
-    return numCredits;
-  }, [scheduleRows, courseMap]);
+    return { average, credits };
+  }, [scheduleRows, courseMaps.averagesMap, courseMaps.courseMap]);
 
   const formatEmptyCourseID: (item: TermTableRow) => JSX.Element = useCallback((item) => {
     const inActiveResults = activeResults.has(item.key) && activeResults.get(item.key);
     const inQueryValues = queryValues.has(item.key) && queryValues.get(item.key)!.length > 0;
     const shouldBeHighlighted = item.key === hoverRow || item.key === activeKey;
+
     return (
       <TableCell
         className={`text-sm ${shouldBeHighlighted && 'bg-gray-100'} border-b`}
@@ -933,7 +951,9 @@ const TermTable: FC<TermTableProps> = ({
               ref={(el) => {
                 if (el) {
                   {/** This gets updated on each render, but it's fine (don't check if the map contains it) */}
-                  inputRefs.current.set(item.key, { current: el });
+                  inputRefs.current.set(item.key, { 
+                    current: el 
+                  });
                 }
               }}
               value={queryValues.get(item.key)?.toUpperCase()}
@@ -942,7 +962,6 @@ const TermTable: FC<TermTableProps> = ({
               }}
               onFocus={(e) => e.stopPropagation()}
               onKeyDown={(e) => handleKeyDown(e, item.key, 'course')}
-              placeholder=""
               className={`text-search bg-transparent z-2 outline-none w-80`}
             />
           </div>
@@ -952,13 +971,12 @@ const TermTable: FC<TermTableProps> = ({
   }, [activeResults, queryValues, rerenderCount, inputRefs, activeKey]);
 
   const formatGradeInput: (item: TermTableRow) => JSX.Element = useCallback((item) => {
-    const key = item.key;
     return (
       <TableCell
         className={`
           border-b border-gray-200 text-sm grade-cell
-          ${(item.key === hoverGrade || activeGradeKey === item.key) && 'bg-gray-100'}
-        `}
+          ${(item.key === hoverGrade || activeGradeKey === item.key) && 'bg-gray-100'}`
+        }
         onClick={() => handleSelectGrade(item.key)}
       >
         <div className="relative w-fit border-b border-gray-400 py-1 pr-2 z-10">
@@ -981,17 +999,19 @@ const TermTable: FC<TermTableProps> = ({
           <div className="flex flex-row gap-0 items-center">
             {/** onFocus=(stop propagation) needed to prevent row from being selected */}
             <input
-              id={`searchbar-${key}`}
+              id={`searchbar-${item.key}`}
               type="text"
               ref={(el) => {
                 if (el) {
-                  gradeInputRefs.current.set(key, { current: el });
+                  gradeInputRefs.current.set(item.key, { 
+                    current: el 
+                  });
                 }
               }}
-              value={activeGradeKey === item.key ? previousGrade || '' : ''} /** Only display if cmd is pressed */
-              onChange={(e) => onGradeChange(e.target.value, key)}
+              value={activeGradeKey === item.key ? previousGrade || '' : ''}
+              onChange={(e) => onGradeChange(e.target.value, item.key)}
               onFocus={(e) => e.stopPropagation()}
-              onKeyDown={(e) => handleKeyDown(e, key, 'grade')}
+              onKeyDown={(e) => handleKeyDown(e, item.key, 'grade')}
               placeholder=""
               className={`text-search bg-transparent z-2 outline-none w-5 ${activeGradeKey === item.key && previousGrade ? '' : ''}`}
             />
@@ -999,18 +1019,18 @@ const TermTable: FC<TermTableProps> = ({
         </div>
       </TableCell>
     );
-  }, [gradeInputRefs, hoverGrade, showPrevious, previousGrade, activeGradeKey, activeKey]);
+  }, [gradeInputRefs, hoverGrade, previousGrade, activeGradeKey, activeKey]);
 
   const nextToolTipDisplayContent: JSX.Element = useMemo(() => {
-    if (!scheduleRows || !averagesMap) {
+    if (!scheduleRows || !courseMaps.averagesMap) {
       return <></>;
     }
-    const nonEmptyAndNonNan = scheduleRows.filter(row => !row.key.startsWith('XX') && averagesMap!.has(row.key));
+    const nonEmptyAndNonNan = scheduleRows.filter(row => !row.key.startsWith('XX') && courseMaps.averagesMap!.has(row.key));
     const numItems = nonEmptyAndNonNan.length;
     return (
       <p className="text-sm">
         {`Weighted by number of credits for each class. ${numItems !== 0 ? (
-          `The value ${Number(averageGpa).toFixed(2)} is currently averaging 
+          `The value ${Number(scheduleData.average).toFixed(2)} is currently averaging 
             ${nonEmptyAndNonNan.map((row => {
               return ` ${row.key}`
             }))} (${numItems} items)`
@@ -1019,14 +1039,14 @@ const TermTable: FC<TermTableProps> = ({
         )}`}
       </p>
     )
-  }, [scheduleRows, averageGpa, averagesMap]);
+  }, [scheduleRows, scheduleData]);
 
   /**
    * All of our hovering logic is handled in this useCallback. The purpose of this is to avoid
    * having to repeat onMouseEnter and onMouseLeave, which are both prone to bugs, especially
-   * when the component remounts. Instead, just always track the mouse and check whether or not
-   * we're currently hovering over (a) a grade cell, or (b) a row. If neither are, true,
-   * set both hover states to null.
+   * when the component remounts (e.g. adding or removing a course). Instead, just always track 
+   * the mouse and check whether or not we're currently hovering over (a) a grade cell, or (b) a 
+   * row. If neither are, true, set both hover states to null.
    * @param e Mouseevent
    */
   const handleMouseMove: (e: MouseEvent) => void = useCallback((e) => {
@@ -1077,36 +1097,47 @@ const TermTable: FC<TermTableProps> = ({
     <div 
       className="flex flex-col gap-2 min-w-600 max-w-700"
       onClick={() => {
-        setTermSelected(term!);
+        degreePlanHandlers.setTermSelected(term);
       }}
     >
       <div className="flex flex-row gap-2 items-end">
         <h1 className="heading-sm">{term}</h1>
-        <TermTableDropdown 
-          term={term}
-        />
+        {/* <TermTableDropdown term={term}/> */}
       </div>
       <div className="flex flex-row gap-8 w-full py-2 rounded rounded-lg">
-        <ScheduleDropdown 
+        {/* <ScheduleDropdown 
           selectedOption={schedule ? schedule.schedule_id! : 'select'}
-        />
+        /> */}
         <div className="flex flex-row gap-4 items-center">
           <div className="flex flex-row gap-2 items-center">
             <NextToolTip content={nextToolTipDisplayContent} className="w-300">
-              <InfoIcon style={{ width: '15px' }} />
+              <InfoIcon 
+                style={{ 
+                  width: '15px' 
+                }} 
+              />
             </NextToolTip>
             <p className="text-sm font-semi-bold">Schedule GPA</p>
           </div>
-          {averageGpa && averageGpa !== 0 ? (
-            <p className="text-sm font-semi-bold" style={{ color: formatGPA(averageGpa) }}>{Number(averageGpa).toFixed(2)}</p>
+          {scheduleData.average && scheduleData.average !== 0 ? (
+            <p 
+              className="text-sm font-semi-bold" 
+              style={{ 
+                color: formatGPA(scheduleData.average) 
+              }}
+            >
+              {Number(scheduleData.average).toFixed(2)}
+            </p>
           ) : (
             <p className="text-gray-400 text-sm">N/A</p>
           )}
         </div>
         <div className="flex flex-row gap-4 items-center">
           <p className="text-sm font-semi-bold">Num Credits</p>
-          {averageGpa && averageGpa !== 0 ? (
-            <p className="text-sm">{Number(numCredits).toFixed()}</p>
+          {scheduleData.credits && scheduleData.credits !== 0 ? (
+            <p className="text-sm">
+              {Number(scheduleData.credits).toFixed(2)}
+            </p>
           ) : (
             <p className="text-gray-400 text-sm">N/A</p>
           )}
@@ -1144,8 +1175,13 @@ const TermTable: FC<TermTableProps> = ({
                   const value = getKeyValue(item, columnKey);
                   const isEmptyOrEditing = item.key.startsWith('XX');
 
-                  let hasGradeValue: boolean = false;
-                  let grade: string | null = null;
+                  let hasGradeValue = false;
+                  let grade = null;
+                  /** 
+                   * Discriminate between obtaining grades via the previous row
+                   * (if the row is currently selected)
+                   * or just with the item.key.
+                   */
                   if (activeKey === item.key) {
                     hasGradeValue = previousRow && gradeValues.has(previousRow!.key) && gradeValues.get(previousRow!.key)!.length > 0 || false;
                     if (hasGradeValue) {
@@ -1156,8 +1192,8 @@ const TermTable: FC<TermTableProps> = ({
                     grade = gradeValues.get(item.key)!;
                   }
 
-                  let course: Course | null = null;
-                  let averageGpa: number | string | null = null;
+                  let course = null;
+                  let averageGpa = null;
                   /**
                    * Every row will necessarily have either
                    *  (a) an entry in activeResults (e.g. XX 0000 -> CS 1332)
@@ -1165,11 +1201,11 @@ const TermTable: FC<TermTableProps> = ({
                    *   or (c) neither (if it's completely new and empty)
                    */
                   if (activeResults.has(item.key) && activeResults.get(item.key)) {
-                    course = courseMap?.get(activeResults.get(item.key)!)!; 
-                    averageGpa = averagesMap?.get(activeResults.get(item.key)!)?.GPA! || 'N/A';
+                    course = courseMaps.courseMap?.get(activeResults.get(item.key)!)!; 
+                    averageGpa = courseMaps.averagesMap?.get(activeResults.get(item.key)!)?.GPA || 'N/A';
                   } else if (!isEmptyOrEditing) {
-                    course = courseMap?.get(item.key)!;
-                    averageGpa = averagesMap?.get(item.key)?.GPA || 'N/A';
+                    course = courseMaps.courseMap?.get(item.key)!;
+                    averageGpa = courseMaps.averagesMap?.get(item.key)?.GPA || 'N/A';
                   }
                   const isActive = item.key === activeKey;
                   /** 
@@ -1275,7 +1311,7 @@ const TermTable: FC<TermTableProps> = ({
                           `}
                           onClick={(e) => {
                             e.stopPropagation(); 
-                            removeInsertedCourse(item.key);
+                            removeRealRow(item.key);
                           }}
                         />
                       </TableCell>
@@ -1306,7 +1342,7 @@ const TermTable: FC<TermTableProps> = ({
             <Link 
               className={`text-sm hover:underline cursor-pointer text-gray-500`}
               onClick={() => {
-                removeInsertedCourse(activeKey!);
+                removeRealRow(activeKey!);
               }}
             >
               Delete

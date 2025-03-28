@@ -9,8 +9,9 @@ export interface ScheduleAssignment {
 }
 
 export const createScheduleAssignment = async (
+  userId: string,
   scheduleId: string, 
-  term: string, 
+  term: string,
 ): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/assignments`, {
     method: 'POST',
@@ -19,13 +20,14 @@ export const createScheduleAssignment = async (
     },
     body: JSON.stringify({
       action: 'create',
+      userId: userId,
       scheduleId: scheduleId,
       term: term,
     }),
   });
   if (!response.ok) {
     throw new Error(
-      `Failed to create schedule assignment on term ${term} for schedule with ID ${scheduleId}.
+      `Failed to create schedule assignment for ${userId} on term ${term} for schedule with ID ${scheduleId}.
       Status: ${response.status}.`
     );
   }
@@ -54,8 +56,33 @@ export const fetchScheduleAssignments = async (
   return response.json();
 }
 
+export const updateScheduleAssignment = async (
+  userId: string,
+  term: string,
+  newScheduleId: string
+): Promise<void> => {
+  const response = await fetch(`${PROD_ENDPOINT}/schedules/assignments`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      term: term,
+      userId: userId,
+      newScheduleId: newScheduleId,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to update schedule assignment on term ${term} for user with ID ${userId} to ${newScheduleId}.
+      Status: ${response.status}.`
+    );
+  }
+}
+
+
 export const deleteScheduleAssignment = async (
-  scheduleId: string, 
+  userId: string,
   term: string
 ): Promise<void> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/assignments`, {
@@ -65,12 +92,12 @@ export const deleteScheduleAssignment = async (
     },
     body: JSON.stringify({
       term: term,
-      scheduleId: scheduleId,
+      userId: userId,
     }),
   });
   if (!response.ok) {
     throw new Error(
-      `Failed to delete schedule assignment on term ${term} for schedule with ID ${scheduleId}.
+      `Failed to delete schedule assignment on term ${term} for user with ID ${userId}.
       Status: ${response.status}.`
     );
   }

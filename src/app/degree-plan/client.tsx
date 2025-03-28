@@ -18,7 +18,7 @@ const DegreePlanPageClient: FC<DegreePlanPageClientProps> = ({
           <TermsSelected />
           <HowToUse />
         </div>
-        {/* <TermGrid /> */}
+        <TermGrid />
       </div>
     </div>
   );
