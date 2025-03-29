@@ -1,5 +1,6 @@
 import { FC } from "react";
 import ShowDontShow from "../components/showDontShow";
+import TermTable from "./termTable";
 
 export interface HowToUseProps {}
 
@@ -9,7 +10,7 @@ const HowToUse: FC<HowToUseProps> = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-row gap-8 items-center min-w-12">
+      <div className="flex flex-col gap-2">
         <p className="heading-md w-fit">How to use</p>
         <ShowDontShow 
           showText="Show"
@@ -18,11 +19,11 @@ const HowToUse: FC<HowToUseProps> = ({
             <div className="flex flex-col gap-4">
               <p className="text-sm">
                 The purpose of this degree planner is to help you construct the layout
-                of your classes every semester. Above you can select the terms you'd like to include,
-                e.g. Fall 2021. Below you'll see the terms you select, along with a table which looks like
-                what follows.
+                of your classes every semester. Under <span className="font-bold">Terms Selected{' '}</span> 
+                above you can select the terms you'd like to include, e.g. Fall 2021. Below you'll see the 
+                terms you select, along with a table which looks like what follows.
               </p>
-              {/* <TermTable term={'Example'}/> */}
+              <TermTable term={'Example'}/>
               <p className="text-sm">
                 Notice that the table allows you to add courses as you wish. The dropdown at the top additionally
                 allows you to select a schedule on which to begin saving courses. If you have no schedule selected,

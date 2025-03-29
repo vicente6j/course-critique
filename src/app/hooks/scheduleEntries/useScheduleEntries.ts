@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDatabaseProfile } from "../contexts/server/profile/provider";
-import { createScheduleEntry, deleteScheduleEntry, ScheduleEntry, updateScheduleEntry } from "../api/schedule-entries";
+import { useDatabaseProfile } from "../../contexts/server/profile/provider";
+import { createScheduleEntry, deleteScheduleEntry, ScheduleEntry, updateScheduleEntry } from "../../api/schedule-entries";
 
 export interface ExposedScheduleEntryHandlers {
   createEntry: (scheduleId: string, courseId: string) => Promise<ScheduleEntry | null>;

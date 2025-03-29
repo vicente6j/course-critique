@@ -26,9 +26,9 @@ const ShowDontShow: FC<ShowDontShowProps> = ({
   const [hoverShow, setHoverShow] = useState<boolean>(false);
 
   return (
-    <div className="w-full">
+    <div className="w-fit">
       {show ? (
-        <>
+        <div className="flex flex-col gap-2">
           <div 
             className="flex gap-2 items-center cursor-pointer w-fit"
             onMouseEnter={() => {
@@ -56,36 +56,34 @@ const ShowDontShow: FC<ShowDontShowProps> = ({
             )}
           </div>
           {whatToShow}
-        </>
+        </div>
       ) : (
-        <>
-          <div 
-            className="flex gap-2 items-center cursor-pointer w-fit"
-            onMouseEnter={() => {
-              setHoverShow(true);
-            }}
-            onMouseLeave={() => {
-              setHoverShow(false);
-            }}
-            onClick={() => {
-              setShow(true);
-            }} 
-          >
-            <p className={`heading-xs ${hoverShow ? 'text-gray-400' : 'text-gray-700' } cursor-pointer`}>
-              {showText}
-            </p>
-            {showIcon ?? (
-              <ViewModuleIcon 
-                style={{ 
-                  width: '20px', 
-                  color: `${hoverShow ? hexToRgba('#9ca3af', 1) : '#374151'}`,
-                  transition: 'transform 0.2s' 
-                }}
-                className={`${hoverShow ? 'rotate-180' : ''}`}
-              />
-            )}
-          </div>
-        </>
+        <div 
+          className="flex gap-2 items-center cursor-pointer w-fit"
+          onMouseEnter={() => {
+            setHoverShow(true);
+          }}
+          onMouseLeave={() => {
+            setHoverShow(false);
+          }}
+          onClick={() => {
+            setShow(true);
+          }} 
+        >
+          <p className={`heading-xs ${hoverShow ? 'text-gray-400' : 'text-gray-700' } cursor-pointer`}>
+            {showText}
+          </p>
+          {showIcon ?? (
+            <ViewModuleIcon 
+              style={{ 
+                width: '20px', 
+                color: `${hoverShow ? hexToRgba('#9ca3af', 1) : '#374151'}`,
+                transition: 'transform 0.2s' 
+              }}
+              className={`${hoverShow ? 'rotate-180' : ''}`}
+            />
+          )}
+        </div>
       )}
     </div>
   )

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDatabaseProfile } from "../contexts/server/profile/provider";
-import { createScheduleGrade, deleteScheduleGrade, ScheduleGrade, updateScheduleGrade } from "../api/schedule-grades";
+import { useDatabaseProfile } from "../../contexts/server/profile/provider";
+import { createScheduleGrade, deleteScheduleGrade, ScheduleGrade, updateScheduleGrade } from "../../api/schedule-grades";
 
 export interface ExposedScheduleGradeHandlers {
   createGrade: (scheduleId: string, term: string, entryId: number, grade: string) => Promise<ScheduleGrade | null>;

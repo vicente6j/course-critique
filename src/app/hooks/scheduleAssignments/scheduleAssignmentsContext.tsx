@@ -1,4 +1,4 @@
-import { useScheduleAssignments, UseScheduleAssignmentsValue } from "@/app/hooks/useScheduleAssignments";
+import { useScheduleAssignments, UseScheduleAssignmentsValue } from "@/app/hooks/scheduleAssignments/useScheduleAssignments";
 import { createContext, FC, useContext } from "react";
 
 const ScheduleAssignmentsContext = createContext<UseScheduleAssignmentsValue | undefined>(undefined);

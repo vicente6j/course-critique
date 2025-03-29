@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createSchedule as createSchedulePing, updateSchedule as updateSchedulePing, deleteSchedule as deleteSchedulePing, ScheduleInfo } from "../api/schedule";
-import { useDatabaseProfile } from "../contexts/server/profile/provider";
+import { createSchedule as createSchedulePing, updateSchedule as updateSchedulePing, deleteSchedule as deleteSchedulePing, ScheduleInfo } from "../../api/schedule";
+import { useDatabaseProfile } from "../../contexts/server/profile/provider";
 
 export interface ExposedScheduleHandlers {
   createSchedule: (scheduleName: string) => Promise<ScheduleInfo | null>;

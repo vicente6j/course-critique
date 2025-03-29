@@ -1,4 +1,4 @@
-import { useScheduleGrades, UseScheduleGradeValues } from "@/app/hooks/useScheduleGrades";
+import { useScheduleGrades, UseScheduleGradeValues } from "@/app/hooks/scheduleGrades/useScheduleGrades";
 import { createContext, FC, useContext } from "react";
 
 const ScheduleGradesContext = createContext<UseScheduleGradeValues | undefined>(undefined);

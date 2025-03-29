@@ -1,7 +1,7 @@
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
-import { useSchedules } from "./useSchedules";
-import { useScheduleAssignments } from "./useScheduleAssignments";
-import { useTermSelection } from "./useTermSelection";
+import { useSchedules } from "../schedules/useSchedules";
+import { useScheduleAssignments } from "../scheduleAssignments/useScheduleAssignments";
+import { useTermSelection } from "../termSelection/useTermSelection";
 
 export interface UseDegreePlanValue {
   termScheduleMap: Map<string, string | null> | null;

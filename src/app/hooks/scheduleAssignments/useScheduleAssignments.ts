@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDatabaseProfile } from "../contexts/server/profile/provider";
-import { createScheduleAssignment, deleteScheduleAssignment, ScheduleAssignment, updateScheduleAssignment } from "../api/schedule-assignments";
+import { useDatabaseProfile } from "../../contexts/server/profile/provider";
+import { createScheduleAssignment, deleteScheduleAssignment, ScheduleAssignment, updateScheduleAssignment } from "../../api/schedule-assignments";
 
 export interface ExposedScheduleAssignmentHandlers {
   createAssignment: (userId: string, scheduleId: string, term: string) => Promise<ScheduleAssignment | null>;

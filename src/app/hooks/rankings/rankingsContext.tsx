@@ -1,5 +1,5 @@
 'use client'
-import { useRankings, UseRankingsValue } from "@/app/hooks/useRankings";
+import { useRankings, UseRankingsValue } from "@/app/hooks/rankings/useRankings";
 import { createContext, FC, useContext } from "react";
 
 const RankingsContext = createContext<UseRankingsValue | undefined>(undefined);

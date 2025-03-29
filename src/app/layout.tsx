@@ -6,7 +6,7 @@ import ProfProviderWrapper from "./contexts/server/prof/wrapper";
 import { SessionProviderWrapper } from "./sessionWrapper";
 import DegreeProgramProviderWrapper from "./contexts/server/degree-programs/wrapper";
 import DatabaseProfileProviderWrapper from "./contexts/server/profile/wrapper";
-import { RankingsContextProvider } from "./contexts/client/rankingsContext";
+import { RankingsContextProvider } from "./hooks/rankings/rankingsContext";
 
 const inter = Inter({ subsets: ["latin"] });
 

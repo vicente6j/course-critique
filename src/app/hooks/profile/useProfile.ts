@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDegreePrograms } from "../contexts/server/degree-programs/provider";
-import { useDatabaseProfile } from "../contexts/server/profile/provider";
-import { checkLevel } from "../utils";
-import { updateProfileField } from "../api/profile";
+import { useDegreePrograms } from "../../contexts/server/degree-programs/provider";
+import { useDatabaseProfile } from "../../contexts/server/profile/provider";
+import { checkLevel } from "../../utils";
+import { updateProfileField } from "../../api/profile";
 
 export interface ExposedProfileData {
   year: number | null;

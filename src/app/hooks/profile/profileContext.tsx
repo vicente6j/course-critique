@@ -1,4 +1,4 @@
-import { useUserProfile, UseUserProfileValue } from "@/app/hooks/useProfile";
+import { useUserProfile, UseUserProfileValue } from "@/app/hooks/profile/useProfile";
 import { createContext, FC, useContext } from "react";
 
 const ProfileContext = createContext<UseUserProfileValue | undefined>(undefined);

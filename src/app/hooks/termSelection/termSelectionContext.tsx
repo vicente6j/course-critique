@@ -1,5 +1,5 @@
 import { TermSelection } from "@/app/api/term-selections";
-import { useTermSelection, UseTermSelectionValue } from "@/app/hooks/useTermSelection";
+import { useTermSelection, UseTermSelectionValue } from "@/app/hooks/termSelection/useTermSelection";
 import { createContext, FC, useContext } from "react";
 
 const TermSelectionContext = createContext<UseTermSelectionValue | undefined>(undefined);

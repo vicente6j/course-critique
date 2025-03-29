@@ -3,12 +3,12 @@ import { FC } from 'react';
 import DegreePlanPageClient from './client';
 import { Footer } from '../shared/footer';
 import Navbar from '../navigation/navbar';
-import { TermSelectionProvider } from '../contexts/client/termSelectionContext';
-import { ProfileContextProvider } from '../contexts/client/profile';
-import { SchedulesContextProvider } from '../contexts/client/schedulesContext';
-import { ScheduleGradesContextProvider } from '../contexts/client/scheduleGradesContext';
-import { ScheduleEntriesContextProvider } from '../contexts/client/scheduleEntriesContext';
-import { ScheduleAssignmentsContextProvider } from '../contexts/client/scheduleAssignmentsContext';
+import { TermSelectionProvider } from '../hooks/termSelection/termSelectionContext';
+import { ProfileContextProvider } from '../hooks/profile/profileContext';
+import { SchedulesContextProvider } from '../hooks/schedules/schedulesContext';
+import { ScheduleGradesContextProvider } from '../hooks/scheduleGrades/scheduleGradesContext';
+import { ScheduleEntriesContextProvider } from '../hooks/scheduleEntries/scheduleEntriesContext';
+import { ScheduleAssignmentsContextProvider } from '../hooks/scheduleAssignments/scheduleAssignmentsContext';
 
 export interface DegreePlanPageProps {}
 

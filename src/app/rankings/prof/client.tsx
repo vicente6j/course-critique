@@ -4,7 +4,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import RankingsTable, { RankingsTableRow } from "../rankingsTable";
 import CustomSearchbar from "@/app/shared/customSearchbar";
 import { useProfs } from "@/app/contexts/server/prof/provider";
-import { useRankings } from "@/app/hooks/useRankings";
+import { useRankings } from "@/app/hooks/rankings/useRankings";
 import { Spinner } from "@heroui/spinner";
 import Checkbox from "@/app/components/checkbox";
 import RightHandPanel from "../rightHandPanel";

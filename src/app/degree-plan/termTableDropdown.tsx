@@ -1,6 +1,6 @@
 import { FC, useCallback, useMemo } from "react";
 import ActionDropdown, { ActionDropdownOption } from "../components/actionDropdown";
-import { useTermSelectionContext } from "../client-contexts/termSelectionContext";
+import { useTermSelectionContext } from "../hooks/termSelection/termSelectionContext";
 
 export interface TermTableDropdownProps {
   term: string;
@@ -10,21 +10,23 @@ const TermTableDropdown: FC<TermTableDropdownProps> = ({
   term,
 }: TermTableDropdownProps) => {
 
-  const { handleUnselectTerm } = useTermSelectionContext();
+  const {
+    handlers
+  } = useTermSelectionContext();
 
-  const options: ActionDropdownOption[] = useMemo(() => {
-    return [
-      { 
-        label: 'Remove', 
-        onClick: () => {
-          handleUnselectTerm(term);
-        }
+  const options: ActionDropdownOption[] = useMemo(() => ([
+    { 
+      label: 'Remove', 
+      id: 'remove',
+      onClick: () => {
+        handlers.handleUnselectTerm(term);
       }
-    ]; 
-  }, []);
+    }
+  ]), []);
 
   return (
     <ActionDropdown 
+      type={'trigger'}
       options={options}
     />
   )

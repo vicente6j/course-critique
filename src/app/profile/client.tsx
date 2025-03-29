@@ -16,7 +16,7 @@ import { DegreeProgramType } from "../globalTypes";
 import { checkLevel, formatDate } from "../utils";
 import SelectionDropdown, { SelectionOption } from "../shared/selectionDropdown";
 import { useDatabaseProfile } from "../contexts/server/profile/provider";
-import { useProfileContext } from "../contexts/client/profile";
+import { useProfileContext } from "../hooks/profile/profileContext";
 
 export const suffixDict: Record<number, string> = {
   1: '1st',

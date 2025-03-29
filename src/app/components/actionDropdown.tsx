@@ -72,9 +72,7 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
     )
   } else if (type === 'trigger') {
     return (
-      <div 
-        className="relative inline-block"
-      >
+      <div className="relative">
         <div 
           onClick={() => {
             setIsOpen(true);
@@ -82,8 +80,11 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
         >
           {trigger ?? (
             <MoreVertIcon 
-              style={{ width: '16px', height: '16px' }}
-              className={`cursor-pointer p-0 hover:bg-gray-200`}
+              style={{ 
+                width: '20px', 
+                height: '20px' 
+              }}
+              className={`cursor-pointer hover:bg-gray-200 pb-0.5`}
             />
           )}
         </div>

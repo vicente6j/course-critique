@@ -1,10 +1,10 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { termToSortableInteger } from "../utils";
-import { useCourses } from "../contexts/server/course/provider";
-import { RankingsTableRow } from "../rankings/rankingsTable";
-import { dataTerms } from "../metadata";
-import { useProfs } from "../contexts/server/prof/provider";
+import { termToSortableInteger } from "../../utils";
+import { useCourses } from "../../contexts/server/course/provider";
+import { RankingsTableRow } from "../../rankings/rankingsTable";
+import { dataTerms } from "../../metadata";
+import { useProfs } from "../../contexts/server/prof/provider";
 
 export interface UseRankingsValue {
   tabs: RankingsPageTab[];

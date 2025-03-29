@@ -1,4 +1,4 @@
-import { useSchedules, UseSchedulesValue } from "@/app/hooks/useSchedules";
+import { useSchedules, UseSchedulesValue } from "@/app/hooks/schedules/useSchedules";
 import { createContext, FC, useContext } from "react";
 
 const SchedulesContext = createContext<UseSchedulesValue | undefined>(undefined);

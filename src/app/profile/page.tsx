@@ -3,7 +3,7 @@ import { FC } from "react";
 import { Footer } from "@/app/shared/footer";
 import Navbar from "@/app/navigation/navbar";
 import ProfilePageClient from "./client";
-import { ProfileContextProvider } from "../contexts/client/profile";
+import { ProfileContextProvider } from "../hooks/profile/profileContext";
 
 export interface ProfilePageProps {}
 

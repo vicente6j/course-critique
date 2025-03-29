@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { termToSortableInteger } from "../utils";
-import { createTermSelection, deleteTermSelection, TermSelection } from "../api/term-selections";
-import { useDatabaseProfile } from "../contexts/server/profile/provider";
+import { termToSortableInteger } from "../../utils";
+import { createTermSelection, deleteTermSelection, TermSelection } from "../../api/term-selections";
+import { useDatabaseProfile } from "../../contexts/server/profile/provider";
 
 export interface UseTermSelectionValue {
   termsSelected: string[] | null;

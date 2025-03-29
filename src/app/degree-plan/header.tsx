@@ -3,8 +3,8 @@ import { FC } from "react";
 import { Skeleton } from "@nextui-org/skeleton";
 import { suffixDict } from "../profile/client";
 import { useDegreePrograms } from "../contexts/server/degree-programs/provider";
-import { useProfileContext } from "../contexts/client/profile";
 import ArrowRight from "../components/arrowRight";
+import { useProfileContext } from "../hooks/profile/profileContext";
 
 export interface DegreePlanHeaderProps {}
 
