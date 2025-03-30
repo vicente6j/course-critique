@@ -9,6 +9,7 @@ import { SchedulesContextProvider } from '../hooks/schedules/schedulesContext';
 import { ScheduleGradesContextProvider } from '../hooks/scheduleGrades/scheduleGradesContext';
 import { ScheduleEntriesContextProvider } from '../hooks/scheduleEntries/scheduleEntriesContext';
 import { ScheduleAssignmentsContextProvider } from '../hooks/scheduleAssignments/scheduleAssignmentsContext';
+import { DegreePlanContextProvider } from '../hooks/degreePlan/degreePlanContext';
 
 export interface DegreePlanPageProps {}
 
@@ -26,7 +27,9 @@ const DegreePlanPage: FC<DegreePlanPageProps> = ({
               <ScheduleGradesContextProvider>
                 <ScheduleEntriesContextProvider>
                   <ScheduleAssignmentsContextProvider>
-                    <DegreePlanPageClient />
+                    <DegreePlanContextProvider>
+                      <DegreePlanPageClient />
+                    </DegreePlanContextProvider>
                   </ScheduleAssignmentsContextProvider>
                 </ScheduleEntriesContextProvider>
               </ScheduleGradesContextProvider>

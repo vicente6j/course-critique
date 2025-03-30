@@ -23,11 +23,9 @@ const DegreePlanHeader: FC<DegreePlanHeaderProps> = ({
 
   return (
     <div className="flex flex-col w-full shadow-sm">
-      <div className="relative flex flex-col gap-4 w-full bg-white p-8">
+      <div className="relative flex flex-col gap-4 w-full bg-white p-8 shadow-lg">
         <div className="flex flex-col gap-2">
-          <Skeleton 
-            isLoaded={!loading} 
-          >
+          <Skeleton isLoaded={!loading} >
             {data.degreeProgram ? (
               <h1 className="heading-md">{maps.degreePrograms?.get(data.degreeProgram)!.name}</h1>
             ) : (
@@ -35,9 +33,7 @@ const DegreePlanHeader: FC<DegreePlanHeaderProps> = ({
             )}
           </Skeleton>
 
-          <Skeleton 
-            isLoaded={!loading}
-          >
+          <Skeleton isLoaded={!loading}>
             <div className="grid grid-cols-[auto_1fr] gap-y-1 gap-x-10 text-md items-center">
               <h1 className="heading-xs">Year</h1>
               {data.year ? (

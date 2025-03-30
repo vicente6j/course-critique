@@ -29,7 +29,8 @@ export const useTermSelection = (): UseTermSelectionValue => {
 
   useEffect(() => {
     if (!initLoadComplete.current && data.termSelections) {
-      setTermsSelected(data.termSelections.map(term => term.term));
+      const sortedTerms = data.termSelections.sort((a, b) => termToSortableInteger(a.term) - termToSortableInteger(b.term))
+      setTermsSelected(sortedTerms.map(term => term.term));
       initLoadComplete.current = true;
     }
   }, [data.termSelections]);

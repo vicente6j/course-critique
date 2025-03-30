@@ -22,7 +22,7 @@ const TermsSelected: FC<TermsSelectedProps> = ({
   return (
     <div 
       className={`
-        relative flex flex-col w-full bg-white p-8 transition-all duration-300 ease-in-out
+        relative flex flex-col w-full bg-white p-8 transition-all duration-300 ease-in-out shadow-lg
         ${hovering ? 'gap-4' : 'gap-0'} 
       `}
       onMouseEnter={() => setHovering(true)}
@@ -74,11 +74,17 @@ const TermsSelected: FC<TermsSelectedProps> = ({
             >
               {isSelected ? (
                 <CloseIcon 
-                  style={{ width: '14px', height: '14px' }}
+                  style={{ 
+                    width: '14px', 
+                    height: '14px' 
+                  }}
                 />
               ) : (
                 <AddIcon 
-                  style={{ width: '14px', height: '14px' }}
+                  style={{ 
+                    width: '14px', 
+                    height: '14px' 
+                  }}
                 />
               )}
               <p className="text-sm">{term}</p>

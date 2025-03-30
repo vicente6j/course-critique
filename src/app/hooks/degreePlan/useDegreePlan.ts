@@ -2,6 +2,8 @@ import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { useSchedules } from "../schedules/useSchedules";
 import { useScheduleAssignments } from "../scheduleAssignments/useScheduleAssignments";
 import { useTermSelection } from "../termSelection/useTermSelection";
+import { useTermSelectionContext } from "../termSelection/termSelectionContext";
+import { useSchedulesAssignmentsContext } from "../scheduleAssignments/scheduleAssignmentsContext";
 
 export interface UseDegreePlanValue {
   termScheduleMap: Map<string, string | null> | null;
@@ -38,11 +40,11 @@ export const useDegreePlan = (): UseDegreePlanValue => {
 
   const { 
     assignmentsMap,
-  } = useScheduleAssignments();
+  } = useSchedulesAssignmentsContext();
 
   const {
     termsSelected,
-  } = useTermSelection();
+  } = useTermSelectionContext();
 
   useEffect(() => {
     if (!initLoadComplete.current && assignmentsMap && termsSelected) {

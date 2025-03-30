@@ -1,12 +1,11 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import HelperDropdown, { HelperDropdownOption } from "../components/helperDropdown";
-import { useProfile } from "../contexts/server/profile/provider";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import { ScheduleInfo, updateSchedule } from "../api/schedule";
 import { MutableRef } from "../degree-plan/termTable";
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useDegreePlanContext } from "../client-contexts/degreePlanContext";
+import { useSchedulesContext } from "../hooks/schedules/schedulesContext";
 
 export interface ScheduleDropdownProps {
   selectedOption: string;
@@ -35,18 +34,9 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
   const helperRef = useRef<HTMLInputElement | null>(null);
   const editRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
 
-  const { 
-    createNewSchedule, 
-    replaceScheduleAssignment, 
-    scheduleEdited,
-    tempInfoObject,
-    deleteSchedulePing 
-  } = useDegreePlanContext();
-
-  const { 
-    schedules, 
-    refetchSchedules 
-  } = useProfile();
+  const {
+    schedules
+  } = useSchedulesContext();
 
   useEffect(() => {
     if (schedules) {
@@ -54,17 +44,11 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       const editMap: Map<string, string> = new Map();
       schedules!.forEach(schedule => {
         editMap.set(schedule.schedule_id, '');
-      })
+      });
       setEditValues(editMap);
       setPendingEditChange(false);
     }
   }, [schedules]);
-
-  useEffect(() => {
-    if (tempInfoObject) {
-      setSelectedOption(tempInfoObject.schedule_id);
-    }
-  }, [tempInfoObject]);
 
   /** Upon the input being available, focus */
   useEffect(() => {
@@ -110,7 +94,6 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
            * it without using the hook.
            */
           await updateSchedule(schedule.schedule_id, editValues!.get(schedule.schedule_id)!);
-          await refetchSchedules();
         }
         setCurrentlyEditing(null);
         setTempName(null);
@@ -137,9 +120,9 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
            * dropdown and if it discovers it has one, it'll show the helper value
            * we just put (mimicking the instance of a real object).
            */
-          const newSchedule = await createNewSchedule(helperValue!)!;
+          // const newSchedule = await createNewSchedule(helperValue!)!;
           setPendingEditChange(true);
-          setSelectedOption(newSchedule!.schedule_id);
+          // setSelectedOption(newSchedule!.schedule_id);
         }
         setHelperValue('');
         break;
@@ -250,8 +233,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
               hover:scale-110 cursor-pointer transition-transform
             `}
             onClick={(e) => {
-              e.stopPropagation(); 
-              deleteSchedulePing(schedule);
+              e.stopPropagation();
               setDeletedScheduleId(schedule.schedule_id);
             }}
           />
@@ -298,7 +280,12 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       isLastHelper: false,
       customDisplayNode: (
         <div className="flex flex-row items-center gap-2">
-          <AddIcon style={{ width: '20px', height: '20px' }}/>
+          <AddIcon 
+            style={{ 
+              width: '20px', 
+              height: '20px' 
+            }}
+          />
           <p className="text-sm">Create a new schedule</p>
         </div> 
       ),
@@ -311,7 +298,12 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       isLastHelper: true,
       customDisplayNode: (
         <div className="flex flex-row items-center gap-2">
-          <EditIcon style={{ width: '16px', height: '16px' }}/>
+          <EditIcon 
+            style={{ 
+              width: '16px', 
+              height: '16px' 
+            }}
+          />
           <p className="text-sm">Edit schedules</p>
         </div> 
       ),
@@ -327,7 +319,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
           setInEditMode(false);
           setCurrentlyEditing(null);
         } else {
-          replaceScheduleAssignment(null);
+          // replaceScheduleAssignment(null);
         }
       },
       isHelper: false,
@@ -345,7 +337,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
         id: schedule.schedule_id,
         onClick: () => {
           setActiveIndex(schedules.findIndex(el => el.schedule_id === schedule.schedule_id));
-          replaceScheduleAssignment(schedule);
+          // replaceScheduleAssignment(schedule);
           setSelectedOption(schedule.schedule_id);
         },
         isHelper: false,
@@ -356,7 +348,7 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
          */
       }))
     ];
-  }, [tempName, currentlyEditing, editValues, schedules, replaceScheduleAssignment, createScheduleNode, editScheduleNode, deletedScheduleId]);
+  }, [tempName, currentlyEditing, editValues, schedules, createScheduleNode, editScheduleNode, deletedScheduleId]);
 
   return (
     <HelperDropdown
@@ -368,8 +360,6 @@ const ScheduleDropdown: FC<ScheduleDropdownProps> = ({
       inEditMode={inEditMode}
       setInEditMode={setInEditMode}
       setCurrentlyEditing={setCurrentlyEditing}
-      optionEdited={scheduleEdited}
-      tempObject={tempInfoObject}
       helperValue={helperValue}
       setHelperValue={setHelperValue}
       activeHelper={activeHelper}

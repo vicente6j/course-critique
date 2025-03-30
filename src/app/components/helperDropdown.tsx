@@ -27,7 +27,7 @@ export interface HelperDropdownProps {
   hasHelper: boolean;
   isOpen: boolean;
   setIsOpen: Dispatch<SetStateAction<boolean>>;
-  optionEdited: string | null;
+  optionEdited?: string | null;
   inEditMode: boolean;
   setInEditMode: Dispatch<SetStateAction<boolean>>;
   setCurrentlyEditing: Dispatch<SetStateAction<string | null>>;

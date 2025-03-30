@@ -73,7 +73,7 @@ const Banner: FC<BannerProps> = ({
               transition-all duration-300 ease-in-out
             `}
             style={{
-              visibility: collapsed ? 'hidden' : 'visible',
+              visibility: collapsed ? 'hidden' : 'visible', /** Needed due to bug with text being triggerable from afar */
               opacity: collapsed ? 0 : '100',
               maxHeight: collapsed ? 0 : `${textHeight}rem`
             }}
@@ -85,9 +85,10 @@ const Banner: FC<BannerProps> = ({
             - Course rankings<br></br>
             - Course & professor history<br></br>
             - A degree planner<br></br>
+            - Faster page loads<br></br>
             - And more!<br></br>
             <br></br>
-            
+
             If you have any questions or feedback, please don't hesitate
             to 
             <a 

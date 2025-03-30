@@ -81,10 +81,10 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
           {trigger ?? (
             <MoreVertIcon 
               style={{ 
-                width: '20px', 
-                height: '20px' 
+                width: '16px', 
+                height: '28px' 
               }}
-              className={`cursor-pointer hover:bg-gray-200 pb-0.5`}
+              className={`cursor-pointer hover:bg-gray-200 px-0 py-0`}
             />
           )}
         </div>
@@ -100,7 +100,7 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
                   }
                   setIsOpen(false);
                 }}
-                className="flex flex-row gap-2 items-center w-full px-4 py-2 text-left hover:bg-gray-100 text-sm whitespace-nowrap"
+                className="flex flex-row gap-2 items-center w-full px-4 py-2 text-left hover:bg-gray-100 text-sm whitespace-nowrap mr-2"
               >
                 {option.customIcon ?? option.customIcon}
                 {option.label}
