@@ -11,7 +11,7 @@ import MiniRankingsTable from "../shared/miniRankingsTable";
 import InfoIcon from '@mui/icons-material/Info';
 import CompareCourses from "./compareCourses";
 import PopularDegreePrograms from "./popularDegreePrograms";
-import { useRankingsContext } from "../contexts/client/rankingsContext";
+import { useRankingsContext } from "../hooks/rankings/rankingsContext";
 
 export interface PrevTermInfo {
   term: string;

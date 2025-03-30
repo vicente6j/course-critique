@@ -2,10 +2,8 @@ import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useDegreePrograms } from "../contexts/server/degree-programs/provider";
 import { DegreeProgramAveragesByTerm } from "../api/degree-programs";
 import { metadata } from "../metadata";
-import PersonIcon from '@mui/icons-material/Person';
 import InfoIcon from '@mui/icons-material/Info';
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
-import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 
 export interface PopularDegreeProgramsProps {}
 

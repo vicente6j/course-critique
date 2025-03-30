@@ -4,14 +4,10 @@ import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useCourses } from "../contexts/server/course/provider";
 import LineChart, { LineChartDataset, LineDataPoint } from "./lineChart";
 import { CourseAveragesByTerm, CourseInfo } from "../api/course";
-import InfoIcon from '@mui/icons-material/Info';
-import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import { dataTerms, GRADE_COLORS } from "../metadata";
 import { Skeleton } from "@nextui-org/skeleton";
 import CourseSearchbar from "../shared/courseSearchbar";
 import CorrelationMatrix, { CustomCorrelationDataset } from "./correlationMatrix";
-import HideSourceIcon from '@mui/icons-material/HideSource';
-import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { hexToRgba } from "../utils";
 import ShowDontShow from "../components/showDontShow";
 

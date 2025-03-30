@@ -1,8 +1,6 @@
 import { FC, useCallback, useMemo, useState } from "react";
 import { PriorityQueue } from '@datastructures-js/priority-queue';
 import 'katex/dist/katex.min.css';
-import { InlineMath, BlockMath } from 'react-katex';
-import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import { hexToRgba, termToSortableInteger } from "../utils";
 
 export interface CorrelationDataset {
