@@ -10,7 +10,8 @@ export interface ExposedScheduleAssignmentHandlers {
 
 export interface UseScheduleAssignmentsValue {
   assignments: ScheduleAssignment[] | null;
-  assignmentsMap: Map<string, ScheduleAssignment> | null;
+  termAssignmentsMap: Map<string, ScheduleAssignment> | null;
+  scheduleAssignmentsMap: Map<string, ScheduleAssignment> | null;
   handlers: ExposedScheduleAssignmentHandlers;
   error: string | null;
 }
@@ -18,7 +19,8 @@ export interface UseScheduleAssignmentsValue {
 export const useScheduleAssignments = (): UseScheduleAssignmentsValue => {
 
   const [assignments, setAssignments] = useState<ScheduleAssignment[] | null>(null);
-  const [assignmentsMap, setAssignmentsMap] = useState<Map<string, ScheduleAssignment> | null>(null);
+  const [termAssignmentsMap, setTermAssignmentsMap] = useState<Map<string, ScheduleAssignment> | null>(null);
+  const [scheduleAssignmentsMap, setScheduleAssignmentsMap] = useState<Map<string, ScheduleAssignment> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const initLoadComplete = useRef<boolean>(false);
@@ -37,7 +39,8 @@ export const useScheduleAssignments = (): UseScheduleAssignmentsValue => {
   }, [data.scheduleAssignments]);
 
   useEffect(() => {
-    setAssignmentsMap(new Map(assignments?.map(assignment => [assignment.term, assignment])));
+    setTermAssignmentsMap(new Map(assignments?.map(assignment => [assignment.term, assignment])));
+    setScheduleAssignmentsMap(new Map(assignments?.map(assignment => [assignment.schedule_id, assignment])));
   }, [assignments]);
 
   const createAssignment: (
@@ -153,7 +156,8 @@ export const useScheduleAssignments = (): UseScheduleAssignmentsValue => {
 
   return {
     assignments,
-    assignmentsMap,
+    termAssignmentsMap,
+    scheduleAssignmentsMap,
     handlers: {
       createAssignment,
       updateAssignment,

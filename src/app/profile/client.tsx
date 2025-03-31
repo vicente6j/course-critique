@@ -14,7 +14,7 @@ import { updateProfileField } from "../api/profile";
 import { Skeleton } from "@nextui-org/skeleton";
 import { DegreeProgramType } from "../globalTypes";
 import { checkLevel, formatDate } from "../utils";
-import SelectionDropdown, { SelectionOption } from "../shared/selectionDropdown";
+import SelectionDropdown, { SelectionOption } from "../components/selectionDropdown";
 import { useDatabaseProfile } from "../contexts/server/profile/provider";
 import { useProfileContext } from "../hooks/profile/profileContext";
 

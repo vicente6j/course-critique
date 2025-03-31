@@ -47,7 +47,7 @@ const Banner: FC<BannerProps> = ({
         transition-all duration-300 ease-in-out
       `}
       style={{
-        maxHeight: collapsed ? '4.8rem' : `${cardHeight + 1}rem`
+        maxHeight: collapsed ? '4.8rem' : `${cardHeight + 1}rem`,
       }}
       onMouseEnter={() => setCollapsed(false)}
       onMouseLeave={() => setCollapsed(true)}
@@ -60,7 +60,7 @@ const Banner: FC<BannerProps> = ({
             height: '28px' 
           }} 
         />
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 relative">
           <div className="flex flex-col gap-1">
             <p className="heading-sm font-semi-bold">Course Critique Update</p>
             <p className={`text-sm font-loose transition-all duration-300 ease-in-out`}>
@@ -74,7 +74,7 @@ const Banner: FC<BannerProps> = ({
             `}
             style={{
               visibility: collapsed ? 'hidden' : 'visible', /** Needed due to bug with text being triggerable from afar */
-              opacity: collapsed ? 0 : '100',
+              opacity: collapsed ? 0 : '100%',
               maxHeight: collapsed ? 0 : `${textHeight}rem`
             }}
             ref={textRef}

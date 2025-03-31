@@ -2,8 +2,7 @@
 import { FC, useCallback, useState } from "react";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckIcon from '@mui/icons-material/Check';
-import CustomSearchbar from "./customSearchbar";
-import { DegreeProgram } from "../api/degree-programs";
+import CustomSearchbar from "../shared/customSearchbar";
 
 export interface SelectionOption {
   label: string | React.ReactNode;
@@ -53,7 +52,10 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
 
   return (
     <div 
-      className="relative inline-block w-full"
+      className="relative inline-block w-full pointer-events-auto"
+      style={{
+        zIndex: 8,
+      }}
       onClick={() => {
         setIsOpen(true);
       }}
@@ -62,8 +64,8 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
       {customTrigger ? (
         customTrigger
       ) : (
-        <div className="w-fit flex flex-row gap-2 items-center hover:bg-gray-100 cursor-pointer px-4 py-2 rounded-md border border-gray-300">
-          <p className="text-sm">{text}</p>
+        <div className="flex flex-row gap-2 items-center border border-gray-400 w-fit px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100">
+          <p className="text-md">{text}</p>
           <ArrowDropDownIcon 
             style={{ 
               width: '22px', 
@@ -101,7 +103,9 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
                 <div className="p-0 w-full flex flex-row justify-between gap-4 items-center">
                   {option.label}
                   <CheckIcon 
-                    style={{ width: '14px' }}
+                    style={{ 
+                      width: '14px' 
+                    }}
                   />
                 </div> : option.label}
             </button>

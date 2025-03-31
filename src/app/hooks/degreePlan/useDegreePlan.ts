@@ -1,7 +1,4 @@
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
-import { useSchedules } from "../schedules/useSchedules";
-import { useScheduleAssignments } from "../scheduleAssignments/useScheduleAssignments";
-import { useTermSelection } from "../termSelection/useTermSelection";
 import { useTermSelectionContext } from "../termSelection/termSelectionContext";
 import { useSchedulesAssignmentsContext } from "../scheduleAssignments/scheduleAssignmentsContext";
 
@@ -39,7 +36,7 @@ export const useDegreePlan = (): UseDegreePlanValue => {
   const initLoadComplete = useRef<boolean>(false);
 
   const { 
-    assignmentsMap,
+    termAssignmentsMap: assignmentsMap,
   } = useSchedulesAssignmentsContext();
 
   const {

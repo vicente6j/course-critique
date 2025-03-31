@@ -114,7 +114,7 @@ const HomePage: FC<HomePageProps> = ({
     <div className="w-4/5 mx-auto my-8">
       <div className="flex flex-col gap-8">
         <Banner />
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-y-8 gap-x-16">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-y-8 gap-x-16 z-4">
           <MiniRankingsTable 
             header={'Hardest Courses Last Semester'}
             subheading={prevTermInfo?.term}

@@ -14,15 +14,13 @@ const TermTableDropdown: FC<TermTableDropdownProps> = ({
     handlers
   } = useTermSelectionContext();
 
-  const options: ActionDropdownOption[] = useMemo(() => ([
-    { 
-      label: 'Remove', 
-      id: 'remove',
-      onClick: () => {
-        handlers.handleUnselectTerm(term);
-      }
+  const options: ActionDropdownOption[] = useMemo(() => ([{ 
+    label: 'Remove', 
+    id: 'remove',
+    onClick: () => {
+      handlers.handleUnselectTerm(term);
     }
-  ]), []);
+  }]), []);
 
   return (
     <ActionDropdown 
