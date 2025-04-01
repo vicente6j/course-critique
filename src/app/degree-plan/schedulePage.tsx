@@ -1,12 +1,9 @@
 import { FC, useEffect, useMemo, useRef, useState } from "react";
 import { useSchedulesContext } from "../hooks/schedules/schedulesContext";
-import { Skeleton } from "@heroui/skeleton";
 import ScheduleTable from "./scheduleTable";
 import { useSchedulesAssignmentsContext } from "../hooks/scheduleAssignments/scheduleAssignmentsContext";
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { useScheduleEntriesContext } from "../hooks/scheduleEntries/scheduleEntriesContext";
 import SelectionDropdown, { SelectionOption } from "../components/selectionDropdown";
-import ActionDropdown from "../components/actionDropdown";
 import { scheduleTerms } from "../metadata";
 
 
@@ -31,8 +28,11 @@ export const SchedulePage: FC<SchedulePageProps> = ({
 
   const {
     scheduleAssignmentsMap,
-    handlers: assignmentHandlers
   } = useSchedulesAssignmentsContext();
+
+  useEffect(() => {
+    console.log(termSelected);
+  }, [termSelected]);
 
   useEffect(() => {
     if (schedules && scheduleAssignmentsMap && !initLoadComplete.current) {
@@ -70,32 +70,32 @@ export const SchedulePage: FC<SchedulePageProps> = ({
         <p className="heading-md">My Schedules</p>
         <p className="text-sm">Found {schedules?.length || 0}</p>
       </div>
-      <Skeleton isLoaded={scheduleAssignmentsMap !== null && scheduleMap != null && scheduleSelected !== null}>
         <div className="flex flex-row justify-between">
-          <div className="flex flex-col gap-0 w-[20%] border-r border-gray-200">
-            {schedules?.map(schedule => {
-              const numEntries = entryMap?.get(schedule.schedule_id)?.length || 0;
-              return (
-                <div 
-                  className={`
-                    py-4 px-8 border-b border-gray-200 hover:bg-gray-100 cursor-pointer 
-                    ${scheduleSelected === schedule.schedule_id ? 'bg-gray-100' : ''}
-                  `}
-                  key={schedule.schedule_id}
-                  onClick={() => {
-                    setScheduleSelected(schedule.schedule_id);
-                  }}
-                >
-                  <p className="text-md">{schedule.name}</p>
-                  <p className="text-sm">
-                    {numEntries} {numEntries === 1 ? 'entry' : 'entries'}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex flex-col gap-1 w-[80%] py-8 px-8">
-            <p className="heading-md font-loose">{scheduleMap!.get(scheduleSelected!)?.name}</p>
+        <div className="flex flex-col gap-0 w-[20%] border-r border-gray-200">
+          {schedules?.map(schedule => {
+            const numEntries = entryMap?.get(schedule.schedule_id)?.length || 0;
+            return (
+              <div 
+                className={`
+                  py-4 px-8 border-b border-gray-200 hover:bg-gray-100 cursor-pointer 
+                  ${scheduleSelected === schedule.schedule_id ? 'bg-gray-100' : ''}
+                `}
+                key={schedule.schedule_id}
+                onClick={() => {
+                  setScheduleSelected(schedule.schedule_id);
+                }}
+              >
+                <p className="text-md">{schedule.name}</p>
+                <p className="text-sm">
+                  {numEntries} {numEntries === 1 ? 'entry' : 'entries'}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex flex-col gap-2 w-[80%] py-8 px-8">
+          <p className="heading-md font-loose">{scheduleMap!.get(scheduleSelected!)?.name}</p>
+          <div className="flex flex-col gap-1">
             <SelectionDropdown 
               options={termOptions}
               selectedOption={termSelected ?? 'select'}
@@ -107,7 +107,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({
             />
           </div>
         </div>
-      </Skeleton>
+      </div>
     </div>
   )
 }

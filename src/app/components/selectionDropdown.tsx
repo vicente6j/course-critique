@@ -1,8 +1,9 @@
 'use client'
-import { FC, useCallback, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckIcon from '@mui/icons-material/Check';
 import CustomSearchbar from "../shared/customSearchbar";
+import { useHoverContext } from "../contexts/client/hover";
 
 export interface SelectionOption {
   label: string | React.ReactNode;
@@ -38,6 +39,12 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
   /** Need a separate state for options because this might change with a search query */
   const [options, setOptions] = useState<any[]>(initOptions);
 
+  const {
+    setAboveDropdown
+  } = useHoverContext();
+
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
   const onSearchChange: (value: string) => void = useCallback((value) => {
     setSearchValue(value || '');
     if (containsSearch) {
@@ -50,9 +57,21 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
     onSearchChange('');
   }, []);
 
+  const exitDropdown: () => boolean = useCallback(() => {
+    try {
+      setIsOpen(false);
+      onClear();
+      setAboveDropdown(false);
+      return true;
+    } catch (e) {
+      console.error(e);
+    }
+    return false;
+  }, []);
+
   return (
     <div 
-      className="relative inline-block w-full pointer-events-auto"
+      className="relative inline-block w-fit"
       style={{
         zIndex: 8,
       }}
@@ -64,8 +83,8 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
       {customTrigger ? (
         customTrigger
       ) : (
-        <div className="flex flex-row gap-2 items-center border border-gray-400 w-fit px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100">
-          <p className="text-md">{text}</p>
+        <div className="flex flex-row gap-2 items-center border border-gray-400 w-fit px-4 py-1 rounded-md cursor-pointer hover:bg-gray-100">
+          <p className="text-sm">{text}</p>
           <ArrowDropDownIcon 
             style={{ 
               width: '22px', 
@@ -76,7 +95,15 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
         </div>
       )}
       {isOpen && (
-        <div className="absolute top-[calc(100%+4px)] left-0 z-20 max-h-60 overflow-y-scroll min-w-48 max-w-96 bg-white border border-gray-200 rounded-none shadow-md">
+        <div 
+          className="
+            absolute top-[calc(100%+4px)] left-0 z-20 max-h-60 overflow-y-scroll min-w-48 max-w-96 bg-white 
+            border border-gray-200 rounded-none shadow-md selection-dropdown
+          "
+          ref={dropdownRef}
+          onMouseEnter={() => setAboveDropdown(true)}
+          onMouseLeave={() => setAboveDropdown(false)}
+        >
           {containsSearch && (
             <CustomSearchbar 
               searchValue={searchValue}
@@ -92,11 +119,11 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 option.onClick();
-                setIsOpen(false);
-                onClear();
+                exitDropdown();
               }}
               className={`${selectedOption === option.id ? 'bg-gray-100' : ''} 
                 block w-full px-4 py-2 text-left hover:bg-gray-100 text-sm
+                selection-dropdown-option
               `}
             >
               {selectedOption === option.id ? 
@@ -118,8 +145,7 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
           className="fixed inset-0 z-10" 
           onClick={(e) => {
             e.stopPropagation();  
-            setIsOpen(false);
-            onClear();
+            exitDropdown();
           }}
         />
       )}

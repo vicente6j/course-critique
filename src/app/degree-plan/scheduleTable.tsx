@@ -30,6 +30,7 @@ import { useScheduleEntriesContext } from "../hooks/scheduleEntries/scheduleEntr
 import { useScheduleGradesContext } from "../hooks/scheduleGrades/scheduleGradesContext";
 import { ScheduleGrade } from "../api/schedule-grades";
 import ScheduleDropdown from "../shared/scheduleDropdown";
+import { useHoverContext } from "../contexts/client/hover";
 
 export interface ScheduleTableColumn {
   key: string;
@@ -175,6 +176,10 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
     gradeMap,
     handlers: gradeHandlers
   } = useScheduleGradesContext();
+
+  const {
+    aboveDropdown
+  } = useHoverContext();
 
   const router = useRouter();
 
@@ -1058,6 +1063,10 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
   const handleMouseMove: (e: MouseEvent) => void = useCallback((e) => {
     if (!tableRef.current) {
       return;
+    } else if (aboveDropdown) {
+      setHoverRow(null);
+      setHoverGrade(null);
+      return;
     }
     const cells = tableRef.current.querySelectorAll('td');
     const mouseX = e.clientX;
@@ -1092,7 +1101,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       setDisablePointerEvents(false);
       setRerenderCount(prev => prev! + 1); /** Necessary to allow cursor-movement again */
     }
-  }, [disablePointerEvents, tableRef]);
+  }, [disablePointerEvents, tableRef, aboveDropdown]);
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
