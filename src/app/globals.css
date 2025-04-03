@@ -310,6 +310,10 @@ body {
     background-color: var(--color-levels);
   }
 
+  .bg-hex {
+    background-color: var(--background-hex);
+  }
+
   .bg-next-table {
     background-color: var(--color-next-table);
   }

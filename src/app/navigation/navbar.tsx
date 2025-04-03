@@ -41,7 +41,7 @@ const Navbar: FC<NavbarProps> = ({
               <NavSearchbar />
               <RankingsDropdown />
             </div>
-            {session ? (
+            {/* {session ? (
               <div className="flex flex-row gap-8 items-center">
                 <Link
                   href="/degree-plan"
@@ -81,7 +81,7 @@ const Navbar: FC<NavbarProps> = ({
                   Sign up
                 </Link>
               </div>
-            )}
+            )} */}
           </div>
         </div>
       </div>

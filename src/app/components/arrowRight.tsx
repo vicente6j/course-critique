@@ -1,4 +1,5 @@
-import { Link } from "@nextui-org/link";
+import { Link } from "@nextui-org/react";
+import NextLink from "next/link";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import { useRouter } from "next/navigation";
 import { FC, useState } from "react";
@@ -35,6 +36,7 @@ const ArrowRight: FC<ArrowRightProps> = ({
         <Link 
           className={`text-sm w-fit float-right`}
           href={href}
+          as={NextLink} 
         >
           {displayText}
         </Link>

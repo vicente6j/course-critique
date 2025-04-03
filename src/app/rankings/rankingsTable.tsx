@@ -120,7 +120,6 @@ const RankingsTable: FC<RankingsTableProps> = ({
       <Table 
         removeWrapper 
         isStriped
-        aria-label="z-0"
       >
         <TableHeader columns={profCols}>
           {(column) => (
@@ -138,7 +137,7 @@ const RankingsTable: FC<RankingsTableProps> = ({
             return (
               <TableRow 
                 key={item.key} 
-                className={`border-b border-gray-200`}
+                className={`border-b border-gray-200 z-10`}
               >
                 {(columnKey) => {
                   const value = getKeyValue(item, columnKey);
@@ -202,7 +201,6 @@ const RankingsTable: FC<RankingsTableProps> = ({
       <Table 
         removeWrapper 
         isStriped
-        aria-label="z-0"
       >
         <TableHeader columns={courseCols}>
           {(column) => (
@@ -220,7 +218,7 @@ const RankingsTable: FC<RankingsTableProps> = ({
             return (
               <TableRow 
                 key={item.key} 
-                className={`border-b border-gray-200`}
+                className={`border-b border-gray-200 z-10`}
               >
                 {(columnKey) => {
                   const value = getKeyValue(item, columnKey);

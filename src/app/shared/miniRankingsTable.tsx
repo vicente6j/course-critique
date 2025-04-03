@@ -25,10 +25,10 @@ const MiniRankingsTable: FC<MiniRankingsTableProps> = ({
 }: MiniRankingsTableProps) => {
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 z-10">
       <h1 className="heading-md font-regular w-fit">{header}</h1>
       <div className="flex flex-row gap-8 items-center">
-        <p className="text-sm font-semi-bold">{subheading}</p>
+        <p className="text-sm font-semi-bold z-10">{subheading}</p>
         <div className="flex flex-row gap-6 items-center">
           {subheadingTuples.map(tuple => {
             return tuple;

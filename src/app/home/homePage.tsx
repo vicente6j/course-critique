@@ -130,7 +130,7 @@ const HomePage: FC<HomePageProps> = ({
             type={'prof'}
           />
         </div>
-        <PopularDegreePrograms />
+        {/* <PopularDegreePrograms /> */}
         <CompareCourses />
       </div>
     </div>

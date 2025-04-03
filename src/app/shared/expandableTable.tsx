@@ -44,7 +44,9 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
   const [page, setPage] = useState<number>(1);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
-  const { profMap } = useProfs();
+  const { 
+    maps
+   } = useProfs();
   const router = useRouter();
 
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
@@ -105,7 +107,7 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
       return [...rows];
     }
     return [...rows].filter(row => {
-      return forProf ? profMap!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
+      return forProf ? maps.profs!.get(row.professor as string)?.instructor_name.toString().toLowerCase().includes(searchValue.toLowerCase())
         : (row.course_id as string).toLowerCase().includes(searchValue.toLowerCase());
       }
     );
@@ -143,11 +145,11 @@ const ExpandableTable: FC<ExpandableTableProps> = ({
           }}
           className="text-sm hover:underline cursor-pointer"
         >
-          {profMap!.get(profId)?.instructor_name}
+          {maps.profs!.get(profId)?.instructor_name}
         </Link>
       </TableCell>
     );
-  }, [profMap]);
+  }, [maps.profs]);
 
   const formatCourse: (courseId: string, isSelected: boolean) => JSX.Element = useCallback((courseId: string, isSelected: boolean) => {
     return (

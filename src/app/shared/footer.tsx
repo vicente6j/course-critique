@@ -7,7 +7,7 @@ export const Footer: FC<FooterProps> = ({
 
 }: FooterProps) => {
   return (
-    <div className="w-full border border-bottom border-gray bg-light">
+    <div className="w-full border border-bottom border-gray bg-light z-20">
       <div className="w-[80%] mx-auto py-12">
         <div className="flex flex-row justify-between items-center">
           <div className="flex flex-col">

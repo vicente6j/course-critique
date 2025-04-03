@@ -35,7 +35,7 @@ const RankingsDropdown: FC<RankingsDropdownProps> = ({
 
     return [
       hardestCourses,
-      hardestProfs,
+      // hardestProfs,
     ];
   }, []);
 
