@@ -48,7 +48,7 @@ const Banner: FC<BannerProps> = ({
       const height = cardRef.current.scrollHeight;
       setCardHeight(height / fontSize);
     }
-  }, [cardRef.current, textRef.current]);
+  }, []);
 
   useEffect(() => {
     updateHeights();

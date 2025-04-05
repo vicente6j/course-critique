@@ -98,7 +98,7 @@ const SelectionDropdown: FC<SelectionDropdownProps> = ({
         <div 
           className="
             absolute top-[calc(100%+4px)] left-0 z-20 max-h-60 overflow-y-scroll min-w-48 max-w-96 bg-white 
-            border border-gray-200 rounded-none shadow-md selection-dropdown
+            border border-gray-200 rounded-lg shadow-md selection-dropdown
           "
           ref={dropdownRef}
           onMouseEnter={() => setAboveDropdown(true)}

@@ -155,8 +155,8 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const tableRef = useRef<HTMLDivElement | null>(null);
-  const initLoadComplete = useRef<boolean>(false);
-  const initLoadGradesComplete = useRef<boolean>(false);
+  const entriesLoadComplete = useRef<boolean>(false);
+  const gradesLoadComplete = useRef<boolean>(false);
 
   const { 
     data: courseData,
@@ -188,21 +188,35 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       return null;
     }
     return scheduleMap.get(scheduleId)!;
-  }, [scheduleMap])
+  }, [scheduleMap, scheduleId]);
 
-  const scheduleEntries: ScheduleEntry[] = useMemo(() => {
+  const scheduleEntries: ScheduleEntry[] | null = useMemo(() => {
     if (!entryMap || !scheduleId) {
       return [];
     }
     return entryMap.get(scheduleId) || [];
-  }, [entryMap]);
+  }, [entryMap, scheduleId]);
 
-  const scheduleGrades: ScheduleGrade[] = useMemo(() => {
+  const scheduleGrades: ScheduleGrade[] | null = useMemo(() => {
     if (!gradeMap || !scheduleId || !gradeMap.has(scheduleId) || !term) {
       return [];
     }
     return gradeMap.get(scheduleId)!.get(term) || [];
-  }, [gradeMap, scheduleId]);
+  }, [gradeMap, scheduleId, term]);
+
+  /**
+   * Upon a scheduleId being found passed in, manually refresh 
+   * schedule rows & grades by setting the load completion to false
+   * again.
+   */
+  useEffect(() => {
+    entriesLoadComplete.current = false;
+    gradesLoadComplete.current = false;
+  }, [scheduleId]);
+
+  useEffect(() => {
+    gradesLoadComplete.current = false;
+  }, [term]);
 
   /** 
    * Runs every instance of activeKey, activeGradeKey, hoverRow,
@@ -224,17 +238,13 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
    * i.e. keep the input fields active and hydrated.
    */
   useEffect(() => {
-    if (activeKey) {
-      const inputRef = inputRefs.current.get(activeKey);
-      if (inputRef?.current) {
-        inputRef!.current.focus();
-      }
+    const inputRef = activeKey ? inputRefs.current.get(activeKey) : null;
+    if (inputRef?.current) {
+      inputRef!.current.focus();
     }
-    if (activeGradeKey) {
-      const gradeRef = gradeInputRefs.current.get(activeGradeKey);
-      if (gradeRef?.current) {
-        gradeRef!.current.focus();
-      }
+    const gradeRef = activeGradeKey ? gradeInputRefs.current.get(activeGradeKey) : null;
+    if (gradeRef?.current) {
+      gradeRef!.current.focus();
     }
   }, [rerenderCount]);
 
@@ -242,12 +252,10 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
    * Simple error display mechanism.
    */
   useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError('');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
+    const timer = setTimeout(() => {
+      setError('');
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [error]);
 
   /**
@@ -258,58 +266,64 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
    * to one empty row.
    */
   const declareScheduleRows: () => void = useCallback(() => {
-    if (scheduleEntries.length === 0 && !initLoadComplete.current) {
+    if (!scheduleEntries && !entriesLoadComplete.current) {
       /**
        * Either no assignment exists, or the assignment which does exist
        * has no entries associated with the inputted schedule.
        */
-      const emptyRow = { key: 'XX 0000', course_id: 'XX 0000' };
+      const emptyRow = { 
+        key: 'XX 0000', 
+        course_id: 'XX 0000' 
+      };
       setScheduleRows([emptyRow]);
-      initLoadComplete.current = true;
+      entriesLoadComplete.current = true;
       return;
-    } else if (!initLoadComplete.current) {
+    } else if (!entriesLoadComplete.current) {
       setScheduleRows(
-        scheduleEntries.map(entry => ({
+        scheduleEntries!.map(entry => ({
           key: entry.course_id!,
           course_id: entry.course_id!,
           entry_id: entry.entry_id,
         }))
       );
-      initLoadComplete.current = true;
+      entriesLoadComplete.current = true;
     }
-  }, [scheduleEntries, initLoadComplete.current]);
+  }, [scheduleEntries]);
 
   const declareScheduleGrades: () => void = useCallback(() => {
     if (!scheduleRows) {
       return;
-    } else if (scheduleGrades.length === 0 && !initLoadGradesComplete.current) {
+    } else if (scheduleGrades.length === 0 && !gradesLoadComplete.current) {
       setGradeValues(
-        new Map(scheduleRows?.map(row => [row.key, '']))
+        new Map(scheduleRows.map(row => [row.key, '']))
       );
-      initLoadGradesComplete.current = true;
+      gradesLoadComplete.current = true;
+      setRerenderCount(prev => prev! + 1); /** Manually update table to reflect updated grades */
       return;
-    } else if (!initLoadGradesComplete.current) {
+    } else if (!gradesLoadComplete.current) {
       setGradeValues(
-        new Map(scheduleRows?.map(row => {
+        new Map(scheduleRows.map(row => {
           const rowGrade = scheduleGrades.find(grade => grade.entry_id === row.entry_id) || null;
           return [row.key, rowGrade ? rowGrade.grade : ''];
         }))
       );
-      initLoadGradesComplete.current = true;
-      setRerenderCount(prev => prev! + 1);
+      gradesLoadComplete.current = true;
+      setRerenderCount(prev => prev! + 1); /** Manually update table to reflect updated grades */
     }
-  }, [scheduleGrades, scheduleRows, initLoadGradesComplete.current]);
+  }, [scheduleGrades, scheduleRows]);
 
   /**
-   * The sole purpose of this useEffect is to only run upon initialization.
+   * The sole purpose of this useEffect is to only run upon initialization
+   * (or upon the completion refs being set to false, which can happen if the 
+   * scheduleId or term passed in suddenly changes).
    */
   useEffect(() => {
-    if (!initLoadComplete.current) {
+    if (!entriesLoadComplete.current) {
       declareScheduleRows();
-    } else if (!initLoadGradesComplete.current) {
+    } else if (!gradesLoadComplete.current) {
       declareScheduleGrades();
     }
-  }, [declareScheduleRows, declareScheduleGrades, initLoadComplete.current, initLoadGradesComplete.current]);
+  }, [declareScheduleRows, declareScheduleGrades]);
 
   /**
    * This function has a few moving parts to it.
@@ -534,13 +548,9 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       if (isUpdate && scheduleId) {
         const entryId = scheduleRows[activeIndex].entry_id as number;
         await entryHandlers.updateEntry(schedule!.schedule_id, entryId, courseId);
-        /** To-do: add some error handling in the case that this returns null */
-
       } else if (scheduleId) {
 
         const newEntry = await entryHandlers.createEntry(schedule!.schedule_id, courseId);
-        /** To-do: more error handling */
-
         /** 
          * It only remains to make sure we update the newRows with the right entry_id, so that we can delete it later. 
          * Note that here we don't actually trigger a rerender of the rows, since the objects remain the same.
@@ -748,7 +758,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
     setRerenderCount(prev => prev! + 1); /** Manually rerender since key isn't changing */
 
     const entryId = scheduleRows!.find(row => row.key === key)!.entry_id as number;
-    const updatePossible = scheduleId && entryId && term;
+    const updatePossible = scheduleId && term;
     if (value !== '' && updatePossible) {
       setPreviousGrade(null);
 
@@ -800,12 +810,19 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       return;
     }
     const newIndex = Math.min(activeIndex + 1, scheduleRows.length);
-    const action: (key: string) => void = newIndex !== scheduleRows.length ? (
-      activeCol == 0 ? handleSelectRow : handleSelectGrade
-    ) : (
-      activeCol == 0 ? handleDeselect : handleDeselectGrade
-    );
-    action(scheduleRows[newIndex].key);
+    if (newIndex !== scheduleRows.length) {
+      if (activeCol === 0) {
+        handleSelectRow(scheduleRows[newIndex].key);
+      } else {
+        handleSelectGrade(scheduleRows[newIndex].key);
+      }
+    } else {
+      if (activeCol === 0) {
+        handleDeselect();
+      } else {
+        handleDeselectGrade();
+      }
+    }
     
     setActiveIndex(newIndex);
     setHoverRow(null); /** Prevent the user from hovering immediately after */
@@ -818,12 +835,19 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       return;
     }
     const newIndex = Math.max(activeIndex - 1, -1);
-    const action: (key: string) => void = newIndex !== -1 ? (
-      activeCol == 0 ? handleSelectRow : handleSelectGrade
-    ) : (
-      activeCol == 0 ? handleDeselect : handleDeselectGrade
-    );
-    action(scheduleRows[newIndex].key);
+    if (newIndex !== -1) {
+      if (activeCol === 0) {
+        handleSelectRow(scheduleRows[newIndex].key);
+      } else {
+        handleSelectGrade(scheduleRows[newIndex].key);
+      }
+    } else {
+      if (activeCol === 0) {
+        handleDeselect();
+      } else {
+        handleDeselectGrade();
+      }
+    }
 
     setActiveIndex(newIndex);
     setHoverRow(null);
@@ -1110,7 +1134,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
 
   return (
     <div 
-      className="flex flex-col gap-2 min-w-600 max-w-700"
+      className="flex flex-col gap-1 min-w-600 max-w-700"
       style={{
         zIndex: 1,
       }}

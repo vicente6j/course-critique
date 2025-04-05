@@ -94,6 +94,7 @@ export const useSchedules = (): UseSchedulesValue => {
       return null;
     }
 
+    console.log('performing optimistic update...');
     const prevSchedules = [...schedules];
     /** Optimistic update with new name */
     setSchedules(prev => (
@@ -102,12 +103,15 @@ export const useSchedules = (): UseSchedulesValue => {
           ? { ...schedule, name: scheduleName }
           : schedule
     )));
+    console.log('done');
 
     try {
+      console.log('performing api request');
       await updateSchedulePing(scheduleId, scheduleName);
       const newSchedules = await revalidate.refetchSchedules();
 
       const updatedSchedule = newSchedules?.find(schedule => (schedule.schedule_id === scheduleId))!;
+      console.log('success: new schedule = ' + updatedSchedule);
 
       numUpdates.current += 1;
       return updatedSchedule;

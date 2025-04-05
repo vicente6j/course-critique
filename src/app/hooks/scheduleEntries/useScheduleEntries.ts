@@ -96,6 +96,7 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       return null;
     }
 
+    console.log('optimistic update on entries');
     const prevEntries = [...entries];
     setEntries(prev => (
       prev!.map(entry => 
@@ -103,12 +104,16 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
           ? { ...entry, course_id: newCourseId }
           : entry
     )));
+    console.log('done');
 
     try {
+
+      console.log('pinging backend...');
       await updateScheduleEntry(scheduleId, entryId, newCourseId);
       const newEntries = await revalidate.refetchScheduleEntries();
       const updatedEntry = newEntries?.find(entry => entry.entry_id === entryId && entry.schedule_id === scheduleId);
       setEntries(newEntries);
+      console.log('done: new entry found in ' + updatedEntry);
 
       numUpdates.current += 1;
       return updatedEntry!;

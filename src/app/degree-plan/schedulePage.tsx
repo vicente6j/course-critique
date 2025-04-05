@@ -1,11 +1,11 @@
-import { FC, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSchedulesContext } from "../hooks/schedules/schedulesContext";
 import ScheduleTable from "./scheduleTable";
 import { useSchedulesAssignmentsContext } from "../hooks/scheduleAssignments/scheduleAssignmentsContext";
 import { useScheduleEntriesContext } from "../hooks/scheduleEntries/scheduleEntriesContext";
 import SelectionDropdown, { SelectionOption } from "../components/selectionDropdown";
 import { scheduleTerms } from "../metadata";
-
+import ModeEditIcon from '@mui/icons-material/ModeEdit';
 
 export interface SchedulePageProps {}
 
@@ -15,11 +15,18 @@ export const SchedulePage: FC<SchedulePageProps> = ({
 
   const [scheduleSelected, setScheduleSelected] = useState<string | null>(null);
   const [termSelected, setTermSelected] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean | null>(false);
+  const [nameInput, setNameInput] = useState<string | null>(null);
+  const [editorHeight, setEditorHeight] = useState<number>(0);
+
   const initLoadComplete = useRef<boolean | null>(false);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
   
   const {
     schedules,
-    scheduleMap
+    scheduleMap,
+    handlers: scheduleHandlers
   } = useSchedulesContext();
 
   const {
@@ -30,9 +37,18 @@ export const SchedulePage: FC<SchedulePageProps> = ({
     scheduleAssignmentsMap,
   } = useSchedulesAssignmentsContext();
 
+  const updateHeights: () => void = useCallback(() => {
+    const fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    if (editorRef.current) {
+      setEditorHeight(editorRef.current.scrollHeight / fontSize);
+    }
+  }, []);
+
   useEffect(() => {
-    console.log(termSelected);
-  }, [termSelected]);
+    updateHeights();
+    window.addEventListener('resize', updateHeights);
+    return () => window.removeEventListener('resize', updateHeights);
+  }, [updateHeights]);
 
   useEffect(() => {
     if (schedules && scheduleAssignmentsMap && !initLoadComplete.current) {
@@ -47,6 +63,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({
     } else {
       setTermSelected(null);
     }
+    updateHeights();
   }, [scheduleSelected, scheduleAssignmentsMap]);
 
   const termOptions: SelectionOption[] = useMemo(() => {
@@ -64,8 +81,37 @@ export const SchedulePage: FC<SchedulePageProps> = ({
     return [select, ...terms];
   }, []);
 
+  const onInputNameChange: (value: string) => void = useCallback((value) => {
+    setNameInput(value);
+  }, []);
+
+  const handleNameKeyDown: (
+    e: React.KeyboardEvent<HTMLInputElement>, 
+  ) => void = useCallback(async (e) => {
+    if (!scheduleSelected || !nameInput) {
+      return;
+    }
+    switch (e.key) {
+      case 'Enter':
+        setIsEditing(false);
+        setNameInput('');
+        await scheduleHandlers.updateSchedule(scheduleSelected!, nameInput);
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+  }, [scheduleHandlers, scheduleSelected, nameInput]);
+
+  useEffect(() => {
+    nameInputRef.current?.focus();
+  }, [isEditing]);
+
   return (
-    <div className="flex flex-col gap-0 w-full bg-white shadow-lg py-4">
+    <div 
+      className="flex flex-col gap-0 w-full bg-white shadow-lg pt-4"
+      ref={editorRef}
+    >
       <div className="flex flex-col gap-1 px-8 pb-6 pt-2 border-b border-gray-200">
         <p className="heading-md">My Schedules</p>
         <p className="text-sm">Found {schedules?.length || 0}</p>
@@ -93,8 +139,40 @@ export const SchedulePage: FC<SchedulePageProps> = ({
             );
           })}
         </div>
-        <div className="flex flex-col gap-2 w-[80%] py-8 px-8">
-          <p className="heading-md font-loose">{scheduleMap!.get(scheduleSelected!)?.name}</p>
+        <div className="flex flex-col gap-3 w-[80%] py-8 px-8">
+          <div 
+            className="relative cursor-pointer w-fit flex flex-row gap-3 items-center"
+            onClick={() => {
+              setIsEditing(!isEditing);
+            }}
+          >
+            {isEditing ? (
+              <input
+                id={`schedule-name-field`}
+                type="text"
+                ref={nameInputRef}
+                value={nameInput || ''}
+                onChange={(e) => {
+                  onInputNameChange(e.target.value);
+                }}
+                onKeyDown={(e) => handleNameKeyDown(e)}
+                className={`
+                  bg-transparent z-20 cursor-text outline-none w-160 border-b border-gray-400
+                  heading-md font-loose
+                `}
+                placeholder={scheduleMap?.get(scheduleSelected!)?.name || ''}
+              />
+            ) : (
+              <div className="flex flex-row gap-3 items-center hover:bg-gray-100">
+                <p className="heading-md font-loose">{scheduleMap!.get(scheduleSelected!)?.name}</p>
+                <ModeEditIcon 
+                  style={{
+                    width: '20px'
+                  }}
+                />
+              </div>
+            )}
+          </div>
           <div className="flex flex-col gap-1">
             <SelectionDropdown 
               options={termOptions}
@@ -107,6 +185,15 @@ export const SchedulePage: FC<SchedulePageProps> = ({
             />
           </div>
         </div>
+        {isEditing && (
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={(e) => {
+              e.stopPropagation();  
+              setIsEditing(false);
+            }}
+          />
+        )}
       </div>
     </div>
   )

@@ -138,6 +138,7 @@ export const useScheduleGrades = (): UseScheduleGradeValues => {
       return false;
     }
 
+    console.log('deleting grade');
     const prevGrades = [...grades];
     /** Optimistic update */
     setGrades(prev => 
@@ -147,6 +148,7 @@ export const useScheduleGrades = (): UseScheduleGradeValues => {
     try {
       await deleteScheduleGrade(scheduleId, term, entryId);
       await revalidate.refetchScheduleGrades();
+      console.log('done');
 
       numUpdates.current += 1;
       return true;
