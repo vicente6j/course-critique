@@ -11,18 +11,6 @@ import { getClientColorFromGPA } from "../utils";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-export interface PieSection {
-  label: string;
-  value: number;
-  color: string;
-  cutout: string;
-}
-
-export interface PieChartData {
-  labels: string[];
-  datasets: PieSectionData;
-}
-
 export interface PieSectionData {
   data: number[];
   backgroundColor: string[];
@@ -31,35 +19,31 @@ export interface PieSectionData {
   dataVisibility: boolean[];
 }
 
-export const resolvedColors: Record<string, string> = {
-  'A': '#168921',
-  'B': '#11AF22',
-  'C': '#FCB400',
-  'D': '#FF9999',
-  'F': '#FE466C',
-  'W': '#666666',
-};
+export interface PieSection {
+  label: string;
+  value: number;
+  color: string;
+  cutout: number;
+}
 
 export interface DonutChartProps {
-  aggregateRow: GradeTableRow;
-  history?: CourseHistory | ProfHistory | null;
-  compiledResponse?: CompiledResponse | CompiledProfResponse | null;
-  fetchLoading?: boolean;
-  forTerm: boolean;
+  /** Assuming that each of these is the same size, for each entry in the pie chart */
+  pieSections: PieSection[];
+  centerText?: string;
+  tooltipText?: string;
 }
 
 const DonutChart: FC<DonutChartProps> = ({
-  aggregateRow,
-  history,
-  compiledResponse,
-  fetchLoading,
-  forTerm,
+  pieSections,
+  centerText,
+  tooltipText,
 }: DonutChartProps) => {
 
   useEffect(() => {
-
-    ChartJS.unregister({ id: 'centerText' });
-    if (aggregateRow.GPA !== undefined) {
+    ChartJS.unregister({ 
+      id: 'centerText' 
+    });
+    if (centerText) {
       ChartJS.register({
         id: 'centerText',
         beforeDraw: (chart) => {
@@ -68,41 +52,26 @@ const DonutChart: FC<DonutChartProps> = ({
       
           const fontSize = (height / 100).toFixed(2);
           const fontWeight = 500;
-          const fontColor = getClientColorFromGPA(aggregateRow.GPA as number);
+          const fontColor = getClientColorFromGPA(Number(centerText));
 
           ctx.font = `${fontWeight} ${fontSize}em sans-serif`;
           ctx.textBaseline = "middle";
           ctx.fillStyle = fontColor;
-      
-          const text = (aggregateRow.GPA as number).toFixed(2);
-          const textX = Math.round((width - ctx.measureText(text).width) / 2);
+          
+          const textX = Math.round((width - ctx.measureText(centerText).width) / 2);
           const textY = height / 2;
       
-          ctx.fillText(text, textX, textY);
+          ctx.fillText(centerText, textX, textY);
           ctx.save();
         }
       });
     }
     return () => {
-      ChartJS.unregister({ id: 'centerText' });
-    };
-  }, [aggregateRow.GPA]);
-
-  const data: PieSection[] = useMemo(() => {
-    let sections: PieSection[] = [];
-    for (const grade of movingAverages) {
-      if (grade == 'GPA') {
-        continue;
-      }
-      sections.push({
-        label: grade as string,
-        value: aggregateRow[grade] as number,
-        color: resolvedColors[grade],
-        cutout: '80%',
+      ChartJS.unregister({ 
+        id: 'centerText' 
       });
-    }
-    return sections;
-  }, [aggregateRow.GPA, aggregateRow.A, aggregateRow.B, aggregateRow.C, aggregateRow.D, aggregateRow.F, aggregateRow.W]);
+    };
+  }, [centerText]);
 
   const options: any = useMemo(() => {
     return {
@@ -119,27 +88,21 @@ const DonutChart: FC<DonutChartProps> = ({
           },
         }
       },
-      cutout: data.map((item: PieSection) => item.cutout),
+      cutout: pieSections.map((item) => `${item.cutout}%`),
     }
-  }, [data]);
+  }, [pieSections]);
 
   const finalData: ChartData<'doughnut', number[], string> = useMemo(() => {
     return {
-      labels: data.map((item: PieSection) => item.label),
+      labels: pieSections.map(item => item.label),
       datasets: [{
-        data: data.map((item: PieSection) => Math.round(item.value * 100) / 100),
-        backgroundColor: data.map((item: PieSection) => item.color),
-        borderColor: data.map((item: PieSection) => item.color),
+        data: pieSections.map(item => Math.round(item.value * 100) / 100),
+        backgroundColor: pieSections.map(item => item.color),
+        borderColor: pieSections.map(item => item.color),
         borderWidth: 1,
       }]
     };
-  }, [data]);
-
-  const nextToolTipDisplayContent: string = 
-    forTerm /** assume fetch isn't loading here. */
-    ? `Grades computed from ${aggregateRow.enrollment!} students` 
-    : `Grades computed from ${`${fetchLoading ? '[loading...]' : history?.terms.length }`} 
-      terms and ${`${fetchLoading ? '[loading...]' : Math.round(compiledResponse?.total_enrollment!) }`} students`;
+  }, [pieSections]);
 
   return (
     <div className="h-fit">
@@ -149,7 +112,7 @@ const DonutChart: FC<DonutChartProps> = ({
             Overall GPA
           </h1>
           <div className="relative">
-            <NextToolTip content={nextToolTipDisplayContent}>
+            <NextToolTip content={tooltipText}>
               <InfoIcon style={{ width: '20px' }} />
             </NextToolTip>
           </div>

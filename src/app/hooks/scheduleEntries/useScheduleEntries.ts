@@ -134,13 +134,18 @@ export const useScheduleEntries = (): UseScheduleEntriesValue => {
       return false;
     }
 
+    console.log('deleting entry ID ' + entryId);
+
     const prevEntries = [...entries];
     /** Optimistic update */
-    setEntries(prev => prev?.filter(entry => entry.entry_id !== entryId && entry.schedule_id !== scheduleId) || []);
+    setEntries(prev => prev!.filter(entry => !(entry.entry_id === entryId && entry.schedule_id === scheduleId)));
 
     try {
-      await deleteScheduleEntry(scheduleId, entryId);
-      await revalidate.refetchScheduleEntries();
+      const res = await deleteScheduleEntry(scheduleId, entryId);
+      const newEntries = await revalidate.refetchScheduleEntries();
+      setEntries(newEntries);
+
+      console.log('was success ? ' + res);
 
       numUpdates.current += 1;
       return true;

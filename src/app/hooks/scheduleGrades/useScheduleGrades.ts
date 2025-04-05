@@ -142,8 +142,8 @@ export const useScheduleGrades = (): UseScheduleGradeValues => {
     const prevGrades = [...grades];
     /** Optimistic update */
     setGrades(prev => 
-      prev?.filter(grade => grade.entry_id !== entryId && grade.schedule_id !== scheduleId && grade.term !== term) 
-      || []);
+      prev?.filter(grade => grade.entry_id !== entryId || grade.schedule_id !== scheduleId || grade.term !== term) || []
+    );
 
     try {
       await deleteScheduleGrade(scheduleId, term, entryId);

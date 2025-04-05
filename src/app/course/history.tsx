@@ -8,14 +8,14 @@ import { SearchIcon } from "../../../public/icons/searchIcon";
 import ExpandableTable from "../shared/expandableTable";
 import ProfessorOrCourseTable from "../shared/professorOrCourseTable";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
-import DonutChart from "../shared/donutChart";
-import { CourseAveragesByTerm } from "../api/course";
+import DonutChart, { PieSection } from "../shared/donutChart";
+import { CourseAverages, CourseAveragesByTerm } from "../api/course";
 import { useCourses } from "../contexts/server/course/provider";
 import { LineChartDataset, LineDataPoint } from "../home/lineChart";
 import LineChart from "./line-chart";
 import { Tooltip as NextToolTip } from "@nextui-org/tooltip";
 import InfoIcon from '@mui/icons-material/Info';
-import { termToSortableInteger } from "../utils";
+import { gradeColorDictHex, possibleGrades, termToSortableInteger } from "../utils";
 import AverageOverTime from "./averageOverTime";
 
 export interface TermDisplayData {
@@ -26,6 +26,10 @@ export interface TermDisplayData {
   total_enrollment: number;
 }
 
+export interface IndexableCourseAverages {
+  [key: string]: any;
+}
+
 export const termOrder: Record<string, number> = {
   'Fall': 3,
   'Summer': 2,
@@ -34,14 +38,13 @@ export const termOrder: Record<string, number> = {
 
 export interface HistoryProps {
   courseHistory: CourseHistory;
-  courseID: string;
+  courseId: string;
   fetchLoading: boolean;
 }
 
 const History: FC<HistoryProps> = ({
   courseHistory,
-  fetchLoading,
-  courseID,
+  courseId,
 }: HistoryProps) => {
 
   const [searchValue, setSearchValue] = useState<string>("");
@@ -53,7 +56,9 @@ const History: FC<HistoryProps> = ({
   const [indexMap, setIndexMap] = useState<Map<string, number>>(new Map()); /** just for constant time lookups */
   const [showAverageOverTime, setShowAverageOverTime] = useState<boolean>(true);
 
-  const { maps } = useCourses();
+  const { 
+    maps 
+  } = useCourses();
 
   const numPages = Math.ceil(courseHistory.terms.length / rowsPerPage);
   const hasSearchFilter = Boolean(searchValue);
@@ -68,7 +73,6 @@ const History: FC<HistoryProps> = ({
   }, [searchValue, courseHistory.terms]);
 
   const terms: TermDisplayData[] = useMemo(() => {
-
     const termSectionMap: Map<string, Map<string, GradeTableRow[]>> = new Map();
     for (const termData of filteredTerms) {
       let sectionMap: Map<string, GradeTableRow[]> = new Map();
@@ -91,7 +95,6 @@ const History: FC<HistoryProps> = ({
       });
       termSectionMap.set(termData.term, sectionMap);
     }
-
     const newTerms: TermDisplayData[] = filteredTerms.map((termData: TermData) => ({
       term: termData.term,
       aggregateRow: {
@@ -171,7 +174,7 @@ const History: FC<HistoryProps> = ({
     return idx !== terms.length - 1 ? terms[idx + 1] : null;
   }, [terms, term]);
 
-  const getDiff: (term1: TermDisplayData, term2: TermDisplayData) => number = useCallback((term1: TermDisplayData, term2: TermDisplayData) => {
+  const getDiff: (term1: TermDisplayData, term2: TermDisplayData) => number = useCallback((term1, term2) => {
     return (term1.aggregateRow!.GPA as number) - (term2.aggregateRow!.GPA as number);
   }, [terms]);
 
@@ -179,7 +182,7 @@ const History: FC<HistoryProps> = ({
     if (!term) {
       return;
     }
-    const originalPath = `course?courseID=${encodeURIComponent(courseID)}`;
+    const originalPath = `course?courseID=${encodeURIComponent(courseId)}`;
     window.history.replaceState({}, "courseTab", `${originalPath}&tab=history&term=${term}`);
   }, [term]);
 
@@ -201,6 +204,18 @@ const History: FC<HistoryProps> = ({
     setSearchValue("");
     setPage(1);
   }, []);
+
+  const pieSections: PieSection[] = useMemo(() => {
+    if (!maps.averagesMap || !term) {
+      return [];
+    }
+    return possibleGrades.map(grade => ({
+      label: grade,
+      value: (termMap.get(term)!.aggregateRow as IndexableCourseAverages)[grade],
+      color: gradeColorDictHex[grade],
+      cutout: 80,
+    }));
+    }, [maps.averagesMap]);
 
   return (
     <div className="flex flex-col">
@@ -225,7 +240,7 @@ const History: FC<HistoryProps> = ({
           </div>
           <h1 className="heading-sm font-semi-bold">{term}</h1>
           <p className="text-sm text-gray-400">
-            During the {term} term {courseID} obtained an overall GPA of {' '}
+            During the {term} term {courseId} obtained an overall GPA of {' '}
             <span 
               className="font-bold"
             >
@@ -247,8 +262,8 @@ const History: FC<HistoryProps> = ({
             )}
           </p>
           <DonutChart 
-            aggregateRow={termMap.get(term)!.aggregateRow} 
-            forTerm={true} 
+            pieSections={pieSections}
+            centerText={(termMap.get(term)?.aggregateRow.GPA as number)?.toFixed(2)}
           />
           <GradeTable 
             rows={[termMap.get(term)!.aggregateRow]} 

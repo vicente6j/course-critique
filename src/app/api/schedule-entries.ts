@@ -90,7 +90,7 @@ export const updateScheduleEntry = async (
 export const deleteScheduleEntry = async (
   scheduleId: string, 
   entryId: number
-): Promise<void> => {
+): Promise<boolean> => {
   const response = await fetch(`${PROD_ENDPOINT}/schedules/entries`, {
     method: 'DELETE',
     headers: {
@@ -107,6 +107,6 @@ export const deleteScheduleEntry = async (
       Status: ${response.status}.`
     );
   }
-  console.log('success');
+  return true;
 }
 

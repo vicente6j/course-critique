@@ -42,6 +42,14 @@ export const getClientColorFromGPA: (gpa: number) => string = (gpa: number) => {
   return color;
 };
 
+export const gradeDict: Record<string, number> = {
+  'A': 4,
+  'B': 3,
+  'C': 2,
+  'D': 1,
+  'F': 0,
+};
+
 export const tailwindConversion: Record<string, string> = {
   'text-green-500': 'rgb(16,185,129)',
   'text-red-500': 'rgb(239,68,68)',
@@ -59,3 +67,15 @@ export const checkLevel: (program: DegreeProgram) => string = (program) => {
   return program.id.includes('-bs') ? 'Undergraduate' : 'Graduate';
 }
 
+export const possibleGrades: string[] = [
+  'A', 'B', 'C', 'D', 'F', 'W'
+];
+
+export const gradeColorDictHex: Record<string, string> = {
+  'A': '#168921',
+  'B': '#11AF22',
+  'C': '#FCB400',
+  'D': '#FF9999',
+  'F': '#FE466C',
+  'W': '#666666',
+};

@@ -21,7 +21,10 @@ const CourseHeader: FC<CourseHeaderProps> = ({
 
   const [seeOthers, setSeeOthers] = useState<boolean>(false);
   
-  const { maps: profMaps } = useProfs();
+  const { 
+    maps: profMaps 
+  } = useProfs();
+  
   const router = useRouter();
 
   const formatProfs: (start: number, end: number) => JSX.Element[] = useCallback((start, end) => {

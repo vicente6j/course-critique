@@ -119,7 +119,6 @@ const RankingsTable: FC<RankingsTableProps> = ({
     return (
       <Table 
         removeWrapper 
-        isStriped
       >
         <TableHeader columns={profCols}>
           {(column) => (
@@ -200,7 +199,6 @@ const RankingsTable: FC<RankingsTableProps> = ({
     return (
       <Table 
         removeWrapper 
-        isStriped
       >
         <TableHeader columns={courseCols}>
           {(column) => (

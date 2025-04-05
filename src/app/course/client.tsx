@@ -7,7 +7,7 @@ import Navbar from "../navigation/navbar";
 import { Spinner } from "@nextui-org/spinner";
 import CourseHeader from "./header";
 import History from "./history";
-import DonutChart from "../shared/donutChart";
+import DonutChart, { PieSection } from "../shared/donutChart";
 import { useRouter } from 'next/router';
 import { Link, Skeleton } from "@nextui-org/react";
 import Info from "./info";
@@ -16,6 +16,7 @@ import SidePanel from "./sidepanel";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import { useCourses } from "../contexts/server/course/provider";
 import { useProfs } from "../contexts/server/prof/provider";
+import { gradeColorDictHex, possibleGrades } from "../utils";
 
 export interface CourseClientProps {
   courseID: string;
@@ -40,8 +41,13 @@ const CourseClient: FC<CourseClientProps> = ({
   const [arrowRight, setArrowRight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { maps } = useCourses();
-  const { maps: profMaps } = useProfs();
+  const { 
+    maps 
+  } = useCourses();
+
+  const { 
+    maps: profMaps 
+  } = useProfs();
 
   /**
    * Here we simply compute the row from the averages map. Computing this
@@ -141,6 +147,15 @@ const CourseClient: FC<CourseClientProps> = ({
     window.history.replaceState({}, "courseTab", `${originalQuery}&tab=${selectedTab}`);
   }, [selectedTab]);
 
+  const pieSections: PieSection[] = useMemo(() => {
+    return possibleGrades.map(grade => ({
+      label: grade,
+      value: aggregateRow[grade] as number,
+      color: gradeColorDictHex[grade],
+      cutout: 80,
+    }));
+  }, [aggregateRow]);
+
   return (
     <div className="min-h-screen w-full">
       <Navbar />
@@ -180,11 +195,8 @@ const CourseClient: FC<CourseClientProps> = ({
                     </p>
                     <div className="flex flex-col gap-4">
                       <DonutChart 
-                        aggregateRow={aggregateRow}
-                        history={courseFetchAggregate?.courseHistory}
-                        compiledResponse={courseFetchAggregate?.compiledResponse}
-                        fetchLoading={fetchLoading} 
-                        forTerm={false}
+                        pieSections={pieSections}
+                        centerText={(aggregateRow.GPA as number)?.toFixed(2)}
                       />
                       <GradeTable 
                         rows={[aggregateRow]} 
@@ -231,7 +243,7 @@ const CourseClient: FC<CourseClientProps> = ({
                   <h1 className="heading-md font-loose">{courseID} History</h1>
                   <History 
                     courseHistory={courseFetchAggregate?.courseHistory}
-                    courseID={courseID}
+                    courseId={courseID}
                     fetchLoading={fetchLoading} 
                   />
                 </div>

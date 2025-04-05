@@ -31,6 +31,7 @@ import { useScheduleGradesContext } from "../hooks/scheduleGrades/scheduleGrades
 import { ScheduleGrade } from "../api/schedule-grades";
 import ScheduleDropdown from "../shared/scheduleDropdown";
 import { useHoverContext } from "../contexts/client/hover";
+import { gradeDict } from "../utils";
 
 export interface ScheduleTableColumn {
   key: string;
@@ -151,6 +152,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
    */
   const [noChange, setNoChange] = useState<boolean>(false);
   const [hoverDelete, setHoverDelete] = useState<boolean | null>(false);
+  const [gradeValuesVersion, setGradeValuesVersion] = useState<number>(0);
 
   const inputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
   const gradeInputRefs = useRef<Map<string, MutableRef<HTMLInputElement>>>(new Map());
@@ -168,6 +170,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
   } = useSchedulesContext();
 
   const {
+    entries,
     entryMap,
     handlers: entryHandlers
   } = useScheduleEntriesContext();
@@ -297,6 +300,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       setGradeValues(
         new Map(scheduleRows.map(row => [row.key, '']))
       );
+      setGradeValuesVersion(prev => prev + 1);
       gradesLoadComplete.current = true;
       setRerenderCount(prev => prev! + 1); /** Manually update table to reflect updated grades */
       return;
@@ -307,6 +311,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
           return [row.key, rowGrade ? rowGrade.grade : ''];
         }))
       );
+      setGradeValuesVersion(prev => prev + 1);
       gradesLoadComplete.current = true;
       setRerenderCount(prev => prev! + 1); /** Manually update table to reflect updated grades */
     }
@@ -323,7 +328,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
     } else if (!gradesLoadComplete.current) {
       declareScheduleGrades();
     }
-  }, [declareScheduleRows, declareScheduleGrades]);
+  }, [declareScheduleRows, declareScheduleGrades, scheduleId, term]);
 
   /**
    * This function has a few moving parts to it.
@@ -478,6 +483,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       newDict.delete(key);
       return newDict;
     });
+    setGradeValuesVersion(prev => prev + 1);
   }, []);
 
   /**
@@ -536,6 +542,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
         newDict.set(courseId, isUpdate ? gradeValues.get(previousRow!.key)! : '');
         return newDict;
       });
+      setGradeValuesVersion(prev => prev + 1);
       removeFromAllDictionaries(key);
 
       /** At this point we definitely have an empty row (or multiple), so select the first one */
@@ -587,6 +594,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
         newDict.delete(deletedCourse);
         return newDict;
       });
+      setGradeValuesVersion(prev => prev + 1);
 
       /**
        * After deleting the row & updating schedule rows,
@@ -654,6 +662,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
     newRows = [...oldRows, emptyRow];
 
     setGradeValues(prev => new Map(prev).set(key, ''));
+    setGradeValuesVersion(prev => prev + 1);
     if (returnList) {
       return newRows;
     }
@@ -699,6 +708,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
     /** Reset the entry grade map */
     if (previousGrade && gradeValues.get(activeGradeKey) !== '') {
       setGradeValues(prev => new Map(prev).set(activeGradeKey, previousGrade));
+      setGradeValuesVersion(prev => prev + 1);
     }
     setPreviousGrade(null);
     setActiveGradeKey(null);
@@ -752,6 +762,7 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       return;
     }
     setGradeValues(prev => prev.set(key, value));
+    setGradeValuesVersion(prev => prev + 1);
     if (value !== '') {
       handleDeselectGrade();
     }
@@ -939,6 +950,24 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
       credits 
     };
   }, [scheduleRows, courseMaps.averagesMap, courseMaps.courseMap]);
+
+  const myGPA: number | null = useMemo(() => {
+    if (!gradeValues || !scheduleId) {
+      return null;
+    }
+    let gpa = 0;
+    let i = 0;
+    entryMap?.get(scheduleId)?.forEach(entry => {
+      const grade = gradeValues.get(entry.course_id!)!;
+      if (grade === 'W' || grade === '') {
+        return;
+      }
+      const numeric = gradeDict[grade];
+      gpa = (gpa * i + numeric) / (i + 1);
+      i++;
+    });
+    return gpa;
+  }, [entries, gradeValuesVersion]);
 
   const formatEmptyCourseID: (item: ScheduleTableRow) => JSX.Element = useCallback((item) => {
     const inActiveResults = activeResults.has(item.key) && activeResults.get(item.key);
@@ -1165,6 +1194,21 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
           )}
         </div>
         <div className="flex flex-row gap-4 items-center">
+          <p className="text-sm font-semi-bold">My GPA</p>
+          {myGPA && myGPA !== 0 ? (
+            <p 
+              className="text-sm font-semi-bold" 
+              style={{ 
+                color: formatGPA(myGPA) 
+              }}
+            >
+              {Number(myGPA).toFixed(2)}
+            </p>
+          ) : (
+            <p className="text-gray-400 text-sm">N/A</p>
+          )}
+        </div>
+        <div className="flex flex-row gap-4 items-center">
           <p className="text-sm font-semi-bold">Num Credits</p>
           {scheduleData.credits && scheduleData.credits !== 0 ? (
             <p className="text-sm">
@@ -1288,9 +1332,12 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
                     const color = isNA || !averageGpa ? 'gray' : formatGPA(Number(averageGpa));
                     return (
                       <TableCell 
-                        style={{ color: color }} 
+                        style={{ 
+                          color: color 
+                        }} 
                         className={`
-                          font-semibold border-b border-gray-200 z-1
+                          ${!isNA && 'font-semi-bold'}
+                          border-b border-gray-200 z-1
                           ${shouldBeHighlighted && 'bg-gray-100'}
                           ${disablePointerEvents && 'pointer-events-none'}
                         `}
@@ -1335,7 +1382,12 @@ const ScheduleTable: FC<ScheduleTableProps> = ({
                     ) : formatGradeInput(item); /** Otherwise, handle empty action */
                   } else if (columnKey === 'actions') {
                     return isEmptyOrEditing ? (
-                      <TableCell className={`actions ${isActive ? '' : 'pointer-events-none'}`}>
+                      <TableCell 
+                        className={`
+                          actions ${isActive ? '' : 'pointer-events-none'}
+                          px-0
+                        `}
+                      >
                         <div 
                           className={`
                             flex flex-col relative
